@@ -7,11 +7,11 @@ interface BadgeProps {
 }
 
 const variantClasses = {
-  default: "bg-[var(--color-muted)] text-[var(--color-text-secondary)] border-[var(--color-border)]",
-  success: "bg-[var(--color-success-surface)] text-[var(--color-success)] border-emerald-200",
-  error: "bg-[var(--color-error-surface)] text-[var(--color-error)] border-red-200",
-  warning: "bg-[var(--color-warning-surface)] text-[var(--color-warning)] border-amber-200",
-  info: "bg-[var(--color-info-surface)] text-[var(--color-info)] border-blue-200",
+  default: "bg-muted text-text-secondary border-border",
+  success: "bg-success-surface text-success border-emerald-200",
+  error: "bg-error-surface text-error border-red-200",
+  warning: "bg-warning-surface text-warning border-amber-200",
+  info: "bg-info-surface text-info border-blue-200",
 };
 
 export function Badge({ children, variant = "default", className }: BadgeProps) {

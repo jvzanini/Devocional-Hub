@@ -44,7 +44,7 @@ export function PipelineButton() {
         onClick={handleRun}
         disabled={loading}
         aria-label="Executar pipeline de processamento"
-        className="inline-flex items-center gap-2 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-primary-light)] text-white px-4 py-2 rounded-[var(--radius-md)] text-sm font-semibold hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 cursor-pointer active:scale-[0.98]"
+        className="inline-flex items-center gap-2 bg-gradient-to-r from-primary to-primary-light text-white px-4 py-2 rounded-md text-sm font-semibold hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 cursor-pointer active:scale-[0.98]"
         style={{ boxShadow: "0 4px 12px -2px rgba(180, 83, 9, 0.20)" }}
       >
         {loading ? (
@@ -68,10 +68,10 @@ export function PipelineButton() {
       {message && (
         <span
           role="status"
-          className={`text-xs font-medium px-2.5 py-1 rounded-[var(--radius-sm)] animate-fade-in ${
+          className={`text-xs font-medium px-2.5 py-1 rounded-sm animate-fade-in ${
             message.type === "error"
-              ? "bg-[var(--color-error-surface)] text-[var(--color-error)] border border-red-200"
-              : "bg-[var(--color-success-surface)] text-[var(--color-success)] border border-emerald-200"
+              ? "bg-error-surface text-error border border-red-200"
+              : "bg-success-surface text-success border border-emerald-200"
           }`}
         >
           {message.text}
