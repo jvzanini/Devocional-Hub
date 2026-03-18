@@ -1,8 +1,8 @@
 #!/bin/sh
 set -e
 
-echo "▶ Rodando migrations do banco..."
-node node_modules/prisma/build/index.js migrate deploy --schema=./prisma/schema.prisma
+echo "▶ Sincronizando schema do banco..."
+node node_modules/prisma/build/index.js db push --schema=./prisma/schema.prisma --accept-data-loss
 
 echo "▶ Iniciando aplicação..."
 exec node server.js
