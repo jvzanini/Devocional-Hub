@@ -7,15 +7,15 @@ import { Badge } from "@/components/ui/badge";
 import { DocType, PipelineStatus } from "@prisma/client";
 
 const DOC_LABELS: Record<DocType, { label: string; color: string; bg: string; border: string }> = {
-  TRANSCRIPT_RAW: { label: "Transcricao Bruta", color: "text-stone-600", bg: "bg-stone-50", border: "border-stone-200" },
-  TRANSCRIPT_CLEAN: { label: "Transcricao Limpa", color: "text-sky-600", bg: "bg-sky-50", border: "border-sky-200" },
-  BIBLE_TEXT: { label: "Texto Biblico (NVI)", color: "text-amber-700", bg: "bg-amber-50", border: "border-amber-200" },
-  INFOGRAPHIC: { label: "Infografico", color: "text-orange-600", bg: "bg-orange-50", border: "border-orange-200" },
+  TRANSCRIPT_RAW: { label: "Transcri\u00e7\u00e3o Bruta", color: "text-stone-600", bg: "bg-stone-50", border: "border-stone-200" },
+  TRANSCRIPT_CLEAN: { label: "Transcri\u00e7\u00e3o Limpa", color: "text-sky-600", bg: "bg-sky-50", border: "border-sky-200" },
+  BIBLE_TEXT: { label: "Texto B\u00edblico (NVI)", color: "text-amber-700", bg: "bg-amber-50", border: "border-amber-200" },
+  INFOGRAPHIC: { label: "Infogr\u00e1fico", color: "text-orange-600", bg: "bg-orange-50", border: "border-orange-200" },
   SLIDES: { label: "Slides", color: "text-violet-600", bg: "bg-violet-50", border: "border-violet-200" },
 };
 
 const STATUS_CONFIG: Record<PipelineStatus, { label: string; variant: "success" | "error" | "warning" | "info" }> = {
-  COMPLETED: { label: "Concluido", variant: "success" },
+  COMPLETED: { label: "Conclu\u00eddo", variant: "success" },
   ERROR: { label: "Erro no pipeline", variant: "error" },
   RUNNING: { label: "Processando...", variant: "warning" },
   PENDING: { label: "Pendente", variant: "info" },
@@ -175,14 +175,14 @@ export default async function SessionPage({
 
         {/* Metadados */}
         <div className="bg-white border border-stone-200/80 rounded-xl p-5 shadow-sm animate-slide-up" style={{ animationDelay: "150ms" }}>
-          <h2 className="text-xs font-semibold text-stone-400 uppercase tracking-wider mb-3">Informacoes</h2>
+          <h2 className="text-xs font-semibold text-stone-400 uppercase tracking-wider mb-3">Informa\u00e7\u00f5es</h2>
           <dl className="space-y-2.5 text-sm">
             <div className="flex justify-between items-center">
-              <dt className="text-stone-400">Reuniao Zoom</dt>
+              <dt className="text-stone-400">Reuni\u00e3o Zoom</dt>
               <dd className="text-stone-600 font-mono text-xs bg-stone-50 px-2 py-0.5 rounded">{devSession.zoomMeetingId}</dd>
             </div>
             <div className="flex justify-between items-center">
-              <dt className="text-stone-400">Gravacao</dt>
+              <dt className="text-stone-400">Grava\u00e7\u00e3o</dt>
               <dd className="text-stone-600 font-mono text-xs bg-stone-50 px-2 py-0.5 rounded">{devSession.zoomRecordingId || "—"}</dd>
             </div>
             <div className="flex justify-between items-center">

@@ -54,7 +54,7 @@ export default async function DashboardPage() {
             <div>
               <h1 className="font-bold text-stone-900 text-sm leading-none">DevocionalHub</h1>
               <p className="text-[11px] text-stone-400 mt-0.5">
-                Ola, {session.user?.name || "usuario"}
+                Ol\u00e1, {session.user?.name || "usu\u00e1rio"}
               </p>
             </div>
           </div>
@@ -89,7 +89,7 @@ export default async function DashboardPage() {
           </div>
           <div className="bg-white rounded-xl border border-stone-200/80 p-4 text-center shadow-sm">
             <div className="text-2xl font-bold text-emerald-600">{completed}</div>
-            <div className="text-[11px] text-stone-400 mt-0.5 font-medium uppercase tracking-wider">Concluidos</div>
+            <div className="text-[11px] text-stone-400 mt-0.5 font-medium uppercase tracking-wider">Conclu\u00eddos</div>
           </div>
           <div className="bg-white rounded-xl border border-stone-200/80 p-4 text-center shadow-sm">
             <div className={`text-2xl font-bold ${running > 0 ? "text-amber-600" : "text-stone-300"}`}>{running}</div>
@@ -120,7 +120,7 @@ export default async function DashboardPage() {
             </div>
             <p className="font-medium text-stone-500 mb-1">Nenhum devocional ainda</p>
             <p className="text-sm text-stone-400">
-              Clique em &quot;Executar Pipeline&quot; para processar a ultima gravacao do Zoom
+              Clique em &quot;Executar Pipeline&quot; para processar a \u00faltima grava\u00e7\u00e3o do Zoom
             </p>
           </div>
         ) : (
