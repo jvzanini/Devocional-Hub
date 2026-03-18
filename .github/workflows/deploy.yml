@@ -59,11 +59,25 @@ jobs:
     needs: build-and-push
 
     steps:
+      - name: Checkout (for stack file)
+        uses: actions/checkout@v4
+
       - name: Redeploy stack on Portainer
         run: |
-          curl -s -X POST \
+          STACK_CONTENT=$(curl -s \
             -H "X-API-Key: ${{ secrets.PORTAINER_TOKEN }}" \
-            "https://painel.nexusai360.com/api/stacks/${{ secrets.PORTAINER_STACK_ID }}/redeploy" \
+            "https://painel.nexusai360.com/api/stacks/${{ secrets.PORTAINER_STACK_ID }}/file" \
+            | python3 -c "import json,sys; print(json.load(sys.stdin)['StackFileContent'])")
+
+          PAYLOAD=$(python3 -c "
+          import json, sys
+          content = sys.stdin.read()
+          print(json.dumps({'stackFileContent': content, 'pullImage': True, 'prune': False}))
+          " <<< "$STACK_CONTENT")
+
+          curl -s -X PUT \
+            -H "X-API-Key: ${{ secrets.PORTAINER_TOKEN }}" \
             -H "Content-Type: application/json" \
-            -d '{"endpointId": 1, "pullImage": true}' \
-            | python3 -m json.tool
+            "https://painel.nexusai360.com/api/stacks/${{ secrets.PORTAINER_STACK_ID }}?endpointId=1" \
+            -d "$PAYLOAD" \
+            | python3 -c "import json,sys; d=json.load(sys.stdin); print('Deploy OK, status:', d.get('Status'))"
