@@ -8,7 +8,7 @@ services:
       - rede_nexusAI
     environment:
       # ── Banco de Dados (reutiliza o postgres existente) ──────
-      - DATABASE_URL=postgresql://postgres:nexus.AI@360@postgres:5432/devocional_hub
+      - DATABASE_URL=postgresql://postgres:nexus.AI%40360@postgres:5432/devocional_hub?connection_limit=5&connect_timeout=30&pool_timeout=30
 
       # ── Auth ─────────────────────────────────────────────────
       - NEXTAUTH_SECRET=devocional-hub-secret-nexusai360-2024

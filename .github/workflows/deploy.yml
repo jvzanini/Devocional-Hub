@@ -63,23 +63,12 @@ jobs:
 
       - name: Redeploy stack on Portainer
         run: |
-          # Buscar stack atual
-          STACK_CONTENT=$(curl -s --max-time 30 \
-            -H "X-API-Key: ${{ secrets.PORTAINER_TOKEN }}" \
-            "https://painel.nexusai360.com/api/stacks/${{ secrets.PORTAINER_STACK_ID }}/file" \
-            | python3 -c "import json,sys; print(json.load(sys.stdin)['StackFileContent'])")
+          # Usar stack file do repositório (não do Portainer) + injetar DEPLOY_SHA
+          STACK_CONTENT=$(cat portainer-stack.yml)
 
-          # Injetar DEPLOY_SHA para forçar redeploy (Docker Swarm precisa de mudança no config)
+          # Injetar DEPLOY_SHA para forçar redeploy
           DEPLOY_SHA="${{ github.sha }}"
-          STACK_CONTENT=$(echo "$STACK_CONTENT" | python3 -c "
-          import sys, re
-          content = sys.stdin.read()
-          # Remove DEPLOY_SHA antigo se existir
-          content = re.sub(r'\\n\\s*- DEPLOY_SHA=\\S+', '', content)
-          # Adiciona novo DEPLOY_SHA após NODE_ENV
-          content = content.replace('- NODE_ENV=production', '- NODE_ENV=production\n      - DEPLOY_SHA=${DEPLOY_SHA}')
-          print(content)
-          " | sed "s/\${DEPLOY_SHA}/$DEPLOY_SHA/g")
+          STACK_CONTENT=$(echo "$STACK_CONTENT" | sed "s/NODE_ENV=production/NODE_ENV=production\n      - DEPLOY_SHA=$DEPLOY_SHA/")
 
           PAYLOAD=$(python3 -c "
           import json, sys
