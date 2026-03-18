@@ -54,14 +54,23 @@ services:
           memory: 1024M
       labels:
         - traefik.enable=true
+        # HTTPS router (principal)
         - traefik.http.routers.devocional.rule=Host(`devocional.nexusai360.com`)
         - traefik.http.routers.devocional.entrypoints=websecure
         - traefik.http.routers.devocional.tls=true
         - traefik.http.routers.devocional.tls.certresolver=letsencryptresolver
+        - traefik.http.routers.devocional.middlewares=devocional-headers
+        # HTTP router (redirect para HTTPS)
+        - traefik.http.routers.devocional-http.rule=Host(`devocional.nexusai360.com`)
+        - traefik.http.routers.devocional-http.entrypoints=web
+        - traefik.http.routers.devocional-http.middlewares=devocional-redirect
+        - traefik.http.middlewares.devocional-redirect.redirectscheme.scheme=https
+        - traefik.http.middlewares.devocional-redirect.redirectscheme.permanent=true
+        # Service
         - traefik.http.services.devocional.loadbalancer.server.port=3000
         - traefik.http.services.devocional.loadbalancer.passHostHeader=true
+        # Headers
         - traefik.http.middlewares.devocional-headers.headers.customrequestheaders.X-Forwarded-Proto=https
-        - traefik.http.routers.devocional.middlewares=devocional-headers
       update_config:
         parallelism: 1
         delay: 10s

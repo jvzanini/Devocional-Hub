@@ -32,7 +32,7 @@ export function PipelineButton() {
         setMessage(null);
       }, 3000);
     } catch {
-      setMessage({ text: "Erro de conex\u00e3o", type: "error" });
+      setMessage({ text: "Erro de conexão", type: "error" });
     } finally {
       setLoading(false);
     }

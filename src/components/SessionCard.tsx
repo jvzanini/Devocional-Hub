@@ -25,7 +25,7 @@ interface SessionCardProps {
 }
 
 const statusConfig: Record<PipelineStatus, { label: string; variant: "success" | "error" | "warning" | "info"; dot: string }> = {
-  COMPLETED: { label: "Conclu\u00eddo", variant: "success", dot: "bg-[var(--color-success)]" },
+  COMPLETED: { label: "Concluído", variant: "success", dot: "bg-[var(--color-success)]" },
   ERROR: { label: "Erro", variant: "error", dot: "bg-[var(--color-error)]" },
   RUNNING: { label: "Processando", variant: "warning", dot: "bg-[var(--color-warning)] animate-pulse-subtle" },
   PENDING: { label: "Pendente", variant: "info", dot: "bg-[var(--color-info)]" },
@@ -67,7 +67,7 @@ export function SessionCard({ session }: SessionCardProps) {
 
           {/* Title */}
           <h3 className="font-semibold text-[var(--color-text)] text-[15px] leading-snug mb-1 group-hover:text-[var(--color-primary)] transition-colors duration-200">
-            {session.chapterRef || "Cap\u00edtulo n\u00e3o identificado"}
+            {session.chapterRef || "Capítulo não identificado"}
           </h3>
 
           {/* Summary */}
@@ -96,7 +96,7 @@ export function SessionCard({ session }: SessionCardProps) {
               {hasInfographic && (
                 <span className="inline-flex items-center gap-1 text-[11px] bg-orange-50 text-orange-600 px-2 py-0.5 rounded-md font-medium border border-orange-200">
                   <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5" /></svg>
-                  Infogr\u00e1fico
+                  Infográfico
                 </span>
               )}
               {docCount > 0 && !hasSlides && !hasInfographic && (

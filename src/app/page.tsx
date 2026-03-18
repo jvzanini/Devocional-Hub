@@ -39,7 +39,7 @@ export default async function DashboardPage() {
 
   const completed = sessions.filter((s) => s.status === "COMPLETED").length;
   const running = sessions.filter((s) => s.status === "RUNNING").length;
-  const firstName = session.user?.name?.split(" ")[0] || "usu\u00e1rio";
+  const firstName = session.user?.name?.split(" ")[0] || "usuário";
 
   return (
     <div className="min-h-dvh bg-[var(--color-bg)]">
@@ -54,7 +54,7 @@ export default async function DashboardPage() {
             </div>
             <div>
               <h1 className="font-bold text-[var(--color-text)] text-sm leading-none">DevocionalHub</h1>
-              <p className="text-[11px] text-[var(--color-text-muted)] mt-0.5">Ol\u00e1, {firstName}</p>
+              <p className="text-[11px] text-[var(--color-text-muted)] mt-0.5">Olá, {firstName}</p>
             </div>
           </div>
 
@@ -80,7 +80,7 @@ export default async function DashboardPage() {
         <div className="grid grid-cols-3 gap-3 mb-8">
           {[
             { value: sessions.length, label: "Devocionais", color: "text-[var(--color-text)]" },
-            { value: completed, label: "Conclu\u00eddos", color: "text-[var(--color-success)]" },
+            { value: completed, label: "Concluídos", color: "text-[var(--color-success)]" },
             { value: running, label: "Processando", color: running > 0 ? "text-[var(--color-warning)]" : "text-[var(--color-text-muted)]" },
           ].map((stat) => (
             <div key={stat.label} className="bg-[var(--color-card)] rounded-[var(--radius-md)] border border-[var(--color-border)] p-4 text-center" style={{ boxShadow: "var(--shadow-sm)" }}>
@@ -113,7 +113,7 @@ export default async function DashboardPage() {
             </div>
             <p className="font-medium text-[var(--color-text-secondary)] mb-1">Nenhum devocional ainda</p>
             <p className="text-sm text-[var(--color-text-muted)]">
-              Clique em &quot;Executar&quot; para processar a \u00faltima grava\u00e7\u00e3o do Zoom
+              Clique em &quot;Executar&quot; para processar a última gravação do Zoom
             </p>
           </div>
         ) : (

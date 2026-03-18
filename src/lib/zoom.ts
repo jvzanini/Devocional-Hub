@@ -1,7 +1,7 @@
 /**
- * Zoom API v2 client \u2014 Server-to-Server OAuth
- * Busca grava\u00e7\u00f5es em nuvem (cloud) e tenta m\u00faltiplos endpoints
- * para maximizar a chance de encontrar a grava\u00e7\u00e3o.
+ * Zoom API v2 client — Server-to-Server OAuth
+ * Busca gravações em nuvem (cloud) e tenta múltiplos endpoints
+ * para maximizar a chance de encontrar a gravação.
  */
 
 interface ZoomTokenResponse {
@@ -46,7 +46,7 @@ async function getAccessToken(): Promise<string> {
 
   const { ZOOM_ACCOUNT_ID, ZOOM_CLIENT_ID, ZOOM_CLIENT_SECRET } = process.env;
   if (!ZOOM_ACCOUNT_ID || !ZOOM_CLIENT_ID || !ZOOM_CLIENT_SECRET) {
-    throw new Error("Credenciais Zoom n\u00e3o configuradas (ZOOM_ACCOUNT_ID, ZOOM_CLIENT_ID, ZOOM_CLIENT_SECRET)");
+    throw new Error("Credenciais Zoom não configuradas (ZOOM_ACCOUNT_ID, ZOOM_CLIENT_ID, ZOOM_CLIENT_SECRET)");
   }
 
   const credentials = Buffer.from(`${ZOOM_CLIENT_ID}:${ZOOM_CLIENT_SECRET}`).toString("base64");
@@ -102,10 +102,10 @@ async function zoomFetchOrThrow(path: string): Promise<unknown> {
 }
 
 /**
- * Busca grava\u00e7\u00f5es usando m\u00faltiplas estrat\u00e9gias:
- * 1. /users/me/recordings (todos os recordings do usu\u00e1rio, filtrado por meeting ID)
- * 2. /meetings/{id}/recordings (endpoint direto, pode n\u00e3o funcionar para recorrentes)
- * 3. Busca sem filtro de meeting ID (pega qualquer grava\u00e7\u00e3o recente)
+ * Busca gravações usando múltiplas estratégias:
+ * 1. /users/me/recordings (todos os recordings do usuário, filtrado por meeting ID)
+ * 2. /meetings/{id}/recordings (endpoint direto, pode não funcionar para recorrentes)
+ * 3. Busca sem filtro de meeting ID (pega qualquer gravação recente)
  */
 export async function getMeetingRecordings(meetingId: string): Promise<ZoomRecording[]> {
   const to = new Date();
@@ -114,33 +114,33 @@ export async function getMeetingRecordings(meetingId: string): Promise<ZoomRecor
   const fromStr = from.toISOString().split("T")[0];
   const toStr = to.toISOString().split("T")[0];
 
-  // Estrat\u00e9gia 1: /users/me/recordings (mais confi\u00e1vel)
-  console.log(`[Zoom] Buscando grava\u00e7\u00f5es via /users/me/recordings (${fromStr} a ${toStr})...`);
+  // Estratégia 1: /users/me/recordings (mais confiável)
+  console.log(`[Zoom] Buscando gravações via /users/me/recordings (${fromStr} a ${toStr})...`);
   const userResult = await zoomFetch(`/users/me/recordings?from=${fromStr}&to=${toStr}&page_size=100`);
 
   if (userResult.ok) {
     const meetings = (userResult.data as { meetings?: ZoomRecording[] }).meetings || [];
-    console.log(`[Zoom] Encontradas ${meetings.length} grava\u00e7\u00f5es totais do usu\u00e1rio`);
+    console.log(`[Zoom] Encontradas ${meetings.length} gravações totais do usuário`);
 
     // Filtra pelo meeting ID
     const filtered = meetings.filter((m) => String(m.id) === String(meetingId));
-    console.log(`[Zoom] ${filtered.length} grava\u00e7\u00f5es da reuni\u00e3o ${meetingId}`);
+    console.log(`[Zoom] ${filtered.length} gravações da reunião ${meetingId}`);
 
     if (filtered.length > 0) {
       return filtered;
     }
 
-    // Se n\u00e3o encontrou com filtro, retorna todas (talvez o ID esteja diferente)
+    // Se não encontrou com filtro, retorna todas (talvez o ID esteja diferente)
     if (meetings.length > 0) {
-      console.log(`[Zoom] Meeting ID ${meetingId} n\u00e3o encontrado. IDs dispon\u00edveis: ${meetings.map(m => m.id).join(", ")}`);
-      // Retorna todas para que o usu\u00e1rio veja o que est\u00e1 dispon\u00edvel
+      console.log(`[Zoom] Meeting ID ${meetingId} não encontrado. IDs disponíveis: ${meetings.map(m => m.id).join(", ")}`);
+      // Retorna todas para que o usuário veja o que está disponível
       return meetings;
     }
   } else {
     console.log(`[Zoom] /users/me/recordings falhou: ${JSON.stringify(userResult.data)}`);
   }
 
-  // Estrat\u00e9gia 2: /meetings/{id}/recordings (endpoint direto)
+  // Estratégia 2: /meetings/{id}/recordings (endpoint direto)
   console.log(`[Zoom] Tentando /meetings/${meetingId}/recordings...`);
   const meetingResult = await zoomFetch(`/meetings/${meetingId}/recordings`);
 
@@ -156,12 +156,12 @@ export async function getMeetingRecordings(meetingId: string): Promise<ZoomRecor
     };
 
     if (data.meetings && data.meetings.length > 0) {
-      console.log(`[Zoom] Encontradas ${data.meetings.length} grava\u00e7\u00f5es via endpoint direto`);
+      console.log(`[Zoom] Encontradas ${data.meetings.length} gravações via endpoint direto`);
       return data.meetings;
     }
 
     if (data.recording_files && data.recording_files.length > 0) {
-      console.log(`[Zoom] Encontrada grava\u00e7\u00e3o direta com ${data.recording_files.length} arquivos`);
+      console.log(`[Zoom] Encontrada gravação direta com ${data.recording_files.length} arquivos`);
       return [{
         id: String(data.id || meetingId),
         uuid: data.uuid || "",
@@ -175,7 +175,7 @@ export async function getMeetingRecordings(meetingId: string): Promise<ZoomRecor
     console.log(`[Zoom] /meetings/${meetingId}/recordings falhou: ${JSON.stringify(meetingResult.data)}`);
   }
 
-  // Estrat\u00e9gia 3: Buscar com range de data maior (60 dias)
+  // Estratégia 3: Buscar com range de data maior (60 dias)
   console.log("[Zoom] Tentando com range de 60 dias...");
   const from60 = new Date();
   from60.setDate(from60.getDate() - 60);
@@ -185,7 +185,7 @@ export async function getMeetingRecordings(meetingId: string): Promise<ZoomRecor
   if (widerResult.ok) {
     const meetings = (widerResult.data as { meetings?: ZoomRecording[] }).meetings || [];
     if (meetings.length > 0) {
-      console.log(`[Zoom] Encontradas ${meetings.length} grava\u00e7\u00f5es com range de 60 dias`);
+      console.log(`[Zoom] Encontradas ${meetings.length} gravações com range de 60 dias`);
       return meetings;
     }
   }
@@ -194,18 +194,18 @@ export async function getMeetingRecordings(meetingId: string): Promise<ZoomRecor
 }
 
 /**
- * Pega a \u00faltima grava\u00e7\u00e3o (mais recente)
+ * Pega a última gravação (mais recente)
  */
 export async function getLatestRecording(meetingId: string): Promise<ZoomRecording | null> {
   const recordings = await getMeetingRecordings(meetingId);
 
   if (!recordings.length) {
     throw new Error(
-      `Nenhuma grava\u00e7\u00e3o encontrada para a reuni\u00e3o ${meetingId}. ` +
-      "Verifique se: (1) A grava\u00e7\u00e3o em nuvem est\u00e1 ativada no Zoom, " +
-      "(2) Houve alguma reuni\u00e3o gravada nos \u00faltimos 60 dias, " +
-      "(3) As credenciais do app Zoom t\u00eam permiss\u00e3o de leitura de grava\u00e7\u00f5es. " +
-      "Nota: grava\u00e7\u00f5es locais (salvas no computador) n\u00e3o s\u00e3o acess\u00edveis via API."
+      `Nenhuma gravação encontrada para a reunião ${meetingId}. ` +
+      "Verifique se: (1) A gravação em nuvem está ativada no Zoom, " +
+      "(2) Houve alguma reunião gravada nos últimos 60 dias, " +
+      "(3) As credenciais do app Zoom têm permissão de leitura de gravações. " +
+      "Nota: gravações locais (salvas no computador) não são acessíveis via API."
     );
   }
 
@@ -214,7 +214,7 @@ export async function getLatestRecording(meetingId: string): Promise<ZoomRecordi
     (a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime()
   );
 
-  // Prioriza grava\u00e7\u00f5es que t\u00eam transcri\u00e7\u00e3o
+  // Prioriza gravações que têm transcrição
   const withTranscript = sorted.find((r) =>
     r.recording_files?.some(
       (f) => f.file_type === "TRANSCRIPT" || f.file_extension === "VTT"
@@ -222,24 +222,24 @@ export async function getLatestRecording(meetingId: string): Promise<ZoomRecordi
   );
 
   if (withTranscript) {
-    console.log(`[Zoom] Usando grava\u00e7\u00e3o com transcri\u00e7\u00e3o: ${withTranscript.start_time}`);
+    console.log(`[Zoom] Usando gravação com transcrição: ${withTranscript.start_time}`);
     return withTranscript;
   }
 
-  // Lista os tipos dispon\u00edveis para debug
+  // Lista os tipos disponíveis para debug
   const types = sorted[0].recording_files?.map(f => f.file_type).join(", ") || "nenhum";
   console.warn(
-    `[Zoom] Nenhuma grava\u00e7\u00e3o com transcri\u00e7\u00e3o VTT. ` +
+    `[Zoom] Nenhuma gravação com transcrição VTT. ` +
     `Usando mais recente (${sorted[0].start_time}). ` +
-    `Tipos dispon\u00edveis: ${types}. ` +
-    `Ative "Audio Transcript" nas configura\u00e7\u00f5es de grava\u00e7\u00e3o do Zoom.`
+    `Tipos disponíveis: ${types}. ` +
+    `Ative "Audio Transcript" nas configurações de gravação do Zoom.`
   );
 
   return sorted[0];
 }
 
 /**
- * Baixa o arquivo de transcri\u00e7\u00e3o (VTT) e converte para texto plano
+ * Baixa o arquivo de transcrição (VTT) e converte para texto plano
  */
 export async function downloadTranscript(recording: ZoomRecording): Promise<string> {
   const transcriptFile = recording.recording_files.find(
@@ -249,8 +249,8 @@ export async function downloadTranscript(recording: ZoomRecording): Promise<stri
   if (!transcriptFile) {
     const types = recording.recording_files.map(f => `${f.file_type}(${f.file_extension})`).join(", ");
     throw new Error(
-      `Transcri\u00e7\u00e3o VTT n\u00e3o encontrada nesta grava\u00e7\u00e3o. ` +
-      `Arquivos dispon\u00edveis: ${types || "nenhum"}. ` +
+      `Transcrição VTT não encontrada nesta gravação. ` +
+      `Arquivos disponíveis: ${types || "nenhum"}. ` +
       "Para corrigir: Zoom > Settings > Recording > ative 'Audio transcript'."
     );
   }
@@ -259,7 +259,7 @@ export async function downloadTranscript(recording: ZoomRecording): Promise<stri
   const response = await fetch(`${transcriptFile.download_url}?access_token=${token}`);
 
   if (!response.ok) {
-    throw new Error(`Falha ao baixar transcri\u00e7\u00e3o: ${response.status} ${response.statusText}`);
+    throw new Error(`Falha ao baixar transcrição: ${response.status} ${response.statusText}`);
   }
 
   const vttContent = await response.text();
@@ -290,7 +290,7 @@ function parseVttToText(vtt: string): string {
 }
 
 /**
- * Lista participantes de uma inst\u00e2ncia de reuni\u00e3o
+ * Lista participantes de uma instância de reunião
  */
 export async function getMeetingParticipants(meetingUuid: string): Promise<string[]> {
   try {

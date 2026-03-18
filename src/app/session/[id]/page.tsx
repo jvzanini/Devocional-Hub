@@ -7,15 +7,15 @@ import { Badge } from "@/components/ui/badge";
 import { DocType, PipelineStatus } from "@prisma/client";
 
 const DOC_LABELS: Record<DocType, { label: string; icon: string; color: string; bg: string; border: string }> = {
-  TRANSCRIPT_RAW: { label: "Transcri\u00e7\u00e3o Bruta", icon: "M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z", color: "text-[var(--color-text-secondary)]", bg: "bg-[var(--color-muted)]", border: "border-[var(--color-border)]" },
-  TRANSCRIPT_CLEAN: { label: "Transcri\u00e7\u00e3o Limpa", icon: "M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z", color: "text-[var(--color-info)]", bg: "bg-[var(--color-info-surface)]", border: "border-blue-200" },
-  BIBLE_TEXT: { label: "Texto B\u00edblico (NVI)", icon: "M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25", color: "text-[var(--color-primary)]", bg: "bg-[var(--color-primary-surface)]", border: "border-amber-200" },
-  INFOGRAPHIC: { label: "Infogr\u00e1fico", icon: "M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5", color: "text-orange-600", bg: "bg-orange-50", border: "border-orange-200" },
+  TRANSCRIPT_RAW: { label: "Transcrição Bruta", icon: "M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z", color: "text-[var(--color-text-secondary)]", bg: "bg-[var(--color-muted)]", border: "border-[var(--color-border)]" },
+  TRANSCRIPT_CLEAN: { label: "Transcrição Limpa", icon: "M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z", color: "text-[var(--color-info)]", bg: "bg-[var(--color-info-surface)]", border: "border-blue-200" },
+  BIBLE_TEXT: { label: "Texto Bíblico (NVI)", icon: "M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25", color: "text-[var(--color-primary)]", bg: "bg-[var(--color-primary-surface)]", border: "border-amber-200" },
+  INFOGRAPHIC: { label: "Infográfico", icon: "M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5", color: "text-orange-600", bg: "bg-orange-50", border: "border-orange-200" },
   SLIDES: { label: "Slides", icon: "M3.75 3v11.25A2.25 2.25 0 006 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0118 16.5h-2.25m-7.5 0h7.5m-7.5 0l-1 3m8.5-3l1 3", color: "text-[var(--color-accent)]", bg: "bg-[var(--color-accent-surface)]", border: "border-violet-200" },
 };
 
 const STATUS_CONFIG: Record<PipelineStatus, { label: string; variant: "success" | "error" | "warning" | "info" }> = {
-  COMPLETED: { label: "Conclu\u00eddo", variant: "success" },
+  COMPLETED: { label: "Concluído", variant: "success" },
   ERROR: { label: "Erro no pipeline", variant: "error" },
   RUNNING: { label: "Processando...", variant: "warning" },
   PENDING: { label: "Pendente", variant: "info" },
@@ -150,15 +150,15 @@ export default async function SessionPage({ params }: { params: Promise<{ id: st
 
         {/* Metadata */}
         <section className="bg-[var(--color-card)] border border-[var(--color-border)] rounded-[var(--radius-lg)] p-5 animate-slide-up" style={{ boxShadow: "var(--shadow-sm)", animationDelay: "120ms" }}>
-          <h2 className="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-3">Informa\u00e7\u00f5es</h2>
+          <h2 className="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-3">Informações</h2>
           <dl className="space-y-2.5 text-sm">
             <div className="flex justify-between items-center">
-              <dt className="text-[var(--color-text-muted)]">Reuni\u00e3o Zoom</dt>
+              <dt className="text-[var(--color-text-muted)]">Reunião Zoom</dt>
               <dd className="text-[var(--color-text-secondary)] font-mono text-xs bg-[var(--color-bg-subtle)] px-2 py-0.5 rounded-[var(--radius-sm)]">{devSession.zoomMeetingId}</dd>
             </div>
             <div className="flex justify-between items-center">
-              <dt className="text-[var(--color-text-muted)]">Grava\u00e7\u00e3o</dt>
-              <dd className="text-[var(--color-text-secondary)] font-mono text-xs bg-[var(--color-bg-subtle)] px-2 py-0.5 rounded-[var(--radius-sm)]">{devSession.zoomRecordingId || "\u2014"}</dd>
+              <dt className="text-[var(--color-text-muted)]">Gravação</dt>
+              <dd className="text-[var(--color-text-secondary)] font-mono text-xs bg-[var(--color-bg-subtle)] px-2 py-0.5 rounded-[var(--radius-sm)]">{devSession.zoomRecordingId || "—"}</dd>
             </div>
             <div className="flex justify-between items-center">
               <dt className="text-[var(--color-text-muted)]">Criado em</dt>
