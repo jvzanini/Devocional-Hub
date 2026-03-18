@@ -1,0 +1,80 @@
+version: "3.7"
+
+services:
+  devocional_hub:
+    image: ghcr.io/jvzanini/devocional-hub:latest
+    hostname: "{{.Service.Name}}.{{.Task.Slot}}"
+    networks:
+      - rede_nexusAI
+    environment:
+      # ── Banco de Dados (reutiliza o postgres existente) ──────
+      - DATABASE_URL=postgresql://postgres:nexus.AI@360@postgres:5432/devocional_hub
+
+      # ── Auth ─────────────────────────────────────────────────
+      - NEXTAUTH_SECRET=devocional-hub-secret-nexusai360-2024
+      - NEXTAUTH_URL=https://devocional.nexusai360.com
+
+      # ── Zoom ─────────────────────────────────────────────────
+      - ZOOM_ACCOUNT_ID=51vc4kXaQgumFizGGpFDgg
+      - ZOOM_CLIENT_ID=5YA9ML5tTUW5Wml9GiiWTg
+      - ZOOM_CLIENT_SECRET=YDFkbR227SGt5op7x0BF1wpG1zMjEXg6
+      - ZOOM_RECURRING_MEETING_ID=89803817919
+
+      # ── Gemini (gratuito) ────────────────────────────────────
+      - GEMINI_API_KEY=AIzaSyD6jKWTVDUbF4NJ4OygKvm8AtSx8elUEDQ
+
+      # ── Bíblia NVI ───────────────────────────────────────────
+      - BIBLE_API_KEY=GWhLJusrh2UJdt0GpKYwa
+      - BIBLE_NVI_ID=a556c5305ee15c3f-01
+
+      # ── Storage local ────────────────────────────────────────
+      - STORAGE_PATH=/app/data
+
+      # ── Google (Playwright / NotebookLM) ─────────────────────
+      - GOOGLE_EMAIL=joaovtzanini@gmail.com
+      - GOOGLE_PASSWORD=C@misa107
+
+      # ── App ──────────────────────────────────────────────────
+      - NODE_ENV=production
+      - TZ=America/Sao_Paulo
+
+    volumes:
+      - devocional_data:/app/data
+      - devocional_playwright:/app/playwright-state
+
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      resources:
+        limits:
+          cpus: "1"
+          memory: 1024M
+      labels:
+        - traefik.enable=true
+        - traefik.http.routers.devocional.rule=Host(`devocional.nexusai360.com`)
+        - traefik.http.routers.devocional.entrypoints=websecure
+        - traefik.http.routers.devocional.tls=true
+        - traefik.http.routers.devocional.tls.certresolver=letsencryptresolver
+        - traefik.http.services.devocional.loadbalancer.server.port=3000
+        - traefik.http.services.devocional.loadbalancer.passHostHeader=true
+        - traefik.http.middlewares.devocional-headers.headers.customrequestheaders.X-Forwarded-Proto=https
+        - traefik.http.routers.devocional.middlewares=devocional-headers
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+        failure_action: rollback
+
+volumes:
+  devocional_data:
+    driver: local
+  devocional_playwright:
+    driver: local
+
+networks:
+  rede_nexusAI:
+    external: true
+    name: rede_nexusAI
