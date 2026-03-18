@@ -202,9 +202,16 @@ export async function runNotebookLMAutomation(
   const downloadDir = path.join(os.tmpdir(), `devocional-${sessionId}`);
   fs.mkdirSync(downloadDir, { recursive: true });
 
+  const executablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH || undefined;
   const browser = await chromium.launch({
     headless: true,
-    args: ["--no-sandbox", "--disable-setuid-sandbox"],
+    executablePath,
+    args: [
+      "--no-sandbox",
+      "--disable-setuid-sandbox",
+      "--disable-dev-shm-usage",
+      "--disable-gpu",
+    ],
   });
 
   let slidesPath: string | null = null;

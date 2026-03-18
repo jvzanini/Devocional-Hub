@@ -3,20 +3,14 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-interface PipelineButtonProps {
-  skipNotebookLM?: boolean;
-}
-
-export function PipelineButton({ skipNotebookLM = false }: PipelineButtonProps) {
+export function PipelineButton() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);
 
-  async function handleRun() {
-    if (!confirm("Iniciar pipeline? Isso irá buscar a última gravação do Zoom.")) return;
-
+  async function handleRun(skipNotebookLM: boolean) {
     setLoading(true);
-    setMessage("");
+    setMessage(null);
 
     try {
       const response = await fetch("/api/pipeline/run", {
@@ -28,28 +22,28 @@ export function PipelineButton({ skipNotebookLM = false }: PipelineButtonProps) 
       const data = await response.json();
 
       if (!response.ok) {
-        setMessage(`Erro: ${data.error}`);
+        setMessage({ text: data.error || "Erro ao executar", type: "error" });
         return;
       }
 
-      setMessage(`Pipeline iniciado! Sessão: ${data.sessionId}`);
+      setMessage({ text: "Pipeline iniciado com sucesso!", type: "success" });
       setTimeout(() => {
         router.refresh();
-        setMessage("");
+        setMessage(null);
       }, 3000);
     } catch {
-      setMessage("Erro de rede. Tente novamente.");
+      setMessage({ text: "Erro de conexao. Tente novamente.", type: "error" });
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex items-center gap-2">
       <button
-        onClick={handleRun}
+        onClick={() => handleRun(false)}
         disabled={loading}
-        className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        className="inline-flex items-center gap-2 bg-gradient-to-r from-amber-600 to-amber-700 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:from-amber-700 hover:to-amber-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md shadow-amber-600/20 hover:shadow-lg hover:shadow-amber-600/30 active:scale-[0.98]"
       >
         {loading ? (
           <>
@@ -61,9 +55,8 @@ export function PipelineButton({ skipNotebookLM = false }: PipelineButtonProps) 
           </>
         ) : (
           <>
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 010 1.971l-11.54 6.347a1.125 1.125 0 01-1.667-.985V5.653z" />
             </svg>
             Executar Pipeline
           </>
@@ -71,8 +64,12 @@ export function PipelineButton({ skipNotebookLM = false }: PipelineButtonProps) 
       </button>
 
       {message && (
-        <span className={`text-sm ${message.startsWith("Erro") ? "text-red-600" : "text-green-600"}`}>
-          {message}
+        <span className={`text-xs font-medium px-3 py-1.5 rounded-lg animate-fade-in ${
+          message.type === "error"
+            ? "bg-red-50 text-red-600 border border-red-200"
+            : "bg-emerald-50 text-emerald-600 border border-emerald-200"
+        }`}>
+          {message.text}
         </span>
       )}
     </div>
