@@ -1,0 +1,83 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: devocional_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-devocional}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-devocional123}
+      POSTGRES_DB: ${POSTGRES_DB:-devocional_hub}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - devocional_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-devocional}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    container_name: devocional_app
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-devocional}:${POSTGRES_PASSWORD:-devocional123}@postgres:5432/${POSTGRES_DB:-devocional_hub}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+      NEXTAUTH_URL: ${NEXTAUTH_URL}
+      ZOOM_ACCOUNT_ID: ${ZOOM_ACCOUNT_ID}
+      ZOOM_CLIENT_ID: ${ZOOM_CLIENT_ID}
+      ZOOM_CLIENT_SECRET: ${ZOOM_CLIENT_SECRET}
+      ZOOM_RECURRING_MEETING_ID: ${ZOOM_RECURRING_MEETING_ID}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      BIBLE_API_KEY: ${BIBLE_API_KEY}
+      BIBLE_NVI_ID: ${BIBLE_NVI_ID:-a556c5305ee15c3f-01}
+      STORAGE_PATH: /app/data
+      GOOGLE_EMAIL: ${GOOGLE_EMAIL}
+      GOOGLE_PASSWORD: ${GOOGLE_PASSWORD}
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - app_data:/app/data
+      - playwright_state:/app/playwright-state
+    networks:
+      - devocional_net
+
+  nginx:
+    image: nginx:alpine
+    container_name: devocional_nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - certbot_www:/var/www/certbot
+      - certbot_conf:/etc/letsencrypt
+    depends_on:
+      - app
+    networks:
+      - devocional_net
+
+  certbot:
+    image: certbot/certbot
+    volumes:
+      - certbot_www:/var/www/certbot
+      - certbot_conf:/etc/letsencrypt
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+
+volumes:
+  postgres_data:
+  app_data:
+  playwright_state:
+  certbot_www:
+  certbot_conf:
+
+networks:
+  devocional_net:
+    driver: bridge

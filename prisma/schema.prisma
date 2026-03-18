@@ -1,0 +1,57 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String
+  createdAt DateTime @default(now())
+}
+
+model Session {
+  id              String         @id @default(cuid())
+  date            DateTime
+  zoomMeetingId   String
+  zoomRecordingId String
+  chapterRef      String         @default("")
+  summary         String         @default("") @db.Text
+  participants    String[]
+  status          PipelineStatus @default(PENDING)
+  errorMessage    String?
+  documents       Document[]
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+}
+
+model Document {
+  id          String   @id @default(cuid())
+  sessionId   String
+  session     Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  type        DocType
+  fileName    String
+  storagePath String
+  fileSize    Int?
+  createdAt   DateTime @default(now())
+}
+
+enum DocType {
+  TRANSCRIPT_RAW
+  TRANSCRIPT_CLEAN
+  BIBLE_TEXT
+  INFOGRAPHIC
+  SLIDES
+}
+
+enum PipelineStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  ERROR
+}
