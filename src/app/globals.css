@@ -1,27 +1,61 @@
 @import "tailwindcss";
 
 @theme inline {
-  --color-amber-50: #fffbeb;
-  --color-amber-100: #fef3c7;
-  --color-amber-200: #fde68a;
-  --color-amber-300: #fcd34d;
-  --color-amber-400: #fbbf24;
-  --color-amber-500: #f59e0b;
-  --color-amber-600: #d97706;
-  --color-amber-700: #b45309;
-  --color-amber-800: #92400e;
-  --color-amber-900: #78350f;
-  --color-stone-50: #fafaf9;
-  --color-stone-100: #f5f5f4;
-  --color-stone-200: #e7e5e4;
-  --color-stone-300: #d6d3d1;
-  --color-stone-400: #a8a29e;
-  --color-stone-500: #78716c;
-  --color-stone-600: #57534e;
-  --color-stone-700: #44403c;
-  --color-stone-800: #292524;
-  --color-stone-900: #1c1917;
+  /* Design System - DevocionalHub */
+  /* Based on ui-ux-pro-max: Church/Religious + Bookmark warm palette */
+
+  /* Primary - Amber/Gold (warm spiritual) */
+  --color-primary: #B45309;
+  --color-primary-light: #D97706;
+  --color-primary-lighter: #F59E0B;
+  --color-primary-surface: #FEF3C7;
+
+  /* Accent - Deep Purple (spiritual) */
+  --color-accent: #7C3AED;
+  --color-accent-light: #A78BFA;
+  --color-accent-surface: #EDE9FE;
+
+  /* Semantic */
+  --color-success: #059669;
+  --color-success-surface: #ECFDF5;
+  --color-error: #DC2626;
+  --color-error-surface: #FEF2F2;
+  --color-warning: #D97706;
+  --color-warning-surface: #FFFBEB;
+  --color-info: #2563EB;
+  --color-info-surface: #EFF6FF;
+
+  /* Surfaces */
+  --color-bg: #FEFDFB;
+  --color-bg-subtle: #F8F5F1;
+  --color-card: #FFFFFF;
+  --color-card-hover: #FEFAF6;
+  --color-muted: #F5F0EB;
+  --color-border: #E8E0D8;
+  --color-border-light: #F0EBE5;
+
+  /* Text */
+  --color-text: #1C1917;
+  --color-text-secondary: #57534E;
+  --color-text-muted: #A8A29E;
+  --color-text-inverse: #FFFFFF;
+
+  /* Typography */
   --font-sans: var(--font-geist);
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px 0 rgba(28, 25, 23, 0.04);
+  --shadow-md: 0 4px 6px -1px rgba(28, 25, 23, 0.06), 0 2px 4px -2px rgba(28, 25, 23, 0.04);
+  --shadow-lg: 0 10px 15px -3px rgba(28, 25, 23, 0.06), 0 4px 6px -4px rgba(28, 25, 23, 0.04);
+  --shadow-card: 0 1px 3px 0 rgba(28, 25, 23, 0.04), 0 1px 2px -1px rgba(28, 25, 23, 0.04);
+  --shadow-card-hover: 0 8px 24px -4px rgba(180, 83, 9, 0.08), 0 4px 8px -4px rgba(28, 25, 23, 0.04);
+
+  /* Radius */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-full: 9999px;
 }
 
 * {
@@ -31,48 +65,61 @@
 }
 
 body {
-  background: #fafaf9;
-  color: #1c1917;
+  background: var(--color-bg);
+  color: var(--color-text);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Scrollbar sutil */
-::-webkit-scrollbar {
-  width: 6px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: #d6d3d1;
-  border-radius: 3px;
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 3px; }
+
+/* Focus ring - Accessibility */
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
 }
 
-/* Animações */
+/* Animations - 150-300ms per UX guidelines */
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(8px); }
+  from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes slideUp {
-  from { opacity: 0; transform: translateY(16px); }
+  from { opacity: 0; transform: translateY(12px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
-@keyframes pulse-slow {
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes pulseSubtle {
   0%, 100% { opacity: 1; }
-  50% { opacity: 0.6; }
+  50% { opacity: 0.7; }
 }
 
-.animate-fade-in {
-  animation: fadeIn 0.3s ease-out;
+.animate-fade-in { animation: fadeIn 200ms ease-out both; }
+.animate-slide-up { animation: slideUp 250ms ease-out both; }
+.animate-shimmer {
+  background: linear-gradient(90deg, var(--color-muted) 25%, var(--color-bg-subtle) 50%, var(--color-muted) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
 }
+.animate-pulse-subtle { animation: pulseSubtle 2s ease-in-out infinite; }
 
-.animate-slide-up {
-  animation: slideUp 0.4s ease-out;
-}
-
-.animate-pulse-slow {
-  animation: pulse-slow 2s ease-in-out infinite;
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in,
+  .animate-slide-up,
+  .animate-shimmer,
+  .animate-pulse-subtle {
+    animation: none !important;
+    transition: none !important;
+  }
 }

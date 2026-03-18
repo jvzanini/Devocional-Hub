@@ -8,7 +8,7 @@ export function PipelineButton() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);
 
-  async function handleRun(skipNotebookLM: boolean) {
+  async function handleRun() {
     setLoading(true);
     setMessage(null);
 
@@ -16,7 +16,7 @@ export function PipelineButton() {
       const response = await fetch("/api/pipeline/run", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ skipNotebookLM }),
+        body: JSON.stringify({ skipNotebookLM: false }),
       });
 
       const data = await response.json();
@@ -26,13 +26,13 @@ export function PipelineButton() {
         return;
       }
 
-      setMessage({ text: "Pipeline iniciado com sucesso!", type: "success" });
+      setMessage({ text: "Pipeline iniciado!", type: "success" });
       setTimeout(() => {
         router.refresh();
         setMessage(null);
       }, 3000);
     } catch {
-      setMessage({ text: "Erro de conexao. Tente novamente.", type: "error" });
+      setMessage({ text: "Erro de conex\u00e3o", type: "error" });
     } finally {
       setLoading(false);
     }
@@ -41,13 +41,15 @@ export function PipelineButton() {
   return (
     <div className="flex items-center gap-2">
       <button
-        onClick={() => handleRun(false)}
+        onClick={handleRun}
         disabled={loading}
-        className="inline-flex items-center gap-2 bg-gradient-to-r from-amber-600 to-amber-700 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:from-amber-700 hover:to-amber-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md shadow-amber-600/20 hover:shadow-lg hover:shadow-amber-600/30 active:scale-[0.98]"
+        aria-label="Executar pipeline de processamento"
+        className="inline-flex items-center gap-2 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-primary-light)] text-white px-4 py-2 rounded-[var(--radius-md)] text-sm font-semibold hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 cursor-pointer active:scale-[0.98]"
+        style={{ boxShadow: "0 4px 12px -2px rgba(180, 83, 9, 0.20)" }}
       >
         {loading ? (
           <>
-            <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+            <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24" aria-hidden="true">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
             </svg>
@@ -55,20 +57,23 @@ export function PipelineButton() {
           </>
         ) : (
           <>
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 010 1.971l-11.54 6.347a1.125 1.125 0 01-1.667-.985V5.653z" />
             </svg>
-            Executar Pipeline
+            Executar
           </>
         )}
       </button>
 
       {message && (
-        <span className={`text-xs font-medium px-3 py-1.5 rounded-lg animate-fade-in ${
-          message.type === "error"
-            ? "bg-red-50 text-red-600 border border-red-200"
-            : "bg-emerald-50 text-emerald-600 border border-emerald-200"
-        }`}>
+        <span
+          role="status"
+          className={`text-xs font-medium px-2.5 py-1 rounded-[var(--radius-sm)] animate-fade-in ${
+            message.type === "error"
+              ? "bg-[var(--color-error-surface)] text-[var(--color-error)] border border-red-200"
+              : "bg-[var(--color-success-surface)] text-[var(--color-success)] border border-emerald-200"
+          }`}
+        >
           {message.text}
         </span>
       )}
