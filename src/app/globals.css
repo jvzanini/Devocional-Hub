@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+/* ============================
+   DevocionalHub - Design System
+   CSS hardcoded (não depende de variáveis Tailwind)
+   ============================ */
+
 * {
   margin: 0;
   padding: 0;
@@ -7,27 +12,235 @@
 }
 
 body {
-  background: #faf9f7;
+  background-color: #f5f3f0;
   color: #1c1917;
+  font-family: system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: translateY(0); }
+/* --- Page backgrounds --- */
+.page-bg {
+  background-color: #f5f3f0;
+  min-height: 100vh;
 }
 
-@keyframes slideUp {
-  from { opacity: 0; transform: translateY(12px); }
-  to { opacity: 1; transform: translateY(0); }
+/* --- Cards --- */
+.card {
+  background-color: #ffffff;
+  border: 1px solid #d6d3d1;
+  border-radius: 16px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
 }
 
+.card-hover:hover {
+  box-shadow: 0 10px 25px rgba(180,83,9,0.10), 0 4px 10px rgba(0,0,0,0.06);
+  border-color: #f59e0b;
+}
+
+/* --- Header --- */
+.app-header {
+  background-color: #ffffff;
+  border-bottom: 1px solid #d6d3d1;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+/* --- Buttons --- */
+.btn-primary {
+  background-color: #d97706;
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 14px;
+  padding: 8px 16px;
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 12px rgba(217,119,6,0.25);
+  transition: background-color 0.15s;
+}
+
+.btn-primary:hover {
+  background-color: #b45309;
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* --- Inputs --- */
+.input-field {
+  width: 100%;
+  padding: 10px 14px;
+  background-color: #fafaf9;
+  border: 1px solid #d6d3d1;
+  border-radius: 12px;
+  font-size: 14px;
+  color: #1c1917;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.input-field::placeholder {
+  color: #a8a29e;
+}
+
+.input-field:focus {
+  border-color: #d97706;
+  box-shadow: 0 0 0 3px rgba(217,119,6,0.15);
+}
+
+/* --- Logo icon --- */
+.logo-icon {
+  width: 56px;
+  height: 56px;
+  background: linear-gradient(135deg, #d97706, #b45309);
+  border-radius: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 20px rgba(180,83,9,0.25);
+}
+
+.logo-icon-sm {
+  width: 36px;
+  height: 36px;
+  background: linear-gradient(135deg, #d97706, #b45309);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(180,83,9,0.2);
+}
+
+/* --- Stat cards --- */
+.stat-card {
+  background-color: #ffffff;
+  border: 1px solid #d6d3d1;
+  border-radius: 12px;
+  padding: 16px;
+  text-align: center;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+
+/* --- Session card --- */
+.session-card {
+  background-color: #ffffff;
+  border: 1px solid #d6d3d1;
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  transition: box-shadow 0.2s, border-color 0.2s;
+  display: flex;
+  gap: 16px;
+}
+
+.session-card:hover {
+  box-shadow: 0 8px 24px rgba(180,83,9,0.10), 0 4px 8px rgba(0,0,0,0.05);
+  border-color: #fbbf24;
+}
+
+/* --- Badge --- */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid;
+}
+
+.badge-success { background-color: #ecfdf5; color: #059669; border-color: #a7f3d0; }
+.badge-error { background-color: #fef2f2; color: #dc2626; border-color: #fecaca; }
+.badge-warning { background-color: #fffbeb; color: #d97706; border-color: #fde68a; }
+.badge-info { background-color: #eff6ff; color: #2563eb; border-color: #bfdbfe; }
+
+/* --- Section card --- */
+.section-card {
+  background-color: #ffffff;
+  border: 1px solid #d6d3d1;
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+
+/* --- File download row --- */
+.file-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid;
+  transition: opacity 0.15s;
+  cursor: pointer;
+}
+
+.file-row:hover {
+  opacity: 0.85;
+}
+
+/* --- Error alert --- */
+.alert-error {
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 12px;
+  padding: 16px;
+}
+
+/* --- Participant chip --- */
+.participant-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  background-color: #f5f5f4;
+  color: #57534e;
+  padding: 4px 10px;
+  border-radius: 8px;
+  border: 1px solid #d6d3d1;
+  font-weight: 500;
+}
+
+/* --- Avatar circle --- */
+.avatar-sm {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #fbbf24, #d97706);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+  font-weight: 700;
+  color: #ffffff;
+  flex-shrink: 0;
+}
+
+/* --- Status dot --- */
+.dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.dot-success { background-color: #059669; }
+.dot-error { background-color: #dc2626; }
+.dot-warning { background-color: #d97706; }
+.dot-info { background-color: #2563eb; }
+.dot-line { width: 2px; flex: 1; border-radius: 1px; }
+
+/* --- Label --- */
+.label { display: block; font-size: 14px; font-weight: 500; color: #57534e; margin-bottom: 6px; }
+.section-title { font-size: 11px; font-weight: 600; color: #a8a29e; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; }
+.text-muted { color: #a8a29e; }
+.text-secondary { color: #57534e; }
+.text-error { color: #dc2626; }
+
+/* --- Animations --- */
+@keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 .anim-fade { animation: fadeIn 200ms ease-out both; }
-.anim-slide { animation: slideUp 250ms ease-out both; }
-.anim-pulse { animation: pulse 2s ease-in-out infinite; }
 
 @media (prefers-reduced-motion: reduce) {
-  .anim-fade, .anim-slide, .anim-pulse {
-    animation: none !important;
-  }
+  .anim-fade { animation: none !important; }
 }
