@@ -7,27 +7,55 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ─── Usuários ────────────────────────────────────────────────────────────
+
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  password  String
-  name      String
-  createdAt DateTime @default(now())
+  id              String    @id @default(cuid())
+  email           String    @unique
+  password        String?   // Nullable: convite pendente não tem senha ainda
+  name            String
+  role            UserRole  @default(MEMBER)
+  church          String    @default("")
+  team            String    @default("")
+  subTeam         String    @default("")
+  photoUrl        String?
+  inviteToken     String?   @unique
+  inviteExpiresAt DateTime?
+  createdAt       DateTime  @default(now())
 }
+
+enum UserRole {
+  ADMIN
+  MEMBER
+}
+
+// ─── Sessões (devocionais) ───────────────────────────────────────────────
 
 model Session {
   id              String         @id @default(cuid())
   date            DateTime
   zoomMeetingId   String
   zoomRecordingId String
+  zoomUuid        String         @default("")
   chapterRef      String         @default("")
   summary         String         @default("") @db.Text
-  participants    String[]
   status          PipelineStatus @default(PENDING)
   errorMessage    String?
   documents       Document[]
+  participants    Participant[]
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
+}
+
+model Participant {
+  id        String   @id @default(cuid())
+  sessionId String
+  session   Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  name      String
+  email     String?
+  joinTime  DateTime
+  leaveTime DateTime
+  duration  Int      // segundos
 }
 
 model Document {
@@ -54,4 +82,22 @@ enum PipelineStatus {
   RUNNING
   COMPLETED
   ERROR
+}
+
+// ─── Webhooks ────────────────────────────────────────────────────────────
+
+model Webhook {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  secret    String?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+// ─── Configurações ───────────────────────────────────────────────────────
+
+model AppSetting {
+  key   String @id
+  value String
 }

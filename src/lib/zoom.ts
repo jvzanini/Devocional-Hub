@@ -1,22 +1,9 @@
 /**
  * Zoom API v2 client — Server-to-Server OAuth
- * Busca TRANSCRIÇÕES e SUMMARIES (não gravações) via Zoom AI Companion
+ * Busca VTT transcripts e participantes detalhados via UUID
  */
 
-interface ZoomTokenResponse {
-  access_token: string;
-  token_type: string;
-  expires_in: number;
-}
-
-interface ZoomRecording {
-  id: string;
-  uuid: string;
-  topic: string;
-  start_time: string;
-  duration: number;
-  recording_files: ZoomRecordingFile[];
-}
+interface ZoomTokenResponse { access_token: string; token_type: string; expires_in: number; }
 
 interface ZoomRecordingFile {
   id: string;
@@ -27,31 +14,18 @@ interface ZoomRecordingFile {
   status: string;
 }
 
-interface ZoomParticipant {
-  id: string;
+export interface ZoomDetailedParticipant {
   name: string;
-  user_email: string;
-  join_time: string;
-  leave_time: string;
-  duration: number;
-}
-
-interface ZoomMeetingSummary {
-  meeting_id: string;
-  meeting_uuid: string;
-  meeting_topic: string;
-  meeting_start_time: string;
-  summary_content: string;
-  next_steps?: string[];
-  edited_summary?: string;
+  email: string;
+  joinTime: string;
+  leaveTime: string;
+  duration: number; // segundos
 }
 
 let cachedToken: { token: string; expiresAt: number } | null = null;
 
 async function getAccessToken(): Promise<string> {
-  if (cachedToken && Date.now() < cachedToken.expiresAt) {
-    return cachedToken.token;
-  }
+  if (cachedToken && Date.now() < cachedToken.expiresAt) return cachedToken.token;
 
   const { ZOOM_ACCOUNT_ID, ZOOM_CLIENT_ID, ZOOM_CLIENT_SECRET } = process.env;
   if (!ZOOM_ACCOUNT_ID || !ZOOM_CLIENT_ID || !ZOOM_CLIENT_SECRET) {
@@ -61,13 +35,10 @@ async function getAccessToken(): Promise<string> {
   const credentials = Buffer.from(`${ZOOM_CLIENT_ID}:${ZOOM_CLIENT_SECRET}`).toString("base64");
   const response = await fetch(
     `https://zoom.us/oauth/token?grant_type=account_credentials&account_id=${ZOOM_ACCOUNT_ID}`,
-    {
-      method: "POST",
-      headers: { Authorization: `Basic ${credentials}`, "Content-Type": "application/x-www-form-urlencoded" },
-    }
+    { method: "POST", headers: { Authorization: `Basic ${credentials}`, "Content-Type": "application/x-www-form-urlencoded" } }
   );
 
-  if (!response.ok) throw new Error(`Falha ao obter token Zoom: ${await response.text()}`);
+  if (!response.ok) throw new Error(`Token Zoom falhou: ${await response.text()}`);
   const data: ZoomTokenResponse = await response.json();
   cachedToken = { token: data.access_token, expiresAt: Date.now() + (data.expires_in - 60) * 1000 };
   return cachedToken.token;
@@ -82,157 +53,148 @@ async function zoomFetch(path: string): Promise<{ ok: boolean; data: unknown; st
   return { ok: response.ok, data, status: response.status };
 }
 
-// ─── TRANSCRIÇÕES (Meeting Summary via Zoom AI Companion) ────────────────
-
 /**
- * Busca o resumo/transcrição gerado pelo Zoom AI Companion
- * Endpoint: GET /meetings/{meetingId}/meeting_summary
- * Escopo necessário: meeting:read
+ * Encode UUID para uso em URLs da API Zoom
+ * UUIDs com / ou + precisam de duplo URL-encode
  */
-export async function getMeetingSummary(meetingId: string): Promise<ZoomMeetingSummary | null> {
-  console.log(`[Zoom] Buscando meeting summary para ${meetingId}...`);
-
-  // Estratégia 1a: /meetings/{id}/meeting_summary
-  const result1 = await zoomFetch(`/meetings/${meetingId}/meeting_summary`);
-  if (result1.ok && result1.data) {
-    console.log("[Zoom] Meeting summary encontrado via /meeting_summary!");
-    return result1.data as ZoomMeetingSummary;
+function encodeUuid(uuid: string): string {
+  if (uuid.includes("/") || uuid.includes("+")) {
+    return encodeURIComponent(encodeURIComponent(uuid));
   }
-  console.log(`[Zoom] /meeting_summary: ${result1.status}`);
-
-  // Estratégia 1b: /meetings/{id}/summaries (endpoint alternativo)
-  const result2 = await zoomFetch(`/meetings/${meetingId}/summaries`);
-  if (result2.ok && result2.data) {
-    console.log("[Zoom] Meeting summary encontrado via /summaries!");
-    const summaries = (result2.data as { summaries?: ZoomMeetingSummary[] })?.summaries;
-    if (summaries?.length) return summaries[0];
-    return result2.data as ZoomMeetingSummary;
-  }
-  console.log(`[Zoom] /summaries: ${result2.status}`);
-
-  // Estratégia 2: Listar summaries recentes do usuário
-  const listResult = await zoomFetch(`/users/me/meeting_summaries?from=${getDateStr(-30)}&to=${getDateStr(0)}&page_size=30`);
-  if (listResult.ok) {
-    const summaries = (listResult.data as { summaries?: ZoomMeetingSummary[] })?.summaries || [];
-    console.log(`[Zoom] ${summaries.length} summaries encontrados via /users/me/meeting_summaries`);
-
-    const match = summaries.find(s => String(s.meeting_id) === String(meetingId));
-    if (match) return match;
-
-    // Se não encontrou pelo ID, retorna o mais recente
-    if (summaries.length > 0) {
-      console.log(`[Zoom] IDs disponíveis: ${summaries.map(s => s.meeting_id).join(", ")}`);
-      return summaries[0]; // Mais recente
-    }
-  } else {
-    console.log(`[Zoom] /users/me/meeting_summaries: ${listResult.status} - ${JSON.stringify(listResult.data)}`);
-  }
-
-  return null;
+  return encodeURIComponent(uuid);
 }
 
-// ─── GRAVAÇÕES (fallback - cloud recordings com VTT transcript) ──────────
+// ─── VTT Transcript por UUID ─────────────────────────────────────────────
 
 /**
- * Busca gravações em nuvem (fallback se meeting summary não existir)
+ * Busca o arquivo VTT de transcrição de uma reunião pelo UUID
+ * Endpoint: GET /meetings/{uuid}/recordings
  */
-export async function getMeetingRecordings(meetingId: string): Promise<ZoomRecording[]> {
-  const fromStr = getDateStr(-60);
-  const toStr = getDateStr(0);
+export async function getVttTranscript(meetingUuid: string): Promise<string> {
+  const encoded = encodeUuid(meetingUuid);
+  console.log(`[Zoom] Buscando VTT para UUID: ${meetingUuid}...`);
 
-  // Estratégia 1: /users/me/recordings
-  console.log(`[Zoom] Buscando gravações via /users/me/recordings (${fromStr} a ${toStr})...`);
-  const userResult = await zoomFetch(`/users/me/recordings?from=${fromStr}&to=${toStr}&page_size=100`);
+  const result = await zoomFetch(`/meetings/${encoded}/recordings`);
 
-  if (userResult.ok) {
-    const meetings = (userResult.data as { meetings?: ZoomRecording[] })?.meetings || [];
-    console.log(`[Zoom] ${meetings.length} gravações encontradas`);
-
-    const filtered = meetings.filter((m) => String(m.id) === String(meetingId));
-    if (filtered.length > 0) return filtered;
-
-    if (meetings.length > 0) {
-      console.log(`[Zoom] IDs disponíveis: ${meetings.map(m => m.id).join(", ")}`);
-      return meetings;
+  if (!result.ok) {
+    // Tentar sem encoding (para UUIDs simples)
+    const result2 = await zoomFetch(`/meetings/${meetingUuid}/recordings`);
+    if (!result2.ok) {
+      throw new Error(`Gravações não encontradas para UUID ${meetingUuid}: ${result.status} / ${result2.status}`);
     }
+    return extractVttFromRecordings(result2.data, meetingUuid);
   }
 
-  // Estratégia 2: /meetings/{id}/recordings
-  const meetingResult = await zoomFetch(`/meetings/${meetingId}/recordings`);
-  if (meetingResult.ok) {
-    const data = meetingResult.data as { meetings?: ZoomRecording[]; recording_files?: ZoomRecordingFile[]; id?: string | number; uuid?: string; topic?: string; start_time?: string; duration?: number };
-    if (data.meetings?.length) return data.meetings;
-    if (data.recording_files?.length) {
-      return [{ id: String(data.id || meetingId), uuid: data.uuid || "", topic: data.topic || "", start_time: data.start_time || new Date().toISOString(), duration: data.duration || 0, recording_files: data.recording_files }];
-    }
-  }
-
-  return [];
+  return extractVttFromRecordings(result.data, meetingUuid);
 }
 
-/**
- * Busca a melhor fonte de transcrição disponível:
- * 1. Meeting Summary (Zoom AI Companion) — preferido
- * 2. Cloud Recording VTT Transcript — fallback
- */
-export async function getLatestTranscript(meetingId: string): Promise<{
-  text: string;
-  source: "summary" | "recording_vtt";
-  meetingUuid: string;
-  startTime: string;
-  topic: string;
-} | null> {
-  // Tentar Meeting Summary primeiro
-  const summary = await getMeetingSummary(meetingId);
-  if (summary?.summary_content) {
-    let text = summary.summary_content;
-    if (summary.next_steps?.length) {
-      text += "\n\nPróximos passos:\n" + summary.next_steps.map(s => `- ${s}`).join("\n");
-    }
-    return {
-      text,
-      source: "summary",
-      meetingUuid: summary.meeting_uuid || "",
-      startTime: summary.meeting_start_time || new Date().toISOString(),
-      topic: summary.meeting_topic || "",
-    };
+async function extractVttFromRecordings(data: unknown, uuid: string): Promise<string> {
+  const recordings = data as { recording_files?: ZoomRecordingFile[] };
+  const files = recordings?.recording_files || [];
+
+  if (files.length === 0) {
+    throw new Error(`Nenhum arquivo de gravação encontrado para UUID ${uuid}`);
   }
 
-  // Fallback: Cloud Recording VTT
-  const recordings = await getMeetingRecordings(meetingId);
-  if (!recordings.length) {
-    throw new Error(
-      `Nenhuma transcrição ou gravação encontrada para a reunião ${meetingId}. ` +
-      "Verifique se: (1) O Zoom AI Companion está ativado para gerar transcrições, " +
-      "(2) A gravação em nuvem está ativada com 'Audio Transcript', " +
-      "(3) Houve alguma reunião nos últimos 60 dias. " +
-      "Escopos necessários no app: meeting:read, recording:read"
-    );
-  }
-
-  const sorted = recordings.sort((a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime());
-  const withVtt = sorted.find(r => r.recording_files?.some(f => f.file_type === "TRANSCRIPT" || f.file_extension === "VTT"));
-  const recording = withVtt || sorted[0];
-
-  const vttFile = recording.recording_files.find(f => f.file_type === "TRANSCRIPT" || f.file_extension === "VTT");
+  const vttFile = files.find(f => f.file_type === "TRANSCRIPT" || f.file_extension === "VTT");
   if (!vttFile) {
-    const types = recording.recording_files.map(f => f.file_type).join(", ");
-    throw new Error(`Transcrição VTT não encontrada. Tipos disponíveis: ${types}. Ative 'Audio transcript' no Zoom.`);
+    const types = files.map(f => f.file_type).join(", ");
+    throw new Error(
+      `Arquivo VTT não encontrado. Tipos disponíveis: ${types}. ` +
+      "Ative 'Audio Transcript' nas configurações de gravação do Zoom."
+    );
   }
 
   const token = await getAccessToken();
   const response = await fetch(`${vttFile.download_url}?access_token=${token}`);
-  if (!response.ok) throw new Error(`Falha ao baixar VTT: ${response.status}`);
+  if (!response.ok) throw new Error(`Download VTT falhou: ${response.status}`);
 
   const vtt = await response.text();
-  return {
-    text: parseVttToText(vtt),
-    source: "recording_vtt",
-    meetingUuid: recording.uuid,
-    startTime: recording.start_time,
-    topic: recording.topic,
-  };
+  console.log(`[Zoom] VTT baixado: ${vtt.length} caracteres`);
+  return parseVttToText(vtt);
 }
+
+/**
+ * Busca VTT por Meeting ID (busca nas gravações do usuário)
+ * Fallback quando não temos o UUID
+ */
+export async function getVttByMeetingId(meetingId: string): Promise<{ text: string; uuid: string; startTime: string; topic: string }> {
+  const fromStr = getDateStr(-60);
+  const toStr = getDateStr(0);
+
+  // Buscar gravações do usuário
+  const result = await zoomFetch(`/users/me/recordings?from=${fromStr}&to=${toStr}&page_size=100`);
+  if (!result.ok) throw new Error(`Falha ao listar gravações: ${result.status}`);
+
+  const meetings = (result.data as { meetings?: Array<{ id: string | number; uuid: string; topic: string; start_time: string; recording_files: ZoomRecordingFile[] }> })?.meetings || [];
+
+  // Filtrar por meeting ID e que tenha VTT
+  const match = meetings
+    .filter(m => String(m.id) === String(meetingId))
+    .sort((a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime())
+    .find(m => m.recording_files?.some(f => f.file_type === "TRANSCRIPT"));
+
+  if (!match) {
+    const ids = meetings.map(m => m.id).join(", ");
+    throw new Error(`VTT não encontrado para meeting ${meetingId}. IDs disponíveis: ${ids}`);
+  }
+
+  const text = await extractVttFromRecordings(match, match.uuid);
+  return { text, uuid: match.uuid, startTime: match.start_time, topic: match.topic };
+}
+
+// ─── Participantes Detalhados ────────────────────────────────────────────
+
+/**
+ * Busca participantes detalhados de uma reunião pelo UUID
+ * Endpoint: GET /past_meetings/{uuid}/participants
+ */
+export async function getDetailedParticipants(meetingUuid: string): Promise<ZoomDetailedParticipant[]> {
+  if (!meetingUuid) return [];
+
+  const encoded = encodeUuid(meetingUuid);
+  console.log(`[Zoom] Buscando participantes para UUID: ${meetingUuid}...`);
+
+  const result = await zoomFetch(`/past_meetings/${encoded}/participants?page_size=100`);
+
+  if (!result.ok) {
+    console.log(`[Zoom] Participantes não disponíveis: ${result.status}`);
+    return [];
+  }
+
+  const data = result.data as {
+    participants?: Array<{
+      name: string;
+      user_email: string;
+      join_time: string;
+      leave_time: string;
+      duration: number;
+    }>;
+  };
+
+  return (data.participants || []).map(p => ({
+    name: p.name || "Participante",
+    email: p.user_email || "",
+    joinTime: p.join_time,
+    leaveTime: p.leave_time,
+    duration: p.duration,
+  }));
+}
+
+// ─── Meeting Instances ───────────────────────────────────────────────────
+
+/**
+ * Lista instâncias passadas de uma reunião recorrente
+ * Endpoint: GET /past_meetings/{meetingId}/instances
+ */
+export async function getMeetingInstances(meetingId: string): Promise<Array<{ uuid: string; start_time: string }>> {
+  const result = await zoomFetch(`/past_meetings/${meetingId}/instances`);
+  if (!result.ok) return [];
+  const data = result.data as { meetings?: Array<{ uuid: string; start_time: string }> };
+  return data.meetings || [];
+}
+
+// ─── Helpers ─────────────────────────────────────────────────────────────
 
 function parseVttToText(vtt: string): string {
   const lines = vtt.split("\n");
@@ -249,39 +211,8 @@ function parseVttToText(vtt: string): string {
   return textLines.join("\n");
 }
 
-// ─── PARTICIPANTES ────────────────────────────────────────────────────────
-
-export async function getMeetingParticipants(meetingUuid: string): Promise<string[]> {
-  if (!meetingUuid) return [];
-  try {
-    const encoded = encodeURIComponent(encodeURIComponent(meetingUuid));
-    const result = await zoomFetch(`/past_meetings/${encoded}/participants?page_size=100`);
-    if (!result.ok) return [];
-    return ((result.data as { participants?: ZoomParticipant[] })?.participants || [])
-      .map((p) => p.name || p.user_email)
-      .filter(Boolean);
-  } catch { return []; }
-}
-
-// ─── Helpers ──────────────────────────────────────────────────────────────
-
 function getDateStr(offsetDays: number): string {
   const d = new Date();
   d.setDate(d.getDate() + offsetDays);
   return d.toISOString().split("T")[0];
-}
-
-// Manter exports antigos para compatibilidade
-export async function getLatestRecording(meetingId: string): Promise<ZoomRecording | null> {
-  const recordings = await getMeetingRecordings(meetingId);
-  return recordings.length ? recordings.sort((a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime())[0] : null;
-}
-
-export async function downloadTranscript(recording: ZoomRecording): Promise<string> {
-  const vttFile = recording.recording_files.find(f => f.file_type === "TRANSCRIPT" || f.file_extension === "VTT");
-  if (!vttFile) throw new Error("VTT não encontrado");
-  const token = await getAccessToken();
-  const res = await fetch(`${vttFile.download_url}?access_token=${token}`);
-  if (!res.ok) throw new Error(`Download falhou: ${res.status}`);
-  return parseVttToText(await res.text());
 }

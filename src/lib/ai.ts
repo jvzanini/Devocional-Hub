@@ -135,22 +135,27 @@ async function callGemini(prompt: string): Promise<string> {
  * - Mantém APENAS o conteúdo da explicação do capítulo bíblico
  * - Gera o resumo
  */
-async function processWithGemini(rawTranscript: string): Promise<{
+async function processWithGemini(rawTranscript: string, mainSpeakerName?: string): Promise<{
   cleanText: string;
   chapterRef: string;
   summary: string;
 }> {
+  const speakerNote = mainSpeakerName
+    ? `\nIMPORTANTE: O orador principal (pregador) é "${mainSpeakerName}" ou o nome mais semelhante que aparecer na transcrição. Foque na fala deste orador. As falas de outros participantes são secundárias (perguntas, comentários).`
+    : "";
+
   const prompt = `Você é um assistente que processa transcrições de devocionais bíblicos em português brasileiro.
 
-A transcrição abaixo é de uma reunião Zoom de devocional diário onde o pastor explica um capítulo da Bíblia.
+A transcrição abaixo é de uma reunião Zoom de devocional diário onde o pastor explica um capítulo da Bíblia.${speakerNote}
+
 O texto pode conter partes irrelevantes como:
 - Cumprimentos e bate-papo inicial ("Bom dia galera", "Glória a Deus", etc.)
 - Conteúdo fragmentado e incoerente gerado por música tocada durante a reunião
-- Tarefas ou recados para membros ("João precisa fazer X", "Ian verificar Y")
+- Tarefas ou recados para membros
 - Despedidas e comentários sociais
 
 Sua tarefa:
-1. Extrair APENAS o conteúdo relevante da explicação do capítulo bíblico
+1. Extrair APENAS o conteúdo relevante da explicação do capítulo bíblico (focando no orador principal)
 2. Identificar qual(is) capítulo(s) da Bíblia foram ensinados
 3. Gerar um resumo em 3-4 parágrafos do ensinamento
 
@@ -208,13 +213,13 @@ function processLocally(rawTranscript: string): {
  * - Com GEMINI_API_KEY: usa IA para filtragem inteligente (recomendado)
  * - Sem GEMINI_API_KEY: usa processamento local básico
  */
-export async function processTranscript(rawTranscript: string): Promise<ProcessedTranscript> {
+export async function processTranscript(rawTranscript: string, mainSpeakerName?: string): Promise<ProcessedTranscript> {
   let cleanText: string;
   let chapterRefString: string;
   let summary: string;
 
   if (process.env.GEMINI_API_KEY) {
-    const result = await processWithGemini(rawTranscript);
+    const result = await processWithGemini(rawTranscript, mainSpeakerName);
     cleanText = result.cleanText;
     chapterRefString = result.chapterRef;
     summary = result.summary;

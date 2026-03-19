@@ -34,8 +34,17 @@ services:
       - GOOGLE_EMAIL=joaovtzanini@gmail.com
       - GOOGLE_PASSWORD=C@misa107
 
+      # ── Admin ─────────────────────────────────────────────────
+      - ADMIN_EMAIL=joaovtzanini@gmail.com
+      - ADMIN_PASSWORD=C@misa107
+
+      # ── Email (Gmail SMTP) ─────────────────────────────────
+      - SMTP_HOST=smtp.gmail.com
+      - SMTP_PORT=587
+      - SMTP_USER=joaovtzanini@gmail.com
+      - SMTP_PASS=C@misa107
+
       # ── App ──────────────────────────────────────────────────
-      - CRON_SECRET=devocional-cron-2024
       - NODE_ENV=production
       - TZ=America/Sao_Paulo
 

@@ -50,10 +50,12 @@ COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
 COPY --from=builder /app/prisma ./prisma
 
-# Scripts de inicialização
+# bcryptjs para o seed do admin
+COPY --from=builder /app/node_modules/bcryptjs ./node_modules/bcryptjs
+
+# Script de inicialização
 COPY --chown=nextjs:nodejs docker-entrypoint.sh ./
-COPY --chown=nextjs:nodejs cron-worker.sh ./
-RUN chmod +x docker-entrypoint.sh cron-worker.sh
+RUN chmod +x docker-entrypoint.sh
 
 # Diretórios de dados
 RUN mkdir -p data playwright-state && chown -R nextjs:nodejs data playwright-state

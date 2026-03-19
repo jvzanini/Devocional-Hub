@@ -6,10 +6,11 @@ import { Badge } from "@/components/ui/badge";
 import { DocType, PipelineStatus } from "@prisma/client";
 
 interface Document { id: string; type: DocType; fileName: string; fileSize: number | null; }
+interface Participant { id: string; name: string; duration: number; }
 interface SessionCardProps {
   session: {
     id: string; date: string | Date; chapterRef: string; summary: string;
-    participants: string[]; status: PipelineStatus; documents: Document[];
+    participants: Participant[]; status: PipelineStatus; documents: Document[];
   };
 }
 
@@ -70,8 +71,8 @@ export function SessionCard({ session }: SessionCardProps) {
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <div style={{ display: "flex" }}>
                   {session.participants.slice(0, 3).map((p, i) => (
-                    <div key={i} className="avatar-sm" style={{ marginLeft: i > 0 ? -4 : 0, border: "2px solid #fff", width: 24, height: 24, fontSize: 10 }}>
-                      {p.charAt(0).toUpperCase()}
+                    <div key={p.id} className="avatar-sm" style={{ marginLeft: i > 0 ? -4 : 0, border: "2px solid #fff", width: 24, height: 24, fontSize: 10 }}>
+                      {p.name.charAt(0).toUpperCase()}
                     </div>
                   ))}
                 </div>
