@@ -1,18 +1,17 @@
-FROM node:20-alpine AS base
+FROM node:20-bookworm-slim AS base
 
-# Chromium para Playwright
-RUN apk add --no-cache \
+# Dependências para Chromium/Playwright
+RUN apt-get update && apt-get install -y --no-install-recommends \
     chromium \
-    nss \
-    freetype \
-    harfbuzz \
+    fonts-freefont-ttf \
     ca-certificates \
-    ttf-freefont \
     openssl \
-    curl
+    curl \
+    dbus \
+    && rm -rf /var/lib/apt/lists/*
 
 ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
-ENV CHROME_BIN=/usr/bin/chromium-browser
+ENV CHROME_BIN=/usr/bin/chromium
 
 WORKDIR /app
 
