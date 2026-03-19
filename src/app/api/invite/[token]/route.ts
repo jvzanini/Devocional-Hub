@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
+import { prisma } from "@/shared/lib/db";
 import bcrypt from "bcryptjs";
-import { syncAttendanceForUser } from "@/lib/attendance-sync";
+import { syncAttendanceForUser } from "@/features/sessions/lib/attendance-sync";
 
 export async function GET(
   _request: Request,

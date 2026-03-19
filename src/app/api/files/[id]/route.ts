@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/db";
-import { downloadFile } from "@/lib/storage";
+import { auth } from "@/features/auth/lib/auth";
+import { prisma } from "@/shared/lib/db";
+import { downloadFile } from "@/shared/lib/storage";
 
 const CONTENT_TYPES: Record<string, string> = {
   pdf: "application/pdf",

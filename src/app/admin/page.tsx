@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { BIBLE_BOOKS } from "@/lib/bible-books";
+import { BIBLE_BOOKS } from "@/features/bible/lib/bible-books";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 
 type Tab = "zoom" | "schedule" | "webhooks" | "users" | "reading" | "attendance" | "ia";

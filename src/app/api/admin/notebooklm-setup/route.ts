@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/db";
-import { setupGoogleSession, hasGoogleSession, clearGoogleSession } from "@/lib/notebooklm";
+import { auth } from "@/features/auth/lib/auth";
+import { prisma } from "@/shared/lib/db";
+import { setupGoogleSession, hasGoogleSession, clearGoogleSession } from "@/features/pipeline/lib/notebooklm";
 import { chromium } from "playwright";
 import fs from "fs";
 

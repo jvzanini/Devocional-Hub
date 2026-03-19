@@ -1,10 +1,10 @@
-import { auth } from "@/lib/auth";
+import { auth } from "@/features/auth/lib/auth";
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/db";
-import { signOut } from "@/lib/auth";
-import { DashboardCalendar } from "@/components/DashboardCalendar";
-import { BibleBooksGrid } from "@/components/BibleBooksGrid";
-import { AddToCalendarButton } from "@/components/AddToCalendarButton";
+import { prisma } from "@/shared/lib/db";
+import { signOut } from "@/features/auth/lib/auth";
+import { DashboardCalendar } from "@/features/dashboard/components/DashboardCalendar";
+import { BibleBooksGrid } from "@/features/bible/components/BibleBooksGrid";
+import { AddToCalendarButton } from "@/features/sessions/components/AddToCalendarButton";
 import Link from "next/link";
 
 function extractBookName(chapterRef: string): string {
@@ -155,7 +155,7 @@ export default async function DashboardPage() {
     where: { status: { in: ["IN_PROGRESS", "UPCOMING"] } },
     include: { days: { orderBy: { date: "asc" } } },
   });
-  const { BIBLE_BOOKS } = await import("@/lib/bible-books");
+  const { BIBLE_BOOKS } = await import("@/features/bible/lib/bible-books");
   for (const plan of allActivePlans) {
     const book = BIBLE_BOOKS.find(b => b.code === plan.bookCode);
     for (const day of plan.days) {

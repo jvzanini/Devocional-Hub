@@ -3,7 +3,7 @@
  * via ZoomIdentifier (email ou username do Zoom)
  */
 
-import { prisma } from "@/lib/db";
+import { prisma } from "@/shared/lib/db";
 
 /**
  * Para cada Participant da sessão:

@@ -1,10 +1,10 @@
-import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/db";
+import { auth } from "@/features/auth/lib/auth";
+import { prisma } from "@/shared/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 import { writeFile, mkdir, unlink } from "fs/promises";
 import { existsSync } from "fs";
 import path from "path";
-import { syncAttendanceForUser } from "@/lib/attendance-sync";
+import { syncAttendanceForUser } from "@/features/sessions/lib/attendance-sync";
 
 export async function GET() {
   const session = await auth();

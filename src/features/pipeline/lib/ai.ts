@@ -225,7 +225,7 @@ async function callGemini(prompt: string, maxTokens: number): Promise<string> {
 
 async function getAISettings(): Promise<{ model: string }> {
   try {
-    const { prisma } = await import("@/lib/db");
+    const { prisma } = await import("@/shared/lib/db");
     const setting = await prisma.appSetting.findUnique({ where: { key: "aiModel" } });
     return { model: setting?.value || "gpt-4.1-mini" };
   } catch {

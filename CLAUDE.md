@@ -21,12 +21,37 @@
 - OpenRouter API (primário) — Nemotron 120B gratuito para IA pesada
 - Google Gemini API (fallback) — gemini-2.5-flash para processar transcrições
 
-## Arquitetura
-- API routes em `src/app/api/`
-- Páginas em `src/app/`
-- Libs em `src/lib/` (zoom.ts, ai.ts, bible.ts, pipeline.ts, storage.ts, email.ts, auth.ts, db.ts)
-- Componentes em `src/components/`
+## Arquitetura (Feature-Based)
+```
+src/
+├── app/                          # Routing layer (pages + API routes)
+│   ├── (auth)/                   # Login, Invite
+│   ├── admin/                    # Painel admin
+│   ├── profile/                  # Perfil do usuário
+│   ├── session/[id]/             # Detalhe da sessão
+│   ├── api/                      # 23 API endpoints
+│   ├── layout.tsx, page.tsx      # Root layout + Dashboard
+│   └── globals.css               # Design system hardcoded
+├── features/                     # Domínios de negócio
+│   ├── auth/lib/                 # Autenticação (NextAuth config)
+│   ├── sessions/                 # Sessões e presença
+│   │   ├── components/           # AttendanceSection, ProtectedDocuments, SessionCard, AddToCalendar
+│   │   └── lib/                  # attendance-sync.ts
+│   ├── dashboard/components/     # DashboardCalendar
+│   ├── admin/components/         # PipelineButton
+│   ├── bible/                    # Textos bíblicos
+│   │   ├── components/           # BibleBooksGrid
+│   │   └── lib/                  # bible.ts, bible-books.ts
+│   ├── pipeline/lib/             # Orquestração: ai.ts, pipeline.ts, notebooklm.ts, reading-plan-sync.ts
+│   ├── zoom/lib/                 # Integração Zoom (OAuth, recordings, participants)
+│   └── email/lib/                # Envio de emails (Gmail SMTP)
+├── shared/                       # Código compartilhado entre features
+│   ├── components/ui/            # Badge e componentes de UI
+│   └── lib/                      # db.ts, storage.ts, utils.ts
+└── middleware.ts                 # Middleware de autenticação
+```
 - CSS em `src/app/globals.css` — TODAS as classes visuais são hardcoded aqui (sem CSS variables do Tailwind)
+- Imports: `@/features/<feature>/lib/<module>`, `@/features/<feature>/components/<Component>`, `@/shared/lib/<module>`
 
 ## Modelos do Banco (Prisma)
 - User: email, password?, name, role (ADMIN/MEMBER), church, team, subTeam, photoUrl, inviteToken

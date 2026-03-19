@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/db";
-import { syncAttendanceForUser } from "@/lib/attendance-sync";
+import { auth } from "@/features/auth/lib/auth";
+import { prisma } from "@/shared/lib/db";
+import { syncAttendanceForUser } from "@/features/sessions/lib/attendance-sync";
 
 async function isAdmin() {
   const session = await auth();

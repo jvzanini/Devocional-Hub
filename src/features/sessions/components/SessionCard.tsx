@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { formatDate } from "@/lib/utils";
-import { Badge } from "@/components/ui/badge";
+import { formatDate } from "@/shared/lib/utils";
+import { Badge } from "@/shared/components/ui/badge";
 import { DocType, PipelineStatus } from "@prisma/client";
 
 interface Document { id: string; type: DocType; fileName: string; fileSize: number | null; }

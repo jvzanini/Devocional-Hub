@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
-import { runPipeline } from "@/lib/pipeline";
+import { auth } from "@/features/auth/lib/auth";
+import { runPipeline } from "@/features/pipeline/lib/pipeline";
 
 export async function POST(request: Request) {
   const session = await auth();
@@ -17,7 +17,7 @@ export async function POST(request: Request) {
     };
 
     // Cria sessão no banco imediatamente para retornar o ID
-    const { prisma } = await import("@/lib/db");
+    const { prisma } = await import("@/shared/lib/db");
     const { PipelineStatus } = await import("@prisma/client");
 
     const meetingId = options.meetingId || process.env.ZOOM_RECURRING_MEETING_ID;

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/db";
-import { sendInviteEmail } from "@/lib/email";
+import { auth } from "@/features/auth/lib/auth";
+import { prisma } from "@/shared/lib/db";
+import { sendInviteEmail } from "@/features/email/lib/email";
 import crypto from "crypto";
 
 async function isAdmin() {

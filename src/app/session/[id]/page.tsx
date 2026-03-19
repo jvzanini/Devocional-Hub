@@ -1,11 +1,11 @@
-import { auth } from "@/lib/auth";
+import { auth } from "@/features/auth/lib/auth";
 import { redirect, notFound } from "next/navigation";
-import { prisma } from "@/lib/db";
+import { prisma } from "@/shared/lib/db";
 import Link from "next/link";
-import { formatDate, formatDateTime } from "@/lib/utils";
-import { Badge } from "@/components/ui/badge";
+import { formatDate, formatDateTime } from "@/shared/lib/utils";
+import { Badge } from "@/shared/components/ui/badge";
 import { DocType, PipelineStatus } from "@prisma/client";
-import ProtectedDocuments from "@/components/ProtectedDocuments";
+import ProtectedDocuments from "@/features/sessions/components/ProtectedDocuments";
 
 const DOC_CFG: Record<DocType, { label: string; bg: string; color: string; border: string; adminOnly?: boolean; isProtected?: boolean }> = {
   TRANSCRIPT_RAW: { label: "Transcrição Bruta", bg: "#f5f5f4", color: "#57534e", border: "#d6d3d1" },

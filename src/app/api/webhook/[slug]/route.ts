@@ -6,8 +6,8 @@
 
 import { NextResponse } from "next/server";
 import crypto from "crypto";
-import { prisma } from "@/lib/db";
-import { runPipeline } from "@/lib/pipeline";
+import { prisma } from "@/shared/lib/db";
+import { runPipeline } from "@/features/pipeline/lib/pipeline";
 
 export async function POST(
   request: Request,

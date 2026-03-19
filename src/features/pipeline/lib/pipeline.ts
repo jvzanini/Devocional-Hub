@@ -3,15 +3,15 @@
  * Webhook Zoom → VTT → Gemini AI → Bíblia NVI → NotebookLM → Storage → DB
  */
 
-import { prisma } from "@/lib/db";
-import { getVttTranscript, getVttByMeetingId, getDetailedParticipants, getMeetingSummary, getMeetingInstances } from "@/lib/zoom";
-import { processTranscript, generateTheologicalResearch, buildNotebookKnowledgeBase, extractSessionPassword } from "@/lib/ai";
-import { getChaptersText } from "@/lib/bible";
-import { runNotebookLMAutomation } from "@/lib/notebooklm";
-import { uploadText, uploadFile, ensureBucket, getFileSize } from "@/lib/storage";
+import { prisma } from "@/shared/lib/db";
+import { getVttTranscript, getVttByMeetingId, getDetailedParticipants, getMeetingSummary, getMeetingInstances } from "@/features/zoom/lib/zoom";
+import { processTranscript, generateTheologicalResearch, buildNotebookKnowledgeBase, extractSessionPassword } from "@/features/pipeline/lib/ai";
+import { getChaptersText } from "@/features/bible/lib/bible";
+import { runNotebookLMAutomation } from "@/features/pipeline/lib/notebooklm";
+import { uploadText, uploadFile, ensureBucket, getFileSize } from "@/shared/lib/storage";
 import { DocType, PipelineStatus } from "@prisma/client";
-import { syncAttendanceForSession } from "@/lib/attendance-sync";
-import { syncReadingPlanWithTranscription } from "@/lib/reading-plan-sync";
+import { syncAttendanceForSession } from "@/features/sessions/lib/attendance-sync";
+import { syncReadingPlanWithTranscription } from "@/features/pipeline/lib/reading-plan-sync";
 import fs from "fs";
 
 export interface PipelineOptions {
@@ -137,7 +137,7 @@ export async function runPipeline(options: PipelineOptions = {}): Promise<string
     if (usedMeetingSummary) {
       // Meeting Summary do AI Companion já é o resumo — usar direto
       log(sessionId, "Usando Meeting Summary como resumo (sem Gemini)...");
-      const { extractChapterRefsFromText } = await import("@/lib/ai");
+      const { extractChapterRefsFromText } = await import("@/features/pipeline/lib/ai");
       const refs = extractChapterRefsFromText(rawTranscript);
       const chapterRefString = refs.map(r => `${r.name} ${r.chapter}`).join(", ") || "Não identificado";
       processed = {

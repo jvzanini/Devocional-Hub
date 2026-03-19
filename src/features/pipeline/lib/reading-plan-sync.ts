@@ -6,9 +6,9 @@
  * e ajusta os dias futuros do plano automaticamente.
  */
 
-import { prisma } from "@/lib/db";
-import { BIBLE_BOOKS, findBookByCode } from "@/lib/bible-books";
-import { downloadFile } from "@/lib/storage";
+import { prisma } from "@/shared/lib/db";
+import { BIBLE_BOOKS, findBookByCode } from "@/features/bible/lib/bible-books";
+import { downloadFile } from "@/shared/lib/storage";
 
 const TAG = "[ReadingPlanSync]";
 
