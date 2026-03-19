@@ -252,7 +252,7 @@ async function createNotebook(page: Page, transcriptText: string, bibleText: str
     log("Criando novo notebook...");
 
     // Clica em "Novo notebook" / "New notebook"
-    const newBtn = page.locator('button:has-text("New notebook"), button:has-text("Novo notebook"), button:has-text("Create new"), [aria-label*="new notebook" i], [aria-label*="novo notebook" i]');
+    const newBtn = page.locator('button:has-text("Criar novo"), button:has-text("New notebook"), button:has-text("Novo notebook"), button:has-text("Create new"), [aria-label*="new notebook" i], [aria-label*="criar" i]');
     await newBtn.first().click({ timeout: 15000 });
     await page.waitForTimeout(3000);
 
@@ -278,9 +278,9 @@ async function createNotebook(page: Page, transcriptText: string, bibleText: str
 
 async function addTextSource(page: Page, text: string): Promise<void> {
   // Clicar em "Add source" / "Adicionar fonte"
-  log("addTextSource: Procurando botão 'Add source'...");
+  log("addTextSource: Procurando botão 'Add source' / 'Adicionar fontes'...");
   const addBtn = page.locator(
-    'button:has-text("Add source"), button:has-text("Adicionar fonte"), [aria-label*="source" i], [aria-label*="fonte" i]'
+    'button:has-text("Add source"), button:has-text("Adicionar fonte"), button:has-text("Adicionar fontes"), [aria-label*="source" i], [aria-label*="fonte" i]'
   );
   await addBtn.first().waitFor({ state: "visible", timeout: 20000 });
   await addBtn.first().click({ timeout: 10000, force: true });
@@ -322,8 +322,8 @@ async function createNotebookWithKB(page: Page, knowledgeBase: string, chapterRe
   try {
     log("Criando novo notebook com KB unificada...");
 
-    // Clica em "Novo notebook" / "Criar notebook"
-    const newBtn = page.locator('button:has-text("New notebook"), button:has-text("Novo notebook"), button:has-text("Criar notebook"), button:has-text("Create new"), [aria-label*="new notebook" i], [aria-label*="novo notebook" i], [aria-label*="criar notebook" i]');
+    // Clica em "Criar novo" / "New notebook"
+    const newBtn = page.locator('button:has-text("Criar novo"), button:has-text("New notebook"), button:has-text("Novo notebook"), button:has-text("Criar notebook"), button:has-text("Create new"), [aria-label*="new notebook" i], [aria-label*="novo notebook" i], [aria-label*="criar" i]');
     await newBtn.first().waitFor({ state: "visible", timeout: 30000 });
     await newBtn.first().click({ timeout: 15000 });
 
@@ -571,7 +571,7 @@ export async function runNotebookLMAutomation(
     log("Passo 2: Procurando botão 'New notebook'...");
 
     // Seletor para o botão de novo notebook
-    const newNotebookSelector = 'button:has-text("New notebook"), button:has-text("Novo notebook"), button:has-text("Criar notebook"), button:has-text("Create new"), [aria-label*="new notebook" i], [aria-label*="novo notebook" i], [aria-label*="criar notebook" i], a:has-text("New notebook"), a:has-text("Create new"), a:has-text("Criar notebook")';
+    const newNotebookSelector = 'button:has-text("New notebook"), button:has-text("Novo notebook"), button:has-text("Criar notebook"), button:has-text("Criar novo"), button:has-text("Create new"), [aria-label*="new notebook" i], [aria-label*="novo notebook" i], [aria-label*="criar" i], a:has-text("New notebook"), a:has-text("Create new"), a:has-text("Criar novo")';
 
     // Primeiro tentar na página principal (com timeout generoso)
     let newBtnFound = false;
