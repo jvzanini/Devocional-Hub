@@ -41,10 +41,20 @@
 2. Aguarda 5min para VTT ficar pronto
 3. Baixa VTT via `GET /meetings/{uuid}/recordings` (file_type=TRANSCRIPT)
 4. UUID com `/` ou `+` precisa de duplo URL-encode (%252F, %252B)
-5. Processa com Gemini AI (foca no mainSpeakerName configurado no admin)
+5. Processa transcrição com IA (cascata de fallbacks)
 6. Busca texto bíblico NVI via API.Bible
-7. Gera slides + infográfico via NotebookLM (Playwright)
-8. Salva tudo no banco + storage local
+7. Gera pesquisa teológica + Knowledge Base unificada
+8. Extrai senha da transcrição (se mencionada)
+9. NotebookLM: cria notebook com KB rica, gera slides + infográfico + vídeo resumo
+10. Salva tudo no banco + storage local
+
+## Cascata de IA (callAI)
+Todos os modelos são gratuitos. Fallback automático se um falhar:
+1. Nemotron 120B (`nvidia/nemotron-3-super-120b-a12b:free`) — OpenRouter
+2. Gemini 2.5 Flash — Google API direta
+3. Step 3.5 Flash (`stepfun/step-3.5-flash:free`) — OpenRouter
+4. Nemotron 30B (`nvidia/nemotron-3-nano-30b-a3b:free`) — OpenRouter
+5. Erro com log de todas as falhas
 
 ## Infraestrutura
 - Domínio: devocional.nexusai360.com (Cloudflare DNS)

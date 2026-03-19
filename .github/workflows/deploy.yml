@@ -136,6 +136,7 @@ jobs:
             {'name': 'ZOOM_CLIENT_SECRET', 'value': '${{ secrets.ZOOM_CLIENT_SECRET }}'},
             {'name': 'ZOOM_RECURRING_MEETING_ID', 'value': '${{ secrets.ZOOM_RECURRING_MEETING_ID }}'},
             {'name': 'ZOOM_WEBHOOK_SECRET', 'value': '${{ secrets.ZOOM_WEBHOOK_SECRET }}'},
+            {'name': 'OPENROUTER_API_KEY', 'value': '${{ secrets.OPENROUTER_API_KEY }}'},
             {'name': 'GEMINI_API_KEY', 'value': '${{ secrets.GEMINI_API_KEY }}'},
             {'name': 'BIBLE_API_KEY', 'value': '${{ secrets.BIBLE_API_KEY }}'},
             {'name': 'GOOGLE_EMAIL', 'value': '${{ secrets.GOOGLE_EMAIL }}'},
