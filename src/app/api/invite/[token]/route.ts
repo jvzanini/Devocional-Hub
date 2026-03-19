@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import bcrypt from "bcryptjs";
+import { syncAttendanceForUser } from "@/lib/attendance-sync";
 
-// GET: verificar se o token é válido
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ token: string }> }
@@ -10,7 +10,6 @@ export async function GET(
   const { token } = await params;
 
   const user = await prisma.user.findUnique({ where: { inviteToken: token } });
-
   if (!user) return NextResponse.json({ error: "Convite não encontrado" }, { status: 404 });
   if (user.inviteExpiresAt && user.inviteExpiresAt < new Date()) {
     return NextResponse.json({ error: "Convite expirado" }, { status: 410 });
@@ -19,13 +18,12 @@ export async function GET(
   return NextResponse.json({ name: user.name, email: user.email });
 }
 
-// POST: definir senha e ativar conta
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ token: string }> }
 ) {
   const { token } = await params;
-  const { password } = await request.json();
+  const { password, zoomIdentifier, zoomType } = await request.json();
 
   if (!password || password.length < 6) {
     return NextResponse.json({ error: "Senha deve ter no mínimo 6 caracteres" }, { status: 400 });
@@ -47,6 +45,26 @@ export async function POST(
       inviteExpiresAt: null,
     },
   });
+
+  // Save Zoom identifier if provided
+  if (zoomIdentifier && zoomIdentifier.trim()) {
+    try {
+      await prisma.zoomIdentifier.create({
+        data: {
+          userId: user.id,
+          value: zoomIdentifier.trim(),
+          type: (zoomType as "EMAIL" | "USERNAME") || "EMAIL",
+        },
+      });
+
+      // Sync retroativo
+      syncAttendanceForUser(user.id).catch(err =>
+        console.error("[Invite] Erro no sync retroativo:", err)
+      );
+    } catch {
+      // Identifier might already exist, ignore
+    }
+  }
 
   return NextResponse.json({ success: true, email: user.email });
 }

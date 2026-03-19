@@ -10,6 +10,7 @@ import { getChaptersText } from "@/lib/bible";
 import { runNotebookLMAutomation } from "@/lib/notebooklm";
 import { uploadText, uploadFile, ensureBucket, getFileSize } from "@/lib/storage";
 import { DocType, PipelineStatus } from "@prisma/client";
+import { syncAttendanceForSession } from "@/lib/attendance-sync";
 import fs from "fs";
 
 export interface PipelineOptions {
@@ -149,7 +150,15 @@ export async function runPipeline(options: PipelineOptions = {}): Promise<string
       }
     }
 
-    // 11. Concluir
+    // 11. Sincronizar presenças
+    log(sessionId, "Sincronizando presenças...");
+    try {
+      await syncAttendanceForSession(sessionId);
+    } catch (err) {
+      log(sessionId, `Aviso: falha no sync de presenças: ${err}`);
+    }
+
+    // 12. Concluir
     await prisma.session.update({ where: { id: sessionId }, data: { status: PipelineStatus.COMPLETED } });
     log(sessionId, "Pipeline concluído com sucesso!");
     return sessionId;

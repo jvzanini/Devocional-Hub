@@ -43,34 +43,68 @@ export default async function SessionPage({ params }: { params: Promise<{ id: st
     include: {
       documents: { orderBy: { createdAt: "asc" } },
       participants: { orderBy: { joinTime: "asc" } },
+      attendances: {
+        include: { user: { select: { id: true, name: true } } },
+      },
     },
   });
   if (!s) notFound();
   const st = ST[s.status];
 
+  // Build a map: participant name/email -> platform user name
+  const attendanceMap = new Map<string, { userName: string; isMember: boolean }>();
+  if (s.attendances) {
+    // Get all zoom identifiers for users with attendance
+    const userIds = s.attendances.map(a => a.userId);
+    const zoomIds = await prisma.zoomIdentifier.findMany({
+      where: { userId: { in: userIds } },
+      select: { userId: true, value: true },
+    });
+
+    // Map zoom identifier value -> userName
+    for (const a of s.attendances) {
+      const userZoomValues = zoomIds.filter(z => z.userId === a.userId).map(z => z.value.toLowerCase());
+      for (const val of userZoomValues) {
+        attendanceMap.set(val, { userName: a.user.name, isMember: true });
+      }
+    }
+  }
+
+  function getParticipantDisplay(name: string, email: string | null): { displayName: string; isMember: boolean } {
+    // Check by email first, then by name
+    const byEmail = email ? attendanceMap.get(email.toLowerCase()) : undefined;
+    if (byEmail) return { displayName: byEmail.userName, isMember: true };
+
+    const byName = attendanceMap.get(name.toLowerCase());
+    if (byName) return { displayName: byName.userName, isMember: true };
+
+    // Not correlated — show Zoom username (never email for privacy)
+    return { displayName: name, isMember: false };
+  }
+
   return (
     <div className="page-bg">
       <header className="app-header">
-        <div style={{ maxWidth: 800, margin: "0 auto", padding: "14px 24px", display: "flex", alignItems: "center", gap: 14 }}>
-          <Link href="/" style={{ width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 10, color: "#78716c", textDecoration: "none", border: "1px solid #e7e5e4" }}>
-            <svg style={{ width: 18, height: 18 }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
+        <div style={{ maxWidth: 800, margin: "0 auto", padding: "12px 20px", display: "flex", alignItems: "center", gap: 12 }}>
+          <Link href="/" className="btn-icon" style={{ textDecoration: "none" }}>
+            <svg width={16} height={16} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
           </Link>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <span style={{ fontWeight: 700, fontSize: 16, color: "#1c1917", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.chapterRef || "Devocional"}</span>
               <Badge variant={st.variant}>{st.label}</Badge>
             </div>
-            <div style={{ fontSize: 13, color: "#78716c", marginTop: 2 }}>{formatDate(s.date)}</div>
+            <div style={{ fontSize: 12, color: "#78716c", marginTop: 2 }}>{formatDate(s.date)}</div>
           </div>
         </div>
       </header>
 
-      <main style={{ maxWidth: 800, margin: "0 auto", padding: "24px 24px 48px", display: "flex", flexDirection: "column", gap: 16 }}>
+      <main style={{ maxWidth: 800, margin: "0 auto", padding: "20px 20px 48px", display: "flex", flexDirection: "column", gap: 14 }}>
         {/* Erro */}
         {s.status === "ERROR" && s.errorMessage && (
           <div className="alert-error">
-            <div style={{ fontWeight: 600, fontSize: 14, color: "#dc2626", marginBottom: 6 }}>Erro no pipeline</div>
-            <div style={{ fontSize: 13, color: "#b91c1c", fontFamily: "monospace", backgroundColor: "rgba(220,38,38,0.06)", padding: "8px 12px", borderRadius: 8, wordBreak: "break-all" }}>{s.errorMessage}</div>
+            <div style={{ fontWeight: 600, fontSize: 13, color: "#dc2626", marginBottom: 6 }}>Erro no pipeline</div>
+            <div style={{ fontSize: 12, color: "#b91c1c", fontFamily: "monospace", backgroundColor: "rgba(220,38,38,0.06)", padding: "8px 12px", borderRadius: 8, wordBreak: "break-all" }}>{s.errorMessage}</div>
           </div>
         )}
 
@@ -78,34 +112,41 @@ export default async function SessionPage({ params }: { params: Promise<{ id: st
         {s.summary && (
           <div className="section-card">
             <div className="section-title">Resumo</div>
-            <p style={{ fontSize: 15, color: "#44403c", lineHeight: 1.7, whiteSpace: "pre-wrap" }}>{s.summary}</p>
+            <p style={{ fontSize: 14, color: "#44403c", lineHeight: 1.7, whiteSpace: "pre-wrap" }}>{s.summary}</p>
           </div>
         )}
 
-        {/* Participantes detalhados */}
+        {/* Participantes */}
         {s.participants.length > 0 && (
           <div className="section-card">
             <div className="section-title">Participantes ({s.participants.length})</div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              {s.participants.map((p) => (
-                <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 14, padding: "10px 14px", backgroundColor: "#fafaf9", borderRadius: 12, border: "1px solid #e7e5e4" }}>
-                  <div className="avatar-sm" style={{ width: 40, height: 40, fontSize: 16, flexShrink: 0 }}>
-                    {p.name.charAt(0).toUpperCase()}
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 600, fontSize: 15, color: "#1c1917" }}>{p.name}</div>
-                    {p.email && <div style={{ fontSize: 12, color: "#a8a29e" }}>{p.email}</div>}
-                  </div>
-                  <div style={{ textAlign: "right", flexShrink: 0 }}>
-                    <div style={{ fontSize: 13, color: "#57534e" }}>
-                      {fmtTime(p.joinTime)} → {fmtTime(p.leaveTime)}
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {s.participants.map((p) => {
+                const { displayName, isMember } = getParticipantDisplay(p.name, p.email);
+                return (
+                  <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", backgroundColor: "#fafaf9", borderRadius: 10, border: "1px solid #e7e5e4" }}>
+                    <div className="avatar-sm" style={{ width: 36, height: 36, fontSize: 14, flexShrink: 0 }}>
+                      {displayName.charAt(0).toUpperCase()}
                     </div>
-                    <div style={{ fontSize: 12, color: "#d97706", fontWeight: 600 }}>
-                      {fmtDuration(p.duration)}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <span style={{ fontWeight: 600, fontSize: 14, color: "#1c1917" }}>{displayName}</span>
+                        <span className={`badge badge-${isMember ? "success" : "info"}`} style={{ fontSize: 10, padding: "1px 6px" }}>
+                          {isMember ? "Membro" : "Visitante"}
+                        </span>
+                      </div>
+                    </div>
+                    <div style={{ textAlign: "right", flexShrink: 0 }}>
+                      <div style={{ fontSize: 12, color: "#57534e" }}>
+                        {fmtTime(p.joinTime)} → {fmtTime(p.leaveTime)}
+                      </div>
+                      <div style={{ fontSize: 11, color: "#d97706", fontWeight: 600 }}>
+                        {fmtDuration(p.duration)}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
@@ -114,28 +155,28 @@ export default async function SessionPage({ params }: { params: Promise<{ id: st
         <div className="section-card">
           <div className="section-title">Arquivos</div>
           {s.documents.length === 0 ? (
-            <p style={{ fontSize: 14, color: "#a8a29e", textAlign: "center", padding: "16px 0" }}>Nenhum arquivo gerado ainda.</p>
+            <p style={{ fontSize: 13, color: "#a8a29e", textAlign: "center", padding: "14px 0" }}>Nenhum arquivo gerado ainda.</p>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {s.documents.map((doc) => {
                 const c = DOC_CFG[doc.type];
                 return (
                   <a key={doc.id} href={`/api/files/${doc.id}`} download={doc.fileName}
                     className="file-row" style={{ backgroundColor: c.bg, borderColor: c.border, textDecoration: "none" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
-                      <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: c.bg, border: `1px solid ${c.border}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                        <svg style={{ width: 18, height: 18, color: c.color }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+                      <div style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: c.bg, border: `1px solid ${c.border}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        <svg style={{ width: 16, height: 16, color: c.color }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
                         </svg>
                       </div>
                       <div style={{ minWidth: 0 }}>
-                        <div style={{ fontSize: 15, fontWeight: 500, color: c.color }}>{c.label}</div>
-                        <div style={{ fontSize: 12, color: "#a8a29e", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{doc.fileName}</div>
+                        <div style={{ fontSize: 14, fontWeight: 500, color: c.color }}>{c.label}</div>
+                        <div style={{ fontSize: 11, color: "#a8a29e", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{doc.fileName}</div>
                       </div>
                     </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-                      {doc.fileSize && <span style={{ fontSize: 12, color: "#a8a29e" }}>{fmtSize(doc.fileSize)}</span>}
-                      <svg style={{ width: 18, height: 18, color: "#a8a29e" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                      {doc.fileSize && <span style={{ fontSize: 11, color: "#a8a29e" }}>{fmtSize(doc.fileSize)}</span>}
+                      <svg style={{ width: 16, height: 16, color: "#a8a29e" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
                       </svg>
                     </div>
@@ -149,15 +190,15 @@ export default async function SessionPage({ params }: { params: Promise<{ id: st
         {/* Informações */}
         <div className="section-card">
           <div className="section-title">Informações</div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {[
               { label: "Reunião Zoom", value: s.zoomMeetingId },
               { label: "UUID", value: s.zoomUuid || "—" },
               { label: "Criado em", value: formatDateTime(s.createdAt) },
             ].map((item) => (
-              <div key={item.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 14 }}>
+              <div key={item.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13 }}>
                 <span style={{ color: "#78716c" }}>{item.label}</span>
-                <span style={{ color: "#44403c", fontFamily: "monospace", fontSize: 13, backgroundColor: "#f5f5f4", padding: "2px 10px", borderRadius: 6 }}>{item.value}</span>
+                <span style={{ color: "#44403c", fontFamily: "monospace", fontSize: 12, backgroundColor: "#f5f5f4", padding: "2px 8px", borderRadius: 6 }}>{item.value}</span>
               </div>
             ))}
           </div>

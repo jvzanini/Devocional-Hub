@@ -10,23 +10,43 @@ datasource db {
 // ─── Usuários ────────────────────────────────────────────────────────────
 
 model User {
-  id              String    @id @default(cuid())
-  email           String    @unique
-  password        String?   // Nullable: convite pendente não tem senha ainda
+  id              String           @id @default(cuid())
+  email           String           @unique
+  password        String?
   name            String
-  role            UserRole  @default(MEMBER)
-  church          String    @default("")
-  team            String    @default("")
-  subTeam         String    @default("")
+  role            UserRole         @default(MEMBER)
+  church          String           @default("")
+  team            String           @default("")
+  subTeam         String           @default("")
   photoUrl        String?
-  inviteToken     String?   @unique
+  active          Boolean          @default(true)
+  inviteToken     String?          @unique
   inviteExpiresAt DateTime?
-  createdAt       DateTime  @default(now())
+  createdAt       DateTime         @default(now())
+  zoomIdentifiers ZoomIdentifier[]
+  attendances     Attendance[]
 }
 
 enum UserRole {
   ADMIN
   MEMBER
+}
+
+model ZoomIdentifier {
+  id        String     @id @default(cuid())
+  userId    String
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  value     String
+  type      ZoomIdType
+  locked    Boolean    @default(false)
+  createdAt DateTime   @default(now())
+
+  @@unique([userId, value])
+}
+
+enum ZoomIdType {
+  EMAIL
+  USERNAME
 }
 
 // ─── Sessões (devocionais) ───────────────────────────────────────────────
@@ -43,6 +63,7 @@ model Session {
   errorMessage    String?
   documents       Document[]
   participants    Participant[]
+  attendances     Attendance[]
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
 }
@@ -55,7 +76,7 @@ model Participant {
   email     String?
   joinTime  DateTime
   leaveTime DateTime
-  duration  Int      // segundos
+  duration  Int
 }
 
 model Document {
@@ -82,6 +103,59 @@ enum PipelineStatus {
   RUNNING
   COMPLETED
   ERROR
+}
+
+// ─── Presença ────────────────────────────────────────────────────────────
+
+model Attendance {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessionId String
+  session   Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  joinTime  DateTime
+  leaveTime DateTime
+  duration  Int
+  createdAt DateTime @default(now())
+
+  @@unique([userId, sessionId])
+}
+
+// ─── Plano de Leitura ───────────────────────────────────────────────────
+
+model ReadingPlan {
+  id             String            @id @default(cuid())
+  bookName       String
+  bookCode       String
+  bookOrder      Int
+  chaptersPerDay Int
+  totalChapters  Int
+  startDate      DateTime
+  endDate        DateTime
+  status         ReadingPlanStatus @default(UPCOMING)
+  imageUrl       String?
+  days           ReadingPlanDay[]
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+}
+
+enum ReadingPlanStatus {
+  UPCOMING
+  IN_PROGRESS
+  COMPLETED
+}
+
+model ReadingPlanDay {
+  id             String      @id @default(cuid())
+  planId         String
+  plan           ReadingPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  date           DateTime
+  chapters       String
+  completed      Boolean     @default(false)
+  logNote        String?
+  actualChapters String?
+
+  @@unique([planId, date])
 }
 
 // ─── Webhooks ────────────────────────────────────────────────────────────
