@@ -28,23 +28,21 @@ export interface NotebookLMResult {
 // ─── Stealth Browser Launch ──────────────────────────────────────────────
 
 async function launchStealthBrowser(): Promise<Browser> {
-  const executablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH || undefined;
-  return chromium.launch({
-    headless: true,
-    executablePath,
-    args: [
-      "--no-sandbox",
-      "--disable-setuid-sandbox",
-      "--disable-dev-shm-usage",
-      "--disable-gpu",
-      "--disable-software-rasterizer",
-      "--disable-extensions",
-      "--disable-crash-reporter",
-      "--disable-blink-features=AutomationControlled",
-      "--disable-features=IsolateOrigins,site-per-process,VizDisplayCompositor",
-      "--single-process",
-    ],
-  });
+  const args = [
+    "--no-sandbox",
+    "--disable-setuid-sandbox",
+    "--disable-dev-shm-usage",
+    "--disable-gpu",
+    "--disable-software-rasterizer",
+    "--disable-extensions",
+    "--disable-blink-features=AutomationControlled",
+    "--disable-features=IsolateOrigins,site-per-process",
+  ];
+
+  // Usa o Chromium bundled do Playwright (compatível garantido)
+  const browser = await chromium.launch({ headless: true, args });
+  log("Chromium lançado com sucesso.");
+  return browser;
 }
 
 async function createStealthContext(browser: Browser, options?: { recordVideoDir?: string }): Promise<BrowserContext> {
