@@ -28,7 +28,6 @@ export interface NotebookLMResult {
 // ─── Stealth Browser Launch ──────────────────────────────────────────────
 
 async function launchStealthBrowser(): Promise<Browser> {
-  const executablePath = process.env.CHROME_BIN || "/usr/bin/chromium-browser";
   const args = [
     "--no-sandbox",
     "--disable-setuid-sandbox",
@@ -46,8 +45,8 @@ async function launchStealthBrowser(): Promise<Browser> {
     "--no-first-run",
   ];
 
-  log(`Lançando Chromium: ${executablePath}`);
-  const browser = await chromium.launch({ headless: true, executablePath, args });
+  log("Lançando Chromium bundled do Playwright...");
+  const browser = await chromium.launch({ headless: true, args });
   log("Chromium lançado com sucesso.");
   return browser;
 }

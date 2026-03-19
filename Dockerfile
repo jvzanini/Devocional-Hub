@@ -1,18 +1,4 @@
 FROM node:20-bookworm-slim AS base
-
-# Dependências para Chromium/Playwright
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    chromium \
-    fonts-freefont-ttf \
-    ca-certificates \
-    openssl \
-    curl \
-    dbus \
-    && rm -rf /var/lib/apt/lists/*
-
-ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
-ENV CHROME_BIN=/usr/bin/chromium
-
 WORKDIR /app
 
 # ── Dependências ──────────────────────────────────────────────
@@ -20,6 +6,10 @@ FROM base AS deps
 COPY package*.json ./
 COPY prisma ./prisma/
 RUN npm ci --legacy-peer-deps && npx prisma generate
+
+# Instala Chromium bundled do Playwright + dependências do sistema
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+RUN npx playwright install --with-deps chromium
 
 # ── Build ─────────────────────────────────────────────────────
 FROM base AS builder
@@ -29,12 +19,22 @@ COPY . .
 RUN npx prisma generate && npm run build
 
 # ── Runner ────────────────────────────────────────────────────
-FROM base AS runner
+FROM node:20-bookworm-slim AS runner
 WORKDIR /app
+
+# Dependências do sistema para Chromium do Playwright
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 \
+    libdbus-1-3 libxkbcommon0 libatspi2.0-0 libx11-6 libxcomposite1 \
+    libxdamage1 libxext6 libxfixes3 libxrandr2 libgbm1 libpango-1.0-0 \
+    libcairo2 libasound2 \
+    fonts-freefont-ttf ca-certificates openssl curl \
+    && rm -rf /var/lib/apt/lists/*
 
 ENV NODE_ENV=production
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
@@ -52,7 +52,10 @@ COPY --from=builder /app/prisma ./prisma
 # bcryptjs para o seed do admin
 COPY --from=builder /app/node_modules/bcryptjs ./node_modules/bcryptjs
 
-# Playwright (usa Chromium do sistema via CHROME_BIN)
+# Playwright — Chromium bundled + bibliotecas do pacote
+COPY --from=deps /ms-playwright /ms-playwright
+COPY --from=deps /app/node_modules/playwright /app/node_modules/playwright
+COPY --from=deps /app/node_modules/playwright-core /app/node_modules/playwright-core
 
 # Script de inicialização
 COPY --chown=nextjs:nodejs docker-entrypoint.sh ./
