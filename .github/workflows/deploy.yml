@@ -52,6 +52,14 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           no-cache: true
 
+      - name: Make package public (for Swarm pull)
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api --method PATCH /user/packages/container/devocional-hub \
+            -f visibility=public 2>/dev/null && echo "Package set to public" || echo "Could not change visibility"
+
   deploy:
     name: Deploy to Portainer
     runs-on: ubuntu-latest
@@ -60,6 +68,54 @@ jobs:
     steps:
       - name: Checkout (for stack file)
         uses: actions/checkout@v4
+
+      - name: Ensure GHCR registry in Portainer
+        continue-on-error: true
+        run: |
+          # Verificar se o registry GHCR já existe no Portainer
+          REGISTRIES=$(curl -s -H "X-API-Key: ${{ secrets.PORTAINER_TOKEN }}" \
+            "https://painel.nexusai360.com/api/registries")
+
+          GHCR_ID=$(echo "$REGISTRIES" | python3 -c "
+          import json, sys
+          try:
+            registries = json.load(sys.stdin)
+            ghcr = [r for r in registries if 'ghcr.io' in r.get('URL', '')]
+            print(ghcr[0]['Id'] if ghcr else '')
+          except: print('')
+          ")
+
+          if [ -z "$GHCR_ID" ]; then
+            echo "Criando registry GHCR no Portainer..."
+            curl -s -X POST \
+              -H "X-API-Key: ${{ secrets.PORTAINER_TOKEN }}" \
+              -H "Content-Type: application/json" \
+              "https://painel.nexusai360.com/api/registries" \
+              -d "{
+                \"Name\": \"GitHub Container Registry\",
+                \"Type\": 6,
+                \"URL\": \"ghcr.io\",
+                \"BaseURL\": \"\",
+                \"Authentication\": true,
+                \"Username\": \"${{ github.actor }}\",
+                \"Password\": \"${{ secrets.GITHUB_TOKEN }}\"
+              }" && echo "Registry GHCR criado com sucesso"
+          else
+            echo "Registry GHCR já existe (ID: $GHCR_ID), atualizando credenciais..."
+            curl -s -X PUT \
+              -H "X-API-Key: ${{ secrets.PORTAINER_TOKEN }}" \
+              -H "Content-Type: application/json" \
+              "https://painel.nexusai360.com/api/registries/$GHCR_ID" \
+              -d "{
+                \"Name\": \"GitHub Container Registry\",
+                \"Type\": 6,
+                \"URL\": \"ghcr.io\",
+                \"BaseURL\": \"\",
+                \"Authentication\": true,
+                \"Username\": \"${{ github.actor }}\",
+                \"Password\": \"${{ secrets.GITHUB_TOKEN }}\"
+              }" && echo "Registry GHCR atualizado"
+          fi
 
       - name: Redeploy stack on Portainer
         run: |
