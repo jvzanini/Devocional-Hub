@@ -278,31 +278,41 @@ async function createNotebook(page: Page, transcriptText: string, bibleText: str
 
 async function addTextSource(page: Page, text: string): Promise<void> {
   // Clicar em "Add source" / "Adicionar fonte"
+  log("addTextSource: Procurando botão 'Add source'...");
   const addBtn = page.locator(
-    'button:has-text("Add source"), button:has-text("Adicionar fonte"), button:has-text("Add"), [aria-label*="source" i], [aria-label*="fonte" i]'
+    'button:has-text("Add source"), button:has-text("Adicionar fonte"), [aria-label*="source" i], [aria-label*="fonte" i]'
   );
-  await addBtn.first().click({ timeout: 10000 });
-  await page.waitForTimeout(1500);
+  await addBtn.first().waitFor({ state: "visible", timeout: 20000 });
+  await addBtn.first().click({ timeout: 10000, force: true });
+  log("addTextSource: Clicou em 'Add source'");
+  await page.waitForTimeout(3000);
 
   // Selecionar "Copied text" / "Texto copiado"
+  log("addTextSource: Procurando opção 'Copied text'...");
   const pasteBtn = page.locator(
     'button:has-text("Copied text"), button:has-text("Texto copiado"), button:has-text("Paste text"), button:has-text("Colar texto"), [data-value="TEXT"]'
   );
-  await pasteBtn.first().click({ timeout: 8000 });
-  await page.waitForTimeout(1000);
+  await pasteBtn.first().waitFor({ state: "visible", timeout: 15000 });
+  await pasteBtn.first().click({ timeout: 10000 });
+  log("addTextSource: Clicou em 'Copied text'");
+  await page.waitForTimeout(2000);
 
   // Preencher textarea
+  log("addTextSource: Preenchendo texto...");
   const textarea = page.locator('textarea, [contenteditable="true"], [role="textbox"]');
-  await textarea.last().click({ timeout: 5000 });
+  await textarea.last().click({ timeout: 10000 });
   await textarea.last().fill(text);
-  await page.waitForTimeout(500);
+  await page.waitForTimeout(1000);
 
   // Confirmar inserção
+  log("addTextSource: Confirmando inserção...");
   const insertBtn = page.locator(
-    'button:has-text("Insert"), button:has-text("Inserir"), button:has-text("Add"), button:has-text("Adicionar")'
+    'button:has-text("Insert"), button:has-text("Inserir")'
   );
-  await insertBtn.first().click({ timeout: 8000 });
-  await page.waitForTimeout(2000);
+  await insertBtn.first().waitFor({ state: "visible", timeout: 10000 });
+  await insertBtn.first().click({ timeout: 10000 });
+  log("addTextSource: Fonte inserida com sucesso");
+  await page.waitForTimeout(3000);
 }
 
 /**
@@ -315,7 +325,14 @@ async function createNotebookWithKB(page: Page, knowledgeBase: string, chapterRe
     // Clica em "Novo notebook"
     const newBtn = page.locator('button:has-text("New notebook"), button:has-text("Novo notebook"), button:has-text("Create new"), [aria-label*="new notebook" i], [aria-label*="novo notebook" i]');
     await newBtn.first().click({ timeout: 15000 });
-    await page.waitForTimeout(3000);
+
+    // Aguardar a UI do novo notebook carregar completamente
+    log("Aguardando carregamento do novo notebook...");
+    await page.waitForTimeout(8000);
+
+    // Listar botões disponíveis para diagnóstico
+    const btns = await page.locator("button").allTextContents().catch(() => []);
+    log(`Botões após criar notebook: ${btns.filter(b => b.trim()).slice(0, 15).join(" | ")}`);
 
     // Adicionar fonte única: KB unificada
     log("Adicionando fonte: KB unificada...");
