@@ -1,7 +1,14 @@
 /**
- * NotebookLM automation via Playwright
- * NOTA: Esta automação depende da UI do NotebookLM que pode mudar.
- * O Google pode bloquear logins automatizados — use storageState para persistir sessão.
+ * NotebookLM automation via Playwright (Stealth Mode)
+ * Gera: Slides (PDF), Infográfico (PDF), Vídeo resumo (Audio Overview)
+ *
+ * Fluxo:
+ * 1. Login Google com sessão persistida (volume Docker)
+ * 2. Cria notebook com transcrição + texto bíblico
+ * 3. Gera Presentation (slides), Infographic, Audio Overview (vídeo)
+ *
+ * Setup inicial: chamar POST /api/admin/notebooklm-setup para fazer login
+ * manual uma vez. A sessão é salva em playwright-state/ (volume persistente).
  */
 
 import { chromium, Browser, BrowserContext, Page } from "playwright";
@@ -12,259 +19,312 @@ import os from "os";
 const STATE_FILE = path.join(process.cwd(), "playwright-state", "google-session.json");
 const NOTEBOOKLM_URL = "https://notebooklm.google.com";
 
-interface NotebookLMResult {
+export interface NotebookLMResult {
   slidesPath: string | null;
   infographicPath: string | null;
   audioOverviewPath: string | null;
 }
 
-/**
- * Obtém ou cria contexto de browser com sessão Google persistida
- */
-async function getBrowserContext(browser: Browser): Promise<BrowserContext> {
+// ─── Stealth Browser Launch ──────────────────────────────────────────────
+
+async function launchStealthBrowser(): Promise<Browser> {
+  const executablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH || undefined;
+  return chromium.launch({
+    headless: true,
+    executablePath,
+    args: [
+      "--no-sandbox",
+      "--disable-setuid-sandbox",
+      "--disable-dev-shm-usage",
+      "--disable-gpu",
+      "--disable-blink-features=AutomationControlled",
+      "--disable-features=IsolateOrigins,site-per-process",
+      "--window-size=1920,1080",
+      "--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+    ],
+  });
+}
+
+async function createStealthContext(browser: Browser, options?: { recordVideoDir?: string }): Promise<BrowserContext> {
   const stateDir = path.dirname(STATE_FILE);
   if (!fs.existsSync(stateDir)) {
     fs.mkdirSync(stateDir, { recursive: true });
   }
 
+  const contextOptions: Record<string, unknown> = {
+    viewport: { width: 1920, height: 1080 },
+    locale: "pt-BR",
+    timezoneId: "America/Sao_Paulo",
+    userAgent: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+  };
+
+  if (options?.recordVideoDir) {
+    contextOptions.recordVideo = { dir: options.recordVideoDir, size: { width: 1280, height: 720 } };
+  }
+
   if (fs.existsSync(STATE_FILE)) {
-    return browser.newContext({ storageState: STATE_FILE });
+    contextOptions.storageState = STATE_FILE;
   }
 
-  return browser.newContext();
+  const context = await browser.newContext(contextOptions);
+
+  // Stealth: override navigator.webdriver
+  await context.addInitScript(() => {
+    Object.defineProperty(navigator, "webdriver", { get: () => false });
+    // @ts-expect-error - stealth override
+    window.chrome = { runtime: {} };
+    Object.defineProperty(navigator, "plugins", { get: () => [1, 2, 3, 4, 5] });
+    Object.defineProperty(navigator, "languages", { get: () => ["pt-BR", "pt", "en-US", "en"] });
+  });
+
+  return context;
 }
 
-/**
- * Salva o estado da sessão para reutilização
- */
-async function saveSession(context: BrowserContext): Promise<void> {
-  await context.storageState({ path: STATE_FILE });
-}
+// ─── Google Login ────────────────────────────────────────────────────────
 
-/**
- * Faz login no Google se necessário
- */
-async function ensureGoogleLogin(page: Page): Promise<void> {
-  await page.goto(NOTEBOOKLM_URL, { waitUntil: "networkidle" });
-
-  // Verifica se já está logado
+async function isLoggedIn(page: Page): Promise<boolean> {
   const url = page.url();
-  if (url.includes("notebooklm.google.com") && !url.includes("accounts.google.com")) {
-    return;
-  }
+  return url.includes("notebooklm.google.com") && !url.includes("accounts.google.com");
+}
 
+async function loginGoogle(page: Page): Promise<boolean> {
   const { GOOGLE_EMAIL, GOOGLE_PASSWORD } = process.env;
   if (!GOOGLE_EMAIL || !GOOGLE_PASSWORD) {
-    throw new Error(
-      "GOOGLE_EMAIL e GOOGLE_PASSWORD devem estar configurados para automação do NotebookLM"
-    );
+    throw new Error("GOOGLE_EMAIL e GOOGLE_PASSWORD devem estar configurados");
   }
 
-  // Login Google
-  await page.waitForSelector('input[type="email"]', { timeout: 15000 });
-  await page.fill('input[type="email"]', GOOGLE_EMAIL);
-  await page.click("#identifierNext");
+  log("Fazendo login no Google...");
 
-  await page.waitForSelector('input[type="password"]', { timeout: 10000 });
-  await page.fill('input[type="password"]', GOOGLE_PASSWORD);
-  await page.click("#passwordNext");
+  try {
+    await page.goto(NOTEBOOKLM_URL, { waitUntil: "networkidle", timeout: 30000 });
 
-  // Aguarda redirecionamento
-  await page.waitForURL("**/notebooklm.google.com/**", { timeout: 30000 });
+    if (await isLoggedIn(page)) {
+      log("Já logado (sessão salva).");
+      return true;
+    }
+
+    // Email
+    await page.waitForSelector('input[type="email"]', { timeout: 15000 });
+    await page.waitForTimeout(1000);
+    await page.fill('input[type="email"]', GOOGLE_EMAIL);
+    await page.waitForTimeout(500);
+    await page.click("#identifierNext");
+
+    // Password
+    await page.waitForSelector('input[type="password"]:visible', { timeout: 15000 });
+    await page.waitForTimeout(1000);
+    await page.fill('input[type="password"]', GOOGLE_PASSWORD);
+    await page.waitForTimeout(500);
+    await page.click("#passwordNext");
+
+    // Aguarda redirecionamento para NotebookLM
+    await page.waitForURL("**/notebooklm.google.com/**", { timeout: 60000 });
+    log("Login realizado com sucesso!");
+    return true;
+  } catch (err) {
+    log(`Falha no login: ${err}`);
+    // Screenshot de debug
+    try {
+      const debugDir = path.join(os.tmpdir(), "notebooklm-debug");
+      fs.mkdirSync(debugDir, { recursive: true });
+      await page.screenshot({ path: path.join(debugDir, `login-error-${Date.now()}.png`), fullPage: true });
+      log(`Screenshot de debug salva em ${debugDir}`);
+    } catch { /* ignore */ }
+    return false;
+  }
 }
 
-/**
- * Cria um novo notebook no NotebookLM com as fontes fornecidas
- */
-async function createNotebook(
-  page: Page,
-  title: string,
-  transcriptText: string,
-  bibleText: string
-): Promise<void> {
-  // Clica em "Novo notebook"
-  const newNotebookBtn = page.locator('button:has-text("New notebook"), button:has-text("Novo notebook")');
-  await newNotebookBtn.click({ timeout: 10000 });
-
-  // Aguarda modal ou nova página do notebook
-  await page.waitForTimeout(2000);
-
-  // Adiciona fonte — transcrição
-  await addTextSource(page, `Transcrição do Devocional\n\n${transcriptText}`);
-  await page.waitForTimeout(2000);
-
-  // Adiciona fonte — texto bíblico
-  await addTextSource(page, `Texto Bíblico (NVI)\n\n${bibleText}`);
-  await page.waitForTimeout(3000);
+async function saveSession(context: BrowserContext): Promise<void> {
+  try {
+    await context.storageState({ path: STATE_FILE });
+    log("Sessão Google salva.");
+  } catch (err) {
+    log(`Erro ao salvar sessão: ${err}`);
+  }
 }
 
-/**
- * Adiciona uma fonte de texto ao notebook
- */
+// ─── Notebook Creation ──────────────────────────────────────────────────
+
+async function createNotebook(page: Page, transcriptText: string, bibleText: string, chapterRef: string): Promise<boolean> {
+  try {
+    log("Criando novo notebook...");
+
+    // Clica em "Novo notebook" / "New notebook"
+    const newBtn = page.locator('button:has-text("New notebook"), button:has-text("Novo notebook"), button:has-text("Create new"), [aria-label*="new notebook" i], [aria-label*="novo notebook" i]');
+    await newBtn.first().click({ timeout: 15000 });
+    await page.waitForTimeout(3000);
+
+    // Adicionar fonte 1: Transcrição
+    log("Adicionando fonte: Transcrição...");
+    await addTextSource(page, `Transcrição do Devocional — ${chapterRef}\n\n${transcriptText.substring(0, 50000)}`);
+    await page.waitForTimeout(3000);
+
+    // Adicionar fonte 2: Texto Bíblico
+    if (bibleText && bibleText.length > 10) {
+      log("Adicionando fonte: Texto Bíblico...");
+      await addTextSource(page, `Texto Bíblico (NVI) — ${chapterRef}\n\n${bibleText.substring(0, 50000)}`);
+      await page.waitForTimeout(3000);
+    }
+
+    log("Notebook criado com sucesso.");
+    return true;
+  } catch (err) {
+    log(`Erro ao criar notebook: ${err}`);
+    return false;
+  }
+}
+
 async function addTextSource(page: Page, text: string): Promise<void> {
-  // Clica no botão de adicionar fonte
-  const addSourceBtn = page.locator(
-    'button:has-text("Add source"), button:has-text("Adicionar fonte"), [aria-label*="source"], [aria-label*="fonte"]'
+  // Clicar em "Add source" / "Adicionar fonte"
+  const addBtn = page.locator(
+    'button:has-text("Add source"), button:has-text("Adicionar fonte"), button:has-text("Add"), [aria-label*="source" i], [aria-label*="fonte" i]'
   );
-  await addSourceBtn.first().click({ timeout: 10000 });
+  await addBtn.first().click({ timeout: 10000 });
+  await page.waitForTimeout(1500);
 
-  // Seleciona opção de "Colar texto"
-  const pasteTextOption = page.locator(
-    'button:has-text("Copied text"), button:has-text("Texto copiado"), button:has-text("Paste text")'
+  // Selecionar "Copied text" / "Texto copiado"
+  const pasteBtn = page.locator(
+    'button:has-text("Copied text"), button:has-text("Texto copiado"), button:has-text("Paste text"), button:has-text("Colar texto"), [data-value="TEXT"]'
   );
-  await pasteTextOption.first().click({ timeout: 5000 });
+  await pasteBtn.first().click({ timeout: 8000 });
+  await page.waitForTimeout(1000);
 
-  // Preenche a textarea
-  const textarea = page.locator('textarea, [contenteditable="true"]').last();
-  await textarea.fill(text.substring(0, 50000)); // Limite de caracteres
+  // Preencher textarea
+  const textarea = page.locator('textarea, [contenteditable="true"], [role="textbox"]');
+  await textarea.last().click({ timeout: 5000 });
+  await textarea.last().fill(text);
+  await page.waitForTimeout(500);
 
-  // Confirma
-  const confirmBtn = page.locator('button:has-text("Insert"), button:has-text("Inserir"), button:has-text("Add")');
-  await confirmBtn.first().click({ timeout: 5000 });
+  // Confirmar inserção
+  const insertBtn = page.locator(
+    'button:has-text("Insert"), button:has-text("Inserir"), button:has-text("Add"), button:has-text("Adicionar")'
+  );
+  await insertBtn.first().click({ timeout: 8000 });
+  await page.waitForTimeout(2000);
 }
 
-/**
- * Aciona a geração de apresentação de slides
- */
+// ─── Content Generation ─────────────────────────────────────────────────
+
 async function generateSlides(page: Page, downloadDir: string): Promise<string | null> {
   try {
-    // Abre o "Notebook Guide"
+    log("Gerando Slides...");
+
+    // Abrir Notebook Guide
     const guideBtn = page.locator(
-      'button:has-text("Notebook guide"), [aria-label*="guide"]'
+      'button:has-text("Notebook guide"), button:has-text("Guia do notebook"), [aria-label*="guide" i], [aria-label*="guia" i]'
     );
     await guideBtn.first().click({ timeout: 10000 });
     await page.waitForTimeout(2000);
 
-    // Clica em "Presentation"
-    const presentationBtn = page.locator(
-      'button:has-text("Presentation"), button:has-text("Apresentação")'
+    // Clicar em Presentation
+    const presBtn = page.locator(
+      'button:has-text("Presentation"), button:has-text("Apresentação"), button:has-text("Slides")'
     );
-    await presentationBtn.first().click({ timeout: 10000 });
+    await presBtn.first().click({ timeout: 10000 });
+    await page.waitForTimeout(20000); // Aguarda geração
 
-    // Aguarda geração (pode demorar)
-    await page.waitForTimeout(15000);
-
-    // Tenta fazer download
-    const downloadPromise = page.waitForEvent("download", { timeout: 30000 });
-    const downloadBtn = page.locator(
-      'button[aria-label*="download"], button:has-text("Download")'
-    );
-    await downloadBtn.first().click({ timeout: 5000 });
-
+    // Download
+    const downloadPromise = page.waitForEvent("download", { timeout: 60000 });
+    const dlBtn = page.locator('button[aria-label*="download" i], button[aria-label*="Download" i], button:has-text("Download")');
+    await dlBtn.first().click({ timeout: 10000 });
     const download = await downloadPromise;
+
     const slidesPath = path.join(downloadDir, `slides-${Date.now()}.pdf`);
     await download.saveAs(slidesPath);
-
+    log(`Slides salvos: ${slidesPath}`);
     return slidesPath;
   } catch (err) {
-    console.error("Falha ao gerar slides:", err);
+    log(`Falha ao gerar slides: ${err}`);
     return null;
   }
 }
 
-/**
- * Aciona a geração de infográfico
- */
 async function generateInfographic(page: Page, downloadDir: string): Promise<string | null> {
   try {
-    const infographicBtn = page.locator(
+    log("Gerando Infográfico...");
+
+    const btn = page.locator(
       'button:has-text("Infographic"), button:has-text("Infográfico")'
     );
-    await infographicBtn.first().click({ timeout: 10000 });
+    await btn.first().click({ timeout: 10000 });
+    await page.waitForTimeout(20000);
 
-    await page.waitForTimeout(15000);
-
-    const downloadPromise = page.waitForEvent("download", { timeout: 30000 });
-    const downloadBtn = page.locator(
-      'button[aria-label*="download"], button:has-text("Download")'
-    ).last();
-    await downloadBtn.click({ timeout: 5000 });
-
+    const downloadPromise = page.waitForEvent("download", { timeout: 60000 });
+    const dlBtn = page.locator('button[aria-label*="download" i], button:has-text("Download")').last();
+    await dlBtn.click({ timeout: 10000 });
     const download = await downloadPromise;
-    const infographicPath = path.join(downloadDir, `infographic-${Date.now()}.pdf`);
-    await download.saveAs(infographicPath);
 
-    return infographicPath;
+    const infPath = path.join(downloadDir, `infographic-${Date.now()}.pdf`);
+    await download.saveAs(infPath);
+    log(`Infográfico salvo: ${infPath}`);
+    return infPath;
   } catch (err) {
-    console.error("Falha ao gerar infográfico:", err);
+    log(`Falha ao gerar infográfico: ${err}`);
     return null;
   }
 }
 
-/**
- * Aciona a geração do Audio Overview (podcast/vídeo) em Português BR
- */
 async function generateAudioOverview(page: Page, downloadDir: string): Promise<string | null> {
   try {
-    // Clica no botão "Audio Overview" no Notebook Guide
+    log("Gerando Audio Overview (Vídeo)...");
+
+    // Clicar em Audio Overview / Deep Dive
     const audioBtn = page.locator(
-      'button:has-text("Audio Overview"), button:has-text("Visão geral em áudio"), button:has-text("Deep Dive"), [aria-label*="Audio"], [aria-label*="audio"]'
+      'button:has-text("Audio Overview"), button:has-text("Visão geral em áudio"), button:has-text("Deep Dive"), [aria-label*="audio" i]'
     );
     await audioBtn.first().click({ timeout: 10000 });
     await page.waitForTimeout(2000);
 
-    // Tenta configurar idioma para Português antes de gerar
-    const customizeBtn = page.locator(
-      'button:has-text("Customize"), button:has-text("Personalizar"), [aria-label*="customize"], [aria-label*="settings"]'
-    );
+    // Tentar customizar para PT-BR
     try {
-      await customizeBtn.first().click({ timeout: 5000 });
+      const customBtn = page.locator('button:has-text("Customize"), button:has-text("Personalizar")');
+      await customBtn.first().click({ timeout: 5000 });
       await page.waitForTimeout(1000);
 
-      // Procura seletor de idioma
-      const langSelect = page.locator('select, [role="listbox"]').first();
-      try {
-        await langSelect.click({ timeout: 3000 });
-        const ptOption = page.locator('option:has-text("Portuguese"), [role="option"]:has-text("Portuguese"), li:has-text("Portuguese"), li:has-text("Português")');
-        await ptOption.first().click({ timeout: 3000 });
+      // Procurar campo de instruções
+      const instructionField = page.locator('textarea');
+      if (await instructionField.count() > 0) {
+        await instructionField.last().fill(
+          "Gere o conteúdo inteiramente em português brasileiro. Use linguagem pastoral e acessível."
+        );
         await page.waitForTimeout(500);
-      } catch {
-        // Tenta campo de texto para instruções de customização
-        const instructionField = page.locator('textarea, input[type="text"]').last();
-        try {
-          await instructionField.fill("Gere o conteúdo inteiramente em português brasileiro. Use linguagem acessível e tom pastoral.");
-          await page.waitForTimeout(500);
-        } catch {
-          console.log("[NotebookLM] Não foi possível customizar idioma, gerando com padrão");
-        }
       }
     } catch {
-      console.log("[NotebookLM] Botão de customizar não encontrado, gerando com padrão");
+      log("Customização de idioma não disponível, usando padrão.");
     }
 
-    // Clica em "Generate" / "Gerar"
-    const generateBtn = page.locator(
+    // Clicar em Generate / Gerar
+    const genBtn = page.locator(
       'button:has-text("Generate"), button:has-text("Gerar"), button:has-text("Create")'
     );
-    await generateBtn.first().click({ timeout: 10000 });
+    await genBtn.first().click({ timeout: 10000 });
 
-    // Audio Overview demora mais (2-5 min) — aguarda até 5 minutos
-    console.log("[NotebookLM] Aguardando geração do Audio Overview (pode levar até 5 min)...");
-
-    // Aguarda o player de áudio aparecer (indicando que foi gerado)
+    // Audio Overview demora 2-5 minutos
+    log("Aguardando geração do Audio Overview (até 5 min)...");
     await page.waitForSelector(
-      'audio, [aria-label*="Play"], button:has-text("Play"), [data-testid*="audio"]',
-      { timeout: 300000 } // 5 minutos
+      'audio, video, [aria-label*="Play" i], button:has-text("Play"), [data-testid*="audio" i], [data-testid*="player" i]',
+      { timeout: 360000 } // 6 min max
     );
-    await page.waitForTimeout(3000);
+    await page.waitForTimeout(5000);
 
-    // Tenta fazer download do áudio
-    const downloadPromise = page.waitForEvent("download", { timeout: 30000 });
+    // Tentar download
+    const downloadPromise = page.waitForEvent("download", { timeout: 60000 });
 
-    // Procura botão de download/share no player
-    const dlBtn = page.locator(
-      'button[aria-label*="download"], button[aria-label*="Download"], button:has-text("Download"), [aria-label*="more"], button[aria-label*="menu"]'
+    // Procurar menu ou botão de download
+    const menuBtn = page.locator(
+      'button[aria-label*="more" i], button[aria-label*="menu" i], button[aria-label*="options" i], button[aria-label*="download" i]'
     );
-    await dlBtn.first().click({ timeout: 10000 });
+    await menuBtn.first().click({ timeout: 10000 });
+    await page.waitForTimeout(1000);
 
-    // Se abriu menu, clicar em Download
+    // Clicar na opção de download no menu
     try {
       const dlOption = page.locator(
-        'li:has-text("Download"), [role="menuitem"]:has-text("Download"), button:has-text("Download audio")'
+        '[role="menuitem"]:has-text("Download"), li:has-text("Download"), button:has-text("Download")'
       );
       await dlOption.first().click({ timeout: 5000 });
     } catch {
-      // Pode ser que o clique direto já iniciou o download
+      // Download direto pode já ter iniciado
     }
 
     const download = await downloadPromise;
@@ -272,21 +332,21 @@ async function generateAudioOverview(page: Page, downloadDir: string): Promise<s
     const audioPath = path.join(downloadDir, `audio-overview-${Date.now()}.${ext}`);
     await download.saveAs(audioPath);
 
-    console.log(`[NotebookLM] Audio Overview salvo: ${audioPath}`);
+    log(`Audio Overview salvo: ${audioPath}`);
     return audioPath;
   } catch (err) {
-    console.error("[NotebookLM] Falha ao gerar Audio Overview:", err);
-    // Screenshot de debug
+    log(`Falha ao gerar Audio Overview: ${err}`);
     try {
-      await page.screenshot({ path: path.join(downloadDir, "debug-audio-error.png"), fullPage: true });
+      const debugDir = path.join(downloadDir, "debug");
+      fs.mkdirSync(debugDir, { recursive: true });
+      await page.screenshot({ path: path.join(debugDir, "audio-error.png"), fullPage: true });
     } catch { /* ignore */ }
     return null;
   }
 }
 
-/**
- * Orquestrador principal — roda toda a automação do NotebookLM
- */
+// ─── Orquestrador Principal ─────────────────────────────────────────────
+
 export async function runNotebookLMAutomation(
   sessionId: string,
   transcriptText: string,
@@ -296,51 +356,43 @@ export async function runNotebookLMAutomation(
   const downloadDir = path.join(os.tmpdir(), `devocional-${sessionId}`);
   fs.mkdirSync(downloadDir, { recursive: true });
 
-  const executablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH || undefined;
-  const browser = await chromium.launch({
-    headless: true,
-    executablePath,
-    args: [
-      "--no-sandbox",
-      "--disable-setuid-sandbox",
-      "--disable-dev-shm-usage",
-      "--disable-gpu",
-    ],
-  });
+  const browser = await launchStealthBrowser();
 
   let slidesPath: string | null = null;
   let infographicPath: string | null = null;
   let audioOverviewPath: string | null = null;
 
   try {
-    const context = await getBrowserContext(browser);
-
-    // Configura download automático
-    context.on("page", (page) => {
-      page.on("download", async (download) => {
-        await download.saveAs(path.join(downloadDir, download.suggestedFilename()));
-      });
-    });
-
+    const context = await createStealthContext(browser);
     const page = await context.newPage();
 
-    await ensureGoogleLogin(page);
+    // Login
+    const loggedIn = await loginGoogle(page);
+    if (!loggedIn) {
+      log("Login falhou. Execute POST /api/admin/notebooklm-setup para configurar a sessão.");
+      await context.close();
+      return { slidesPath: null, infographicPath: null, audioOverviewPath: null };
+    }
     await saveSession(context);
 
-    const title = `Devocional ${chapterRef} — ${new Date().toLocaleDateString("pt-BR")}`;
-    await createNotebook(page, title, transcriptText, bibleText);
+    // Criar notebook
+    const created = await createNotebook(page, transcriptText, bibleText, chapterRef);
+    if (!created) {
+      await context.close();
+      return { slidesPath: null, infographicPath: null, audioOverviewPath: null };
+    }
 
+    // Gerar conteúdos (cada um independente)
     slidesPath = await generateSlides(page, downloadDir);
     infographicPath = await generateInfographic(page, downloadDir);
-
-    // Gerar Audio Overview (podcast em PT-BR)
     audioOverviewPath = await generateAudioOverview(page, downloadDir);
 
-    // Screenshot de debug
-    const screenshotPath = path.join(downloadDir, "debug-screenshot.png");
-    await page.screenshot({ path: screenshotPath, fullPage: true });
+    // Screenshot final
+    await page.screenshot({ path: path.join(downloadDir, "debug-final.png"), fullPage: true });
 
     await context.close();
+  } catch (err) {
+    log(`Erro geral: ${err}`);
   } finally {
     await browser.close();
   }
@@ -348,18 +400,52 @@ export async function runNotebookLMAutomation(
   return { slidesPath, infographicPath, audioOverviewPath };
 }
 
+// ─── Setup: Login interativo para salvar sessão ─────────────────────────
+
 /**
- * Verifica se a sessão do Google ainda é válida
+ * Faz login no Google e salva a sessão.
+ * Chamado pelo endpoint POST /api/admin/notebooklm-setup
+ * Precisa ser executado UMA VEZ após cada deploy (ou quando sessão expirar).
  */
+export async function setupGoogleSession(): Promise<{ success: boolean; message: string }> {
+  const browser = await launchStealthBrowser();
+
+  try {
+    const context = await createStealthContext(browser);
+    const page = await context.newPage();
+
+    const loggedIn = await loginGoogle(page);
+    if (loggedIn) {
+      await saveSession(context);
+      await context.close();
+      return { success: true, message: "Sessão Google salva com sucesso. NotebookLM está pronto." };
+    }
+
+    // Screenshot de debug
+    const debugPath = path.join(os.tmpdir(), `notebooklm-setup-${Date.now()}.png`);
+    await page.screenshot({ path: debugPath, fullPage: true });
+    await context.close();
+    return { success: false, message: `Login falhou. Screenshot: ${debugPath}` };
+  } catch (err) {
+    return { success: false, message: `Erro: ${err}` };
+  } finally {
+    await browser.close();
+  }
+}
+
+// ─── Helpers ────────────────────────────────────────────────────────────
+
 export function hasGoogleSession(): boolean {
   return fs.existsSync(STATE_FILE);
 }
 
-/**
- * Remove a sessão salva (força novo login)
- */
 export function clearGoogleSession(): void {
   if (fs.existsSync(STATE_FILE)) {
     fs.unlinkSync(STATE_FILE);
+    log("Sessão Google removida.");
   }
+}
+
+function log(message: string): void {
+  console.log(`[NotebookLM] ${message}`);
 }
