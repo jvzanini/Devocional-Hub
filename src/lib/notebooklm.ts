@@ -247,107 +247,71 @@ async function saveSession(context: BrowserContext): Promise<void> {
 
 // ─── Notebook Creation ──────────────────────────────────────────────────
 
-async function createNotebook(page: Page, transcriptText: string, bibleText: string, chapterRef: string): Promise<boolean> {
-  try {
-    log("Criando novo notebook...");
-
-    // Clica em "Novo notebook" / "New notebook"
-    const newBtn = page.locator('button:has-text("Criar novo"), button:has-text("New notebook"), button:has-text("Novo notebook"), button:has-text("Create new"), [aria-label*="new notebook" i], [aria-label*="criar" i]');
-    await newBtn.first().click({ timeout: 15000 });
-    await page.waitForTimeout(3000);
-
-    // Adicionar fonte 1: Transcrição
-    log("Adicionando fonte: Transcrição...");
-    await addTextSource(page, `Transcrição do Devocional — ${chapterRef}\n\n${transcriptText.substring(0, 50000)}`);
-    await page.waitForTimeout(3000);
-
-    // Adicionar fonte 2: Texto Bíblico
-    if (bibleText && bibleText.length > 10) {
-      log("Adicionando fonte: Texto Bíblico...");
-      await addTextSource(page, `Texto Bíblico (NVI) — ${chapterRef}\n\n${bibleText.substring(0, 50000)}`);
-      await page.waitForTimeout(3000);
-    }
-
-    log("Notebook criado com sucesso.");
-    return true;
-  } catch (err) {
-    log(`Erro ao criar notebook: ${err}`);
-    return false;
-  }
-}
-
-async function addTextSource(page: Page, text: string): Promise<void> {
-  // Clicar em "Add source" / "Adicionar fonte"
-  log("addTextSource: Procurando botão 'Add source' / 'Adicionar fontes'...");
-  const addBtn = page.locator(
-    'button:has-text("Add source"), button:has-text("Adicionar fonte"), button:has-text("Adicionar fontes"), [aria-label*="source" i], [aria-label*="fonte" i]'
-  );
-  await addBtn.first().waitFor({ state: "visible", timeout: 20000 });
-  await addBtn.first().click({ timeout: 10000, force: true });
-  log("addTextSource: Clicou em 'Add source'");
-  await page.waitForTimeout(3000);
-
-  // Selecionar "Copied text" / "Texto copiado"
-  // Listar opções disponíveis após clicar em "Add source"
-  const allBtns = await page.locator("button, a, [role='option'], [role='menuitem'], [role='listitem'], li").allTextContents().catch(() => []);
-  log(`Opções visíveis após 'Add source': ${allBtns.filter(b => b.trim()).slice(0, 20).join(" | ")}`);
-
-  log("addTextSource: Procurando opção 'Copied text' / 'Texto copiado' / 'Colar texto'...");
-  const pasteBtn = page.locator(
-    'button:has-text("Copied text"), button:has-text("Texto copiado"), button:has-text("Colar texto"), button:has-text("Paste text"), button:has-text("Texto"), [data-value="TEXT"], [role="option"]:has-text("text"), [role="option"]:has-text("texto"), li:has-text("Texto copiado"), li:has-text("Colar texto"), li:has-text("Copied text")'
-  );
-  await pasteBtn.first().waitFor({ state: "visible", timeout: 15000 });
-  await pasteBtn.first().click({ timeout: 10000 });
-  log("addTextSource: Clicou na opção de texto");
-  await page.waitForTimeout(2000);
-
-  // Preencher textarea
-  log("addTextSource: Preenchendo texto...");
-  const textarea = page.locator('textarea, [contenteditable="true"], [role="textbox"]');
-  await textarea.last().click({ timeout: 10000 });
-  await textarea.last().fill(text);
-  await page.waitForTimeout(1000);
-
-  // Confirmar inserção
-  log("addTextSource: Confirmando inserção...");
-  const insertBtn = page.locator(
-    'button:has-text("Insert"), button:has-text("Inserir")'
-  );
-  await insertBtn.first().waitFor({ state: "visible", timeout: 10000 });
-  await insertBtn.first().click({ timeout: 10000 });
-  log("addTextSource: Fonte inserida com sucesso");
-  await page.waitForTimeout(3000);
-}
-
 /**
- * Cria notebook com KB unificada (fonte única otimizada) e nome padronizado
+ * Cria notebook com KB unificada usando o fluxo real do NotebookLM:
+ * 1. Clica "Criar novo" → dialog aparece com opções de fonte
+ * 2. Clica "Texto copiado" no dialog
+ * 3. Cola o texto na textarea e clica "Inserir"
+ * 4. Aguarda notebook carregar com a fonte
  */
 async function createNotebookWithKB(page: Page, knowledgeBase: string, chapterRef: string): Promise<boolean> {
   try {
     log("Criando novo notebook com KB unificada...");
 
-    // Clica em "Criar novo" / "New notebook"
-    const newBtn = page.locator('button:has-text("Criar novo"), button:has-text("New notebook"), button:has-text("Novo notebook"), button:has-text("Criar notebook"), button:has-text("Create new"), [aria-label*="new notebook" i], [aria-label*="novo notebook" i], [aria-label*="criar" i]');
+    // 1. Clica em "Criar novo"
+    const newBtn = page.locator('button:has-text("Criar novo"), button:has-text("New notebook"), button:has-text("Create new")');
     await newBtn.first().waitFor({ state: "visible", timeout: 30000 });
     await newBtn.first().click({ timeout: 15000 });
+    log("Clicou em 'Criar novo'");
 
-    // Aguardar a UI do novo notebook carregar completamente
-    log("Aguardando carregamento do novo notebook...");
-    await page.waitForTimeout(10000);
+    // 2. Aguardar dialog de fontes aparecer (mostra "Texto copiado" entre as opções)
+    await page.waitForTimeout(5000);
 
-    // Listar botões disponíveis para diagnóstico
-    const btns = await page.locator("button").allTextContents().catch(() => []);
-    log(`Botões após criar notebook: ${btns.filter(b => b.trim()).slice(0, 15).join(" | ")}`);
-
-    // Adicionar fonte única: KB unificada
-    log("Adicionando fonte: KB unificada...");
-    await addTextSource(page, knowledgeBase.substring(0, 100000));
+    // 3. Clicar em "Texto copiado" — pode ser button, span, div, etc.
+    log("Procurando 'Texto copiado' no dialog...");
+    const textoCopiado = page.locator('text="Texto copiado"');
+    try {
+      await textoCopiado.first().waitFor({ state: "visible", timeout: 15000 });
+      await textoCopiado.first().click({ timeout: 10000 });
+      log("Clicou em 'Texto copiado'");
+    } catch {
+      // Fallback: tentar locators mais genéricos
+      log("Tentando locator alternativo para 'Texto copiado'...");
+      const alt = page.locator('*:has-text("Texto copiado"):not(:has(*:has-text("Texto copiado")))');
+      await alt.first().click({ timeout: 10000 });
+      log("Clicou via locator alternativo");
+    }
     await page.waitForTimeout(3000);
 
-    // Renomear notebook para o padrão "{Livro} {Capítulo}"
-    await renameNotebook(page, chapterRef);
+    // 4. Preencher textarea ("Cole o texto aqui")
+    log("Preenchendo textarea com KB...");
+    const textarea = page.locator('textarea');
+    await textarea.first().waitFor({ state: "visible", timeout: 15000 });
+    await textarea.first().click({ timeout: 5000 });
+    await textarea.first().fill(knowledgeBase.substring(0, 100000));
+    log(`KB inserida: ${knowledgeBase.length} chars`);
+    await page.waitForTimeout(1000);
 
-    log("Notebook criado com KB unificada e nome padronizado.");
+    // 5. Clicar "Inserir"
+    log("Clicando 'Inserir'...");
+    const inserirBtn = page.locator('button:has-text("Inserir"), button:has-text("Insert")');
+    await inserirBtn.first().waitFor({ state: "visible", timeout: 10000 });
+    await inserirBtn.first().click({ timeout: 10000 });
+    log("Clicou em 'Inserir'");
+
+    // 6. Aguardar notebook carregar com a fonte (sidebar mostra "Texto colado")
+    log("Aguardando notebook processar fonte...");
+    await page.waitForTimeout(15000);
+
+    // Verificar se fonte foi carregada
+    try {
+      await page.locator('text="Texto colado"').first().waitFor({ state: "visible", timeout: 30000 });
+      log("Fonte 'Texto colado' confirmada no sidebar!");
+    } catch {
+      log("Aviso: 'Texto colado' não encontrado no sidebar, mas continuando...");
+    }
+
+    log("Notebook criado com KB unificada.");
     return true;
   } catch (err) {
     log(`Erro ao criar notebook com KB: ${err}`);
@@ -355,174 +319,70 @@ async function createNotebookWithKB(page: Page, knowledgeBase: string, chapterRe
   }
 }
 
-/**
- * Renomeia o notebook para o padrão correto (ex: "Romanos 10")
- */
-async function renameNotebook(page: Page, chapterRef: string): Promise<void> {
+// ─── Content Generation (Estúdio) ────────────────────────────────────────
+// Os items do Estúdio ficam no painel direito:
+// "Apresentação de slides", "Resumo em Vídeo", "Infográfico"
+// Cada um tem um ícone de edit (lápis) para gerar
+
+async function generateStudioItem(page: Page, itemName: string, downloadDir: string, fileName: string): Promise<string | null> {
   try {
-    // Tentar clicar no título do notebook para editar
-    const titleEl = page.locator(
-      '[contenteditable="true"], input[aria-label*="title" i], input[aria-label*="título" i], h1[contenteditable], [data-testid*="title" i]'
-    );
+    log(`Gerando ${itemName}...`);
 
-    if (await titleEl.count() > 0) {
-      await titleEl.first().click({ timeout: 5000 });
-      await page.waitForTimeout(500);
+    // Clicar no item do Estúdio (pelo texto)
+    const itemBtn = page.locator(`text="${itemName}"`);
+    await itemBtn.first().waitFor({ state: "visible", timeout: 15000 });
+    await itemBtn.first().click({ timeout: 10000 });
+    log(`Clicou em '${itemName}'`);
+    await page.waitForTimeout(5000);
 
-      // Selecionar todo o texto e substituir
-      await page.keyboard.press("Control+A");
-      await page.keyboard.type(chapterRef);
-      await page.keyboard.press("Enter");
-      await page.waitForTimeout(1000);
-      log(`Notebook renomeado para: "${chapterRef}"`);
-    } else {
-      log("Campo de título não encontrado — notebook ficará com nome padrão.");
-    }
+    // Verificar se aparece botão "Gerar" / "Generate"
+    try {
+      const genBtn = page.locator('button:has-text("Gerar"), button:has-text("Generate"), button:has-text("Criar"), button:has-text("Create")');
+      if (await genBtn.count() > 0) {
+        await genBtn.first().click({ timeout: 10000 });
+        log(`Clicou em 'Gerar' para ${itemName}`);
+      }
+    } catch { /* pode não ter botão gerar separado */ }
+
+    // Aguardar geração (pode levar 30s-2min)
+    log(`Aguardando geração de ${itemName} (até 3 min)...`);
+    await page.waitForTimeout(30000);
+
+    // Procurar botão de download
+    const downloadPromise = page.waitForEvent("download", { timeout: 180000 });
+
+    // Tentar clicar em download/baixar
+    const dlBtn = page.locator('button[aria-label*="download" i], button[aria-label*="Download" i], button:has-text("Download"), button:has-text("Baixar"), [aria-label*="Baixar" i]');
+    await dlBtn.first().waitFor({ state: "visible", timeout: 120000 });
+    await dlBtn.first().click({ timeout: 10000 });
+
+    const download = await downloadPromise;
+    const ext = download.suggestedFilename().split(".").pop() || "pdf";
+    const filePath = path.join(downloadDir, `${fileName}-${Date.now()}.${ext}`);
+    await download.saveAs(filePath);
+    log(`${itemName} salvo: ${filePath}`);
+
+    // Voltar ao painel do Estúdio
+    await page.goBack().catch(() => {});
+    await page.waitForTimeout(3000);
+
+    return filePath;
   } catch (err) {
-    log(`Aviso: não foi possível renomear notebook: ${err}`);
+    log(`Falha ao gerar ${itemName}: ${err}`);
+    return null;
   }
 }
 
-// ─── Content Generation ─────────────────────────────────────────────────
-
 async function generateSlides(page: Page, downloadDir: string): Promise<string | null> {
-  try {
-    log("Gerando Slides...");
-
-    // Abrir Notebook Guide
-    const guideBtn = page.locator(
-      'button:has-text("Notebook guide"), button:has-text("Guia do notebook"), [aria-label*="guide" i], [aria-label*="guia" i]'
-    );
-    await guideBtn.first().click({ timeout: 10000 });
-    await page.waitForTimeout(2000);
-
-    // Clicar em Presentation
-    const presBtn = page.locator(
-      'button:has-text("Presentation"), button:has-text("Apresentação"), button:has-text("Slides")'
-    );
-    await presBtn.first().click({ timeout: 10000 });
-    await page.waitForTimeout(20000); // Aguarda geração
-
-    // Download
-    const downloadPromise = page.waitForEvent("download", { timeout: 60000 });
-    const dlBtn = page.locator('button[aria-label*="download" i], button[aria-label*="Download" i], button:has-text("Download")');
-    await dlBtn.first().click({ timeout: 10000 });
-    const download = await downloadPromise;
-
-    const slidesPath = path.join(downloadDir, `slides-${Date.now()}.pdf`);
-    await download.saveAs(slidesPath);
-    log(`Slides salvos: ${slidesPath}`);
-    return slidesPath;
-  } catch (err) {
-    log(`Falha ao gerar slides: ${err}`);
-    return null;
-  }
+  return generateStudioItem(page, "Apresentação de slides", downloadDir, "slides");
 }
 
 async function generateInfographic(page: Page, downloadDir: string): Promise<string | null> {
-  try {
-    log("Gerando Infográfico...");
-
-    const btn = page.locator(
-      'button:has-text("Infographic"), button:has-text("Infográfico")'
-    );
-    await btn.first().click({ timeout: 10000 });
-    await page.waitForTimeout(20000);
-
-    const downloadPromise = page.waitForEvent("download", { timeout: 60000 });
-    const dlBtn = page.locator('button[aria-label*="download" i], button:has-text("Download")').last();
-    await dlBtn.click({ timeout: 10000 });
-    const download = await downloadPromise;
-
-    const infPath = path.join(downloadDir, `infographic-${Date.now()}.pdf`);
-    await download.saveAs(infPath);
-    log(`Infográfico salvo: ${infPath}`);
-    return infPath;
-  } catch (err) {
-    log(`Falha ao gerar infográfico: ${err}`);
-    return null;
-  }
+  return generateStudioItem(page, "Infográfico", downloadDir, "infographic");
 }
 
 async function generateAudioOverview(page: Page, downloadDir: string): Promise<string | null> {
-  try {
-    log("Gerando Audio Overview (Vídeo)...");
-
-    // Clicar em Audio Overview / Deep Dive
-    const audioBtn = page.locator(
-      'button:has-text("Audio Overview"), button:has-text("Visão geral em áudio"), button:has-text("Deep Dive"), [aria-label*="audio" i]'
-    );
-    await audioBtn.first().click({ timeout: 10000 });
-    await page.waitForTimeout(2000);
-
-    // Tentar customizar para PT-BR
-    try {
-      const customBtn = page.locator('button:has-text("Customize"), button:has-text("Personalizar")');
-      await customBtn.first().click({ timeout: 5000 });
-      await page.waitForTimeout(1000);
-
-      // Procurar campo de instruções
-      const instructionField = page.locator('textarea');
-      if (await instructionField.count() > 0) {
-        await instructionField.last().fill(
-          "Gere o conteúdo inteiramente em português brasileiro. Use linguagem pastoral e acessível."
-        );
-        await page.waitForTimeout(500);
-      }
-    } catch {
-      log("Customização de idioma não disponível, usando padrão.");
-    }
-
-    // Clicar em Generate / Gerar
-    const genBtn = page.locator(
-      'button:has-text("Generate"), button:has-text("Gerar"), button:has-text("Create")'
-    );
-    await genBtn.first().click({ timeout: 10000 });
-
-    // Audio Overview demora 2-5 minutos
-    log("Aguardando geração do Audio Overview (até 5 min)...");
-    await page.waitForSelector(
-      'audio, video, [aria-label*="Play" i], button:has-text("Play"), [data-testid*="audio" i], [data-testid*="player" i]',
-      { timeout: 360000 } // 6 min max
-    );
-    await page.waitForTimeout(5000);
-
-    // Tentar download
-    const downloadPromise = page.waitForEvent("download", { timeout: 60000 });
-
-    // Procurar menu ou botão de download
-    const menuBtn = page.locator(
-      'button[aria-label*="more" i], button[aria-label*="menu" i], button[aria-label*="options" i], button[aria-label*="download" i]'
-    );
-    await menuBtn.first().click({ timeout: 10000 });
-    await page.waitForTimeout(1000);
-
-    // Clicar na opção de download no menu
-    try {
-      const dlOption = page.locator(
-        '[role="menuitem"]:has-text("Download"), li:has-text("Download"), button:has-text("Download")'
-      );
-      await dlOption.first().click({ timeout: 5000 });
-    } catch {
-      // Download direto pode já ter iniciado
-    }
-
-    const download = await downloadPromise;
-    const ext = download.suggestedFilename().split(".").pop() || "wav";
-    const audioPath = path.join(downloadDir, `audio-overview-${Date.now()}.${ext}`);
-    await download.saveAs(audioPath);
-
-    log(`Audio Overview salvo: ${audioPath}`);
-    return audioPath;
-  } catch (err) {
-    log(`Falha ao gerar Audio Overview: ${err}`);
-    try {
-      const debugDir = path.join(downloadDir, "debug");
-      fs.mkdirSync(debugDir, { recursive: true });
-      await page.screenshot({ path: path.join(debugDir, "audio-error.png"), fullPage: true });
-    } catch { /* ignore */ }
-    return null;
-  }
+  return generateStudioItem(page, "Resumo em Vídeo", downloadDir, "audio-overview");
 }
 
 // ─── Orquestrador Principal ─────────────────────────────────────────────
@@ -563,83 +423,15 @@ export async function runNotebookLMAutomation(
 
     // Aguardar carregamento completo da página NotebookLM
     log("Aguardando NotebookLM carregar...");
-    await page.waitForTimeout(10000);
+    await page.waitForTimeout(8000);
 
-    // Diagnóstico de frames
-    log(`Frames: ${page.frames().length}`);
-    for (const f of page.frames()) {
-      log(`  Frame: ${f.url().substring(0, 100)}`);
-    }
+    // Passo 2: Criar notebook e inserir KB
+    log("Passo 2: Criando notebook e inserindo KB...");
 
-    // Tentar encontrar o botão "New notebook" — primeiro na página, depois em iframes
-    log("Passo 2: Procurando botão 'New notebook'...");
+    // Construir KB se não fornecida
+    const kb = knowledgeBase || `Transcrição do Devocional — ${chapterRef}\n\n${transcriptText}\n\n---\n\nTexto Bíblico:\n${bibleText}`;
 
-    // Seletor para o botão de novo notebook
-    const newNotebookSelector = 'button:has-text("New notebook"), button:has-text("Novo notebook"), button:has-text("Criar notebook"), button:has-text("Criar novo"), button:has-text("Create new"), [aria-label*="new notebook" i], [aria-label*="novo notebook" i], [aria-label*="criar" i], a:has-text("New notebook"), a:has-text("Create new"), a:has-text("Criar novo")';
-
-    // Primeiro tentar na página principal (com timeout generoso)
-    let newBtnFound = false;
-    try {
-      const btn = page.locator(newNotebookSelector).first();
-      await btn.waitFor({ state: "visible", timeout: 20000 });
-      newBtnFound = true;
-      log("Botão encontrado na página principal.");
-    } catch {
-      log("Botão não encontrado na página principal, buscando em iframes...");
-    }
-
-    // Se não encontrou, tentar em cada iframe (exceto RotateCookies)
-    if (!newBtnFound) {
-      for (const frame of page.frames()) {
-        const url = frame.url();
-        if (url.includes("RotateCookies") || url === page.url()) continue;
-        try {
-          const btn = frame.locator(newNotebookSelector).first();
-          await btn.waitFor({ state: "visible", timeout: 3000 });
-          log(`Botão encontrado no frame: ${url.substring(0, 80)}`);
-          newBtnFound = true;
-          break;
-        } catch { /* continue */ }
-      }
-    }
-
-    // Se ainda não encontrou, tentar via frameLocator (iframe aninhado)
-    if (!newBtnFound) {
-      log("Tentando frameLocator para iframes aninhados...");
-      try {
-        const iframeBtn = page.frameLocator("iframe").locator(newNotebookSelector).first();
-        await iframeBtn.waitFor({ state: "visible", timeout: 10000 });
-        log("Botão encontrado via frameLocator!");
-        newBtnFound = true;
-      } catch {
-        log("Botão não encontrado via frameLocator.");
-      }
-    }
-
-    // Diagnóstico: listar botões visíveis em todos os contextos
-    if (!newBtnFound) {
-      try {
-        const mainBtns = await page.locator("button").allTextContents();
-        log(`Botões na página: ${mainBtns.slice(0, 15).join(" | ")}`);
-        try {
-          const iframeBtns = await page.frameLocator("iframe").locator("button").allTextContents();
-          log(`Botões no iframe: ${iframeBtns.slice(0, 15).join(" | ")}`);
-        } catch { /* ignore */ }
-        // Listar links também
-        const links = await page.locator("a").allTextContents();
-        log(`Links: ${links.slice(0, 15).join(" | ")}`);
-      } catch { /* ignore */ }
-
-      log("Passo 2: Botão 'New notebook' não encontrado em nenhum contexto.");
-      await page.screenshot({ path: path.join(downloadDir, "debug-notebook-fail.png"), fullPage: true });
-      await context.close();
-      { const l = _capturedLogs || []; _capturedLogs = null; return { slidesPath: null, infographicPath: null, audioOverviewPath: null, logs: l }; }
-    }
-
-    // Criar notebook com KB unificada (se disponível) ou fontes separadas
-    const created = knowledgeBase
-      ? await createNotebookWithKB(page, knowledgeBase, chapterRef)
-      : await createNotebook(page, transcriptText, bibleText, chapterRef);
+    const created = await createNotebookWithKB(page, kb, chapterRef);
     if (!created) {
       log("Passo 2: Criação do notebook falhou.");
       await page.screenshot({ path: path.join(downloadDir, "debug-notebook-fail.png"), fullPage: true });

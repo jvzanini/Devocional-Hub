@@ -260,6 +260,47 @@ export async function getMeetingSummaryByDate(meetingId: string, targetDate: str
   return { summary, uuid: match.uuid };
 }
 
+// ─── Latest Transcript (para CRON) ───────────────────────────────────────
+
+/**
+ * Busca a transcrição mais recente de uma reunião recorrente (últimas 24h)
+ * Retorna info da reunião se houver VTT ou Meeting Summary disponível
+ */
+export async function getLatestTranscript(meetingId: string): Promise<{ meetingUuid: string; startTime: string; topic: string; source: "vtt" | "summary" } | null> {
+  // Verificar gravações recentes
+  const today = getDateStr(0);
+  const yesterday = getDateStr(-1);
+
+  const result = await zoomFetch(`/users/me/recordings?from=${yesterday}&to=${today}&page_size=50`);
+  if (result.ok) {
+    const meetings = (result.data as { meetings?: Array<{ id: string | number; uuid: string; topic: string; start_time: string; recording_files: Array<{ file_type: string }> }> })?.meetings || [];
+    const match = meetings
+      .filter(m => String(m.id) === String(meetingId))
+      .sort((a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime())
+      .find(m => m.recording_files?.some(f => f.file_type === "TRANSCRIPT"));
+
+    if (match) {
+      return { meetingUuid: match.uuid, startTime: match.start_time, topic: match.topic, source: "vtt" };
+    }
+  }
+
+  // Fallback: verificar Meeting Summary da instância mais recente
+  const instances = await getMeetingInstances(meetingId);
+  const todayInstances = instances
+    .filter(m => m.start_time.startsWith(today))
+    .sort((a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime());
+
+  if (todayInstances.length > 0) {
+    const latest = todayInstances[0];
+    try {
+      const summary = await getMeetingSummary(latest.uuid);
+      return { meetingUuid: latest.uuid, startTime: latest.start_time, topic: summary.topic, source: "summary" };
+    } catch { /* sem summary */ }
+  }
+
+  return null;
+}
+
 // ─── Helpers ─────────────────────────────────────────────────────────────
 
 function parseVttToText(vtt: string): string {
