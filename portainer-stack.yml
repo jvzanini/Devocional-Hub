@@ -7,47 +7,48 @@ services:
     networks:
       - rede_nexusAI
     environment:
-      # ── Banco de Dados (reutiliza o postgres existente) ──────
-      - DATABASE_URL=postgresql://postgres:YOUR_DB_PASSWORD@postgres:5432/devocional_hub?connection_limit=5&connect_timeout=30&pool_timeout=30
+      # ── Banco de Dados ──────────────────────────────────────
+      - DATABASE_URL=${DATABASE_URL}
 
       # ── Auth ─────────────────────────────────────────────────
-      - NEXTAUTH_SECRET=YOUR_NEXTAUTH_SECRET
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
       - NEXTAUTH_URL=https://devocional.nexusai360.com
 
       # ── Zoom ─────────────────────────────────────────────────
-      - ZOOM_ACCOUNT_ID=YOUR_ZOOM_ACCOUNT_ID
-      - ZOOM_CLIENT_ID=YOUR_ZOOM_CLIENT_ID
-      - ZOOM_CLIENT_SECRET=YOUR_ZOOM_CLIENT_SECRET
-      - ZOOM_RECURRING_MEETING_ID=YOUR_ZOOM_MEETING_ID
-      - ZOOM_WEBHOOK_SECRET=YOUR_ZOOM_WEBHOOK_SECRET
+      - ZOOM_ACCOUNT_ID=${ZOOM_ACCOUNT_ID}
+      - ZOOM_CLIENT_ID=${ZOOM_CLIENT_ID}
+      - ZOOM_CLIENT_SECRET=${ZOOM_CLIENT_SECRET}
+      - ZOOM_RECURRING_MEETING_ID=${ZOOM_RECURRING_MEETING_ID}
+      - ZOOM_WEBHOOK_SECRET=${ZOOM_WEBHOOK_SECRET}
 
-      # ── Gemini (gratuito) ────────────────────────────────────
-      - GEMINI_API_KEY=YOUR_GEMINI_API_KEY
+      # ── Gemini ──────────────────────────────────────────────
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
 
       # ── Bíblia NVI ───────────────────────────────────────────
-      - BIBLE_API_KEY=YOUR_BIBLE_API_KEY
+      - BIBLE_API_KEY=${BIBLE_API_KEY}
       - BIBLE_NVI_ID=a556c5305ee15c3f-01
 
       # ── Storage local ────────────────────────────────────────
       - STORAGE_PATH=/app/data
 
       # ── Google (Playwright / NotebookLM) ─────────────────────
-      - GOOGLE_EMAIL=YOUR_GOOGLE_EMAIL
-      - GOOGLE_PASSWORD=YOUR_GOOGLE_PASSWORD
+      - GOOGLE_EMAIL=${GOOGLE_EMAIL}
+      - GOOGLE_PASSWORD=${GOOGLE_PASSWORD}
 
       # ── Admin ─────────────────────────────────────────────────
-      - ADMIN_EMAIL=YOUR_ADMIN_EMAIL
-      - ADMIN_PASSWORD=YOUR_ADMIN_PASSWORD
+      - ADMIN_EMAIL=${ADMIN_EMAIL}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
 
       # ── Email (Gmail SMTP) ─────────────────────────────────
       - SMTP_HOST=smtp.gmail.com
       - SMTP_PORT=587
-      - SMTP_USER=YOUR_SMTP_USER
-      - SMTP_PASS=YOUR_SMTP_PASS
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASS=${SMTP_PASS}
 
       # ── App ──────────────────────────────────────────────────
       - NODE_ENV=production
       - TZ=America/Sao_Paulo
+      - DEPLOY_SHA=${DEPLOY_SHA}
 
     volumes:
       - devocional_data:/app/data

@@ -63,23 +63,65 @@ jobs:
 
       - name: Redeploy stack on Portainer
         run: |
-          # Usar stack file do repositório (não do Portainer) + injetar DEPLOY_SHA
+          # Ler stack YAML do repositório (contém ${VAR} placeholders)
           STACK_CONTENT=$(cat portainer-stack.yml)
 
-          # Injetar DEPLOY_SHA para forçar redeploy
-          DEPLOY_SHA="${{ github.sha }}"
-          STACK_CONTENT=$(echo "$STACK_CONTENT" | sed "s/NODE_ENV=production/NODE_ENV=production\n      - DEPLOY_SHA=$DEPLOY_SHA/")
+          # Montar array de variáveis de ambiente com credenciais reais (dos GitHub Secrets)
+          # O Portainer substitui ${VAR} no YAML pelos valores do array Env
+          ENV_JSON=$(python3 -c "
+          import json
+          env_vars = [
+            {'name': 'DATABASE_URL', 'value': '${{ secrets.DATABASE_URL }}'},
+            {'name': 'NEXTAUTH_SECRET', 'value': '${{ secrets.NEXTAUTH_SECRET }}'},
+            {'name': 'ZOOM_ACCOUNT_ID', 'value': '${{ secrets.ZOOM_ACCOUNT_ID }}'},
+            {'name': 'ZOOM_CLIENT_ID', 'value': '${{ secrets.ZOOM_CLIENT_ID }}'},
+            {'name': 'ZOOM_CLIENT_SECRET', 'value': '${{ secrets.ZOOM_CLIENT_SECRET }}'},
+            {'name': 'ZOOM_RECURRING_MEETING_ID', 'value': '${{ secrets.ZOOM_RECURRING_MEETING_ID }}'},
+            {'name': 'ZOOM_WEBHOOK_SECRET', 'value': '${{ secrets.ZOOM_WEBHOOK_SECRET }}'},
+            {'name': 'GEMINI_API_KEY', 'value': '${{ secrets.GEMINI_API_KEY }}'},
+            {'name': 'BIBLE_API_KEY', 'value': '${{ secrets.BIBLE_API_KEY }}'},
+            {'name': 'GOOGLE_EMAIL', 'value': '${{ secrets.GOOGLE_EMAIL }}'},
+            {'name': 'GOOGLE_PASSWORD', 'value': '${{ secrets.GOOGLE_PASSWORD }}'},
+            {'name': 'ADMIN_EMAIL', 'value': '${{ secrets.ADMIN_EMAIL }}'},
+            {'name': 'ADMIN_PASSWORD', 'value': '${{ secrets.ADMIN_PASSWORD }}'},
+            {'name': 'SMTP_USER', 'value': '${{ secrets.SMTP_USER }}'},
+            {'name': 'SMTP_PASS', 'value': '${{ secrets.SMTP_PASS }}'},
+            {'name': 'DEPLOY_SHA', 'value': '${{ github.sha }}'},
+          ]
+          print(json.dumps(env_vars))
+          ")
 
+          # Montar payload com stack + env vars
           PAYLOAD=$(python3 -c "
           import json, sys
-          content = sys.stdin.read()
-          print(json.dumps({'stackFileContent': content, 'pullImage': True, 'prune': True}))
+          stack = sys.stdin.read()
+          env = json.loads('$ENV_JSON')
+          payload = {
+            'stackFileContent': stack,
+            'env': env,
+            'pullImage': True,
+            'prune': True
+          }
+          print(json.dumps(payload))
           " <<< "$STACK_CONTENT")
 
+          # Enviar para Portainer
           RESULT=$(curl -s --max-time 120 -X PUT \
             -H "X-API-Key: ${{ secrets.PORTAINER_TOKEN }}" \
             -H "Content-Type: application/json" \
             "https://painel.nexusai360.com/api/stacks/${{ secrets.PORTAINER_STACK_ID }}?endpointId=1" \
             -d "$PAYLOAD")
 
-          echo "$RESULT" | python3 -c "import json,sys; d=json.load(sys.stdin); print('Deploy OK, status:', d.get('Status'))"
+          echo "$RESULT" | python3 -c "
+          import json, sys
+          try:
+            d = json.load(sys.stdin)
+            if 'Id' in d:
+              print('Deploy OK — Stack ID:', d.get('Id'), '| Status:', d.get('Status'))
+            else:
+              print('Erro no deploy:', json.dumps(d, indent=2))
+              sys.exit(1)
+          except:
+            print('Resposta inesperada')
+            sys.exit(1)
+          "
