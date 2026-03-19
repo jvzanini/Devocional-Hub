@@ -38,7 +38,7 @@ export function SessionCard({ session }: SessionCardProps) {
         <div style={{ flex: 1, minWidth: 0 }}>
           {/* Header */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-            <span style={{ fontSize: 13, color: "#78716c", fontWeight: 500 }}>{formatDate(session.date)}</span>
+            <span style={{ fontSize: 13, color: "#57534e", fontWeight: 500 }}>{formatDate(session.date)}</span>
             <Badge variant={st.variant}>{st.label}</Badge>
           </div>
 
@@ -49,7 +49,7 @@ export function SessionCard({ session }: SessionCardProps) {
 
           {/* Summary */}
           {session.summary && (
-            <p style={{ fontSize: 14, color: "#78716c", lineHeight: 1.6, marginBottom: 14, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
+            <p style={{ fontSize: 14, color: "#57534e", lineHeight: 1.6, marginBottom: 14, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
               {session.summary}
             </p>
           )}
@@ -76,7 +76,7 @@ export function SessionCard({ session }: SessionCardProps) {
                     </div>
                   ))}
                 </div>
-                <span style={{ fontSize: 13, color: "#78716c", fontWeight: 500 }}>{session.participants.length} participante(s)</span>
+                <span style={{ fontSize: 13, color: "#57534e", fontWeight: 500 }}>{session.participants.length} participante(s)</span>
               </div>
             )}
           </div>

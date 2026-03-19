@@ -72,7 +72,7 @@ export function BibleBooksGrid({ books }: Props) {
                     <div style={{ fontSize: 16, fontWeight: 700, color: color.accent, marginBottom: 4 }}>
                       {book.name}
                     </div>
-                    <div style={{ fontSize: 13, color: "#78716c", fontWeight: 500 }}>
+                    <div style={{ fontSize: 13, color: "#57534e", fontWeight: 500 }}>
                       {book.sessions.length} devocional{book.sessions.length !== 1 ? "is" : ""}
                     </div>
                   </div>
@@ -115,7 +115,7 @@ export function BibleBooksGrid({ books }: Props) {
                           </div>
                           {s.summary && (
                             <div style={{
-                              fontSize: 13, color: "#78716c", marginTop: 4,
+                              fontSize: 13, color: "#57534e", marginTop: 4,
                               overflow: "hidden", display: "-webkit-box",
                               WebkitLineClamp: 1, WebkitBoxOrient: "vertical",
                             }}>
@@ -124,7 +124,7 @@ export function BibleBooksGrid({ books }: Props) {
                           )}
                         </div>
                         <div style={{ textAlign: "right", flexShrink: 0, marginLeft: 12 }}>
-                          <div style={{ fontSize: 12, color: "#a8a29e" }}>
+                          <div style={{ fontSize: 12, color: "#78716c" }}>
                             {new Date(s.date).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}
                           </div>
                           <div style={{
@@ -143,7 +143,7 @@ export function BibleBooksGrid({ books }: Props) {
       </div>
 
       {books.length === 0 && (
-        <div style={{ textAlign: "center", padding: "40px 0", color: "#a8a29e" }}>
+        <div style={{ textAlign: "center", padding: "40px 0", color: "#78716c" }}>
           <p style={{ fontSize: 16, fontWeight: 500 }}>Nenhum devocional processado ainda</p>
           <p style={{ fontSize: 14, marginTop: 6 }}>Os devocionais aparecerão aqui organizados por livro da Bíblia</p>
         </div>

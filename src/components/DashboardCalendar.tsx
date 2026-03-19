@@ -49,13 +49,13 @@ export function DashboardCalendar({ datesWithDevotional, dateToSessionId }: Cale
     <div className="section-card" style={{ padding: 24 }}>
       {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-        <button onClick={prev} style={{ width: 36, height: 36, borderRadius: 10, border: "1px solid #e7e5e4", background: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#78716c" }}>
+        <button onClick={prev} aria-label="Mês anterior" className="btn-ghost" style={{ width: 44, height: 44 }}>
           <svg style={{ width: 18, height: 18 }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
         </button>
         <span style={{ fontSize: 18, fontWeight: 700, color: "#1c1917" }}>
           {MONTHS[month]} {year}
         </span>
-        <button onClick={next} style={{ width: 36, height: 36, borderRadius: 10, border: "1px solid #e7e5e4", background: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#78716c" }}>
+        <button onClick={next} aria-label="Próximo mês" className="btn-ghost" style={{ width: 44, height: 44 }}>
           <svg style={{ width: 18, height: 18 }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
         </button>
       </div>
@@ -63,7 +63,7 @@ export function DashboardCalendar({ datesWithDevotional, dateToSessionId }: Cale
       {/* Day names */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4, marginBottom: 8 }}>
         {DAYS.map(d => (
-          <div key={d} style={{ textAlign: "center", fontSize: 13, fontWeight: 600, color: "#a8a29e", padding: "4px 0" }}>
+          <div key={d} style={{ textAlign: "center", fontSize: 13, fontWeight: 600, color: "#78716c", padding: "4px 0" }}>
             {d}
           </div>
         ))}
