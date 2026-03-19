@@ -271,7 +271,7 @@ export async function runPipeline(options: PipelineOptions = {}): Promise<string
             try {
               await prisma.session.update({
                 where: { id: sessionId },
-                data: { errorMessage: `[NLM] ${nlmLogStr.substring(0, 1000)}` },
+                data: { errorMessage: `[NLM] ${nlmLogStr.substring(0, 4000)}` },
               });
             } catch { /* ignore */ }
           }
