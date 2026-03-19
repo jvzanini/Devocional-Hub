@@ -324,67 +324,12 @@ async function createNotebookWithKB(page: Page, knowledgeBase: string, chapterRe
 // "Apresentação de slides", "Resumo em Vídeo", "Infográfico"
 // Cada um tem um ícone de edit (lápis) para gerar
 
-async function generateStudioItem(page: Page, itemName: string, downloadDir: string, fileName: string): Promise<string | null> {
+/**
+ * Dispara geração de um item do Estúdio (click rápido, sem esperar)
+ */
+async function triggerStudioItem(page: Page, itemName: string): Promise<boolean> {
   try {
-    log(`Gerando ${itemName}...`);
-
-    // Fechar qualquer overlay/modal que esteja aberto
-    try {
-      const backdrop = page.locator('.cdk-overlay-backdrop');
-      if (await backdrop.count() > 0) {
-        await backdrop.first().click({ force: true, timeout: 3000 });
-        await page.waitForTimeout(1000);
-        log("Overlay fechado antes de clicar no item.");
-      }
-    } catch { /* ignore */ }
-
-    // Clicar no item do Estúdio — usar force para bypass de overlay residual
-    const itemBtn = page.locator(`text="${itemName}"`);
-    await itemBtn.first().waitFor({ state: "visible", timeout: 15000 });
-    await itemBtn.first().click({ timeout: 10000, force: true });
-    log(`Clicou em '${itemName}'`);
-    await page.waitForTimeout(5000);
-
-    // Verificar se aparece botão "Gerar" / "Generate"
-    try {
-      const genBtn = page.locator('button:has-text("Gerar"), button:has-text("Generate"), button:has-text("Criar"), button:has-text("Create")');
-      if (await genBtn.count() > 0) {
-        await genBtn.first().click({ timeout: 10000 });
-        log(`Clicou em 'Gerar' para ${itemName}`);
-      }
-    } catch { /* pode não ter botão gerar separado */ }
-
-    // Aguardar geração (pode levar 30s-3min)
-    log(`Aguardando geração de ${itemName} (até 4 min)...`);
-
-    // Configurar listener de download ANTES de clicar
-    const downloadPromise = page.waitForEvent("download", { timeout: 240000 });
-
-    // Procurar botão de download (pode demorar até aparecer)
-    const dlBtn = page.locator('button[aria-label*="download" i], button[aria-label*="Download" i], button:has-text("Download"), button:has-text("Baixar"), [aria-label*="Baixar" i], [aria-label*="download" i]');
-    await dlBtn.first().waitFor({ state: "visible", timeout: 180000 });
-    log(`Botão de download encontrado para ${itemName}`);
-    await dlBtn.first().click({ timeout: 10000 });
-
-    const download = await downloadPromise;
-    const ext = download.suggestedFilename().split(".").pop() || "pdf";
-    const filePath = path.join(downloadDir, `${fileName}-${Date.now()}.${ext}`);
-    await download.saveAs(filePath);
-    log(`${itemName} salvo: ${filePath}`);
-
-    // Fechar modal/overlay se existir e aguardar retorno ao Estúdio
-    try {
-      const closeBtn = page.locator('button[aria-label*="close" i], button[aria-label*="fechar" i], button:has-text("×"), button:has-text("Fechar")');
-      if (await closeBtn.count() > 0) {
-        await closeBtn.first().click({ timeout: 5000 });
-      }
-    } catch { /* ignore */ }
-    await page.waitForTimeout(3000);
-
-    return filePath;
-  } catch (err) {
-    log(`Falha ao gerar ${itemName}: ${err}`);
-    // Tentar fechar overlay antes de sair
+    // Fechar overlay se existir
     try {
       const backdrop = page.locator('.cdk-overlay-backdrop');
       if (await backdrop.count() > 0) {
@@ -392,21 +337,116 @@ async function generateStudioItem(page: Page, itemName: string, downloadDir: str
         await page.waitForTimeout(1000);
       }
     } catch { /* ignore */ }
-    return null;
+
+    // Clicar no ícone de edit (lápis) ao lado do item, ou no próprio item
+    const itemBtn = page.locator(`text="${itemName}"`);
+    await itemBtn.first().waitFor({ state: "visible", timeout: 10000 });
+    await itemBtn.first().click({ timeout: 10000, force: true });
+    log(`Clicou em '${itemName}'`);
+    await page.waitForTimeout(3000);
+
+    // Se aparecer botão "Gerar", clicar nele
+    try {
+      const genBtn = page.locator('button:has-text("Gerar"), button:has-text("Generate"), button:has-text("Criar"), button:has-text("Create")');
+      if (await genBtn.count() > 0) {
+        await genBtn.first().click({ timeout: 5000 });
+        log(`Clicou em 'Gerar' para ${itemName}`);
+      }
+    } catch { /* pode não ter botão gerar separado */ }
+
+    await page.waitForTimeout(2000);
+    return true;
+  } catch (err) {
+    log(`Falha ao disparar ${itemName}: ${err}`);
+    return false;
   }
 }
 
-async function generateSlides(page: Page, downloadDir: string): Promise<string | null> {
-  return generateStudioItem(page, "Apresentação de slides", downloadDir, "slides");
+/**
+ * Gera os 3 items do Estúdio em sequência rápida, depois monitora e faz download
+ * Ordem: Slides → Resumo em Vídeo → Infográfico
+ */
+async function generateAllStudioItems(page: Page, downloadDir: string): Promise<{
+  slidesPath: string | null;
+  infographicPath: string | null;
+  audioOverviewPath: string | null;
+}> {
+  let slidesPath: string | null = null;
+  let infographicPath: string | null = null;
+  let audioOverviewPath: string | null = null;
+
+  // 1. Disparar geração dos 3 items em sequência rápida
+  log("Disparando geração: Apresentação de slides...");
+  await triggerStudioItem(page, "Apresentação de slides");
+
+  log("Disparando geração: Resumo em Vídeo...");
+  await triggerStudioItem(page, "Resumo em Vídeo");
+
+  log("Disparando geração: Infográfico...");
+  await triggerStudioItem(page, "Infográfico");
+
+  log("Todos os 3 items disparados. Aguardando geração (até 8 min)...");
+
+  // 2. Monitorar downloads — aguardar botões de download aparecerem
+  // Os items ficam no painel Estúdio e mostram ícone de download quando prontos
+  const startTime = Date.now();
+  const maxWait = 480000; // 8 minutos
+  let downloads = 0;
+
+  while (Date.now() - startTime < maxWait && downloads < 3) {
+    await page.waitForTimeout(15000); // Verificar a cada 15s
+    const elapsed = Math.round((Date.now() - startTime) / 1000);
+    log(`Monitorando... ${elapsed}s`);
+
+    // Procurar botões de download visíveis
+    const dlBtns = page.locator('button[aria-label*="download" i], button[aria-label*="Download" i], button:has-text("Download"), button:has-text("Baixar"), [aria-label*="Baixar" i]');
+    const dlCount = await dlBtns.count().catch(() => 0);
+
+    if (dlCount > downloads) {
+      log(`${dlCount} botões de download encontrados (antes: ${downloads})`);
+
+      // Fazer download de cada novo botão
+      for (let i = downloads; i < dlCount; i++) {
+        try {
+          const downloadPromise = page.waitForEvent("download", { timeout: 30000 });
+          await dlBtns.nth(i).click({ timeout: 5000 });
+          const download = await downloadPromise;
+          const suggestedName = download.suggestedFilename();
+          const ext = suggestedName.split(".").pop() || "pdf";
+          const filePath = path.join(downloadDir, `studio-${i}-${Date.now()}.${ext}`);
+          await download.saveAs(filePath);
+          log(`Download ${i + 1}: ${suggestedName} → ${filePath}`);
+
+          // Classificar pelo nome do arquivo
+          const nameLower = suggestedName.toLowerCase();
+          if (nameLower.includes("slide") || nameLower.includes("present") || nameLower.includes("apresenta")) {
+            slidesPath = filePath;
+          } else if (nameLower.includes("infogr")) {
+            infographicPath = filePath;
+          } else if (nameLower.includes("video") || nameLower.includes("audio") || nameLower.includes("resumo")) {
+            audioOverviewPath = filePath;
+          } else {
+            // Classificar pela ordem: 1=slides, 2=video, 3=infografico
+            if (!slidesPath) slidesPath = filePath;
+            else if (!audioOverviewPath) audioOverviewPath = filePath;
+            else if (!infographicPath) infographicPath = filePath;
+          }
+        } catch (err) {
+          log(`Falha no download ${i + 1}: ${err}`);
+        }
+      }
+      downloads = dlCount;
+    }
+  }
+
+  log(`Geração finalizada. Downloads: slides=${!!slidesPath}, video=${!!audioOverviewPath}, infografico=${!!infographicPath}`);
+  return { slidesPath, infographicPath, audioOverviewPath };
 }
 
-async function generateInfographic(page: Page, downloadDir: string): Promise<string | null> {
-  return generateStudioItem(page, "Infográfico", downloadDir, "infographic");
-}
-
-async function generateAudioOverview(page: Page, downloadDir: string): Promise<string | null> {
-  return generateStudioItem(page, "Resumo em Vídeo", downloadDir, "audio-overview");
-}
+// Wrappers mantidos para compatibilidade com pipeline
+async function generateSlides(_page: Page, _downloadDir: string): Promise<string | null> { return null; }
+async function generateInfographic(_page: Page, _downloadDir: string): Promise<string | null> { return null; }
+async function generateAudioOverview(_page: Page, _downloadDir: string): Promise<string | null> { return null; }
 
 // ─── Orquestrador Principal ─────────────────────────────────────────────
 
@@ -463,18 +503,12 @@ export async function runNotebookLMAutomation(
     }
     log("Passo 2: Notebook criado OK");
 
-    // Gerar conteúdos (cada um independente)
-    log("Passo 3: Gerando slides...");
-    slidesPath = await generateSlides(page, downloadDir);
-    log(`Slides: ${slidesPath ? "OK" : "FALHOU"}`);
-
-    log("Passo 4: Gerando infográfico...");
-    infographicPath = await generateInfographic(page, downloadDir);
-    log(`Infográfico: ${infographicPath ? "OK" : "FALHOU"}`);
-
-    log("Passo 5: Gerando Audio Overview...");
-    audioOverviewPath = await generateAudioOverview(page, downloadDir);
-    log(`Audio Overview: ${audioOverviewPath ? "OK" : "FALHOU"}`);
+    // Gerar os 3 items do Estúdio em sequência rápida e monitorar downloads
+    log("Passo 3: Gerando items do Estúdio...");
+    const studioResult = await generateAllStudioItems(page, downloadDir);
+    slidesPath = studioResult.slidesPath;
+    infographicPath = studioResult.infographicPath;
+    audioOverviewPath = studioResult.audioOverviewPath;
 
     // Screenshot final
     await page.screenshot({ path: path.join(downloadDir, "debug-final.png"), fullPage: true });
