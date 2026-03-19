@@ -283,18 +283,18 @@ async function createNotebookWithKB(page: Page, knowledgeBase: string, chapterRe
     }
     await page.waitForTimeout(3000);
 
-    // 4. Preencher textarea ("Cole o texto aqui")
+    // 4. Preencher textarea dentro do dialog overlay ("Cole o texto aqui")
     log("Preenchendo textarea com KB...");
-    const textarea = page.locator('textarea');
+    // O dialog "Cole o texto copiado" abre como overlay — buscar textarea dentro dele
+    const textarea = page.locator('.cdk-overlay-container textarea, [class*="overlay"] textarea, textarea[placeholder*="Cole"], textarea[placeholder*="Paste"], textarea[placeholder*="texto"]');
     await textarea.first().waitFor({ state: "visible", timeout: 15000 });
-    await textarea.first().click({ timeout: 5000 });
     await textarea.first().fill(knowledgeBase.substring(0, 100000));
     log(`KB inserida: ${knowledgeBase.length} chars`);
     await page.waitForTimeout(1000);
 
-    // 5. Clicar "Inserir"
+    // 5. Clicar "Inserir" dentro do overlay
     log("Clicando 'Inserir'...");
-    const inserirBtn = page.locator('button:has-text("Inserir"), button:has-text("Insert")');
+    const inserirBtn = page.locator('.cdk-overlay-container button:has-text("Inserir"), .cdk-overlay-container button:has-text("Insert"), button:has-text("Inserir"), button:has-text("Insert")');
     await inserirBtn.first().waitFor({ state: "visible", timeout: 10000 });
     await inserirBtn.first().click({ timeout: 10000 });
     log("Clicou em 'Inserir'");
