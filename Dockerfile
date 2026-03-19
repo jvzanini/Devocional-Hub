@@ -11,8 +11,8 @@ RUN apk add --no-cache \
     openssl \
     curl
 
-ENV PLAYWRIGHT_BROWSERS_PATH=/app/browsers
-ENV PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=""
+ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+ENV CHROME_BIN=/usr/bin/chromium-browser
 
 WORKDIR /app
 
@@ -20,7 +20,7 @@ WORKDIR /app
 FROM base AS deps
 COPY package*.json ./
 COPY prisma ./prisma/
-RUN npm ci --legacy-peer-deps && npx prisma generate && npx playwright install chromium
+RUN npm ci --legacy-peer-deps && npx prisma generate
 
 # ── Build ─────────────────────────────────────────────────────
 FROM base AS builder
@@ -53,8 +53,7 @@ COPY --from=builder /app/prisma ./prisma
 # bcryptjs para o seed do admin
 COPY --from=builder /app/node_modules/bcryptjs ./node_modules/bcryptjs
 
-# Playwright browsers (Chromium compatível)
-COPY --from=deps /app/browsers ./browsers
+# Playwright (usa Chromium do sistema via CHROME_BIN)
 
 # Script de inicialização
 COPY --chown=nextjs:nodejs docker-entrypoint.sh ./

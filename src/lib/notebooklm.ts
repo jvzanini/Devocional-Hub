@@ -28,6 +28,7 @@ export interface NotebookLMResult {
 // ─── Stealth Browser Launch ──────────────────────────────────────────────
 
 async function launchStealthBrowser(): Promise<Browser> {
+  const executablePath = process.env.CHROME_BIN || "/usr/bin/chromium-browser";
   const args = [
     "--no-sandbox",
     "--disable-setuid-sandbox",
@@ -37,10 +38,16 @@ async function launchStealthBrowser(): Promise<Browser> {
     "--disable-extensions",
     "--disable-blink-features=AutomationControlled",
     "--disable-features=IsolateOrigins,site-per-process",
+    "--disable-background-networking",
+    "--disable-default-apps",
+    "--disable-sync",
+    "--disable-translate",
+    "--metrics-recording-only",
+    "--no-first-run",
   ];
 
-  // Usa o Chromium bundled do Playwright (compatível garantido)
-  const browser = await chromium.launch({ headless: true, args });
+  log(`Lançando Chromium: ${executablePath}`);
+  const browser = await chromium.launch({ headless: true, executablePath, args });
   log("Chromium lançado com sucesso.");
   return browser;
 }
@@ -463,11 +470,17 @@ export async function runNotebookLMAutomation(
  * Precisa ser executado UMA VEZ após cada deploy (ou quando sessão expirar).
  */
 export async function setupGoogleSession(): Promise<{ success: boolean; message: string }> {
-  const browser = await launchStealthBrowser();
+  let browser: Browser;
+  try {
+    browser = await launchStealthBrowser();
+  } catch (err) {
+    return { success: false, message: `Chromium não iniciou: ${err}` };
+  }
 
   try {
     const context = await createStealthContext(browser);
     const page = await context.newPage();
+    log("Página criada, iniciando login...");
 
     const loggedIn = await loginGoogle(page);
     if (loggedIn) {
@@ -476,13 +489,12 @@ export async function setupGoogleSession(): Promise<{ success: boolean; message:
       return { success: true, message: "Sessão Google salva com sucesso. NotebookLM está pronto." };
     }
 
-    // Screenshot de debug
-    const debugPath = path.join(os.tmpdir(), `notebooklm-setup-${Date.now()}.png`);
-    await page.screenshot({ path: debugPath, fullPage: true });
     await context.close();
-    return { success: false, message: `Login falhou. Screenshot: ${debugPath}` };
+    return { success: false, message: "Login Google falhou. Verifique se 2FA/chave de segurança está desativada temporariamente." };
   } catch (err) {
-    return { success: false, message: `Erro: ${err}` };
+    const errMsg = err instanceof Error ? err.message : String(err);
+    log(`Setup falhou: ${errMsg}`);
+    return { success: false, message: `Erro no setup: ${errMsg}` };
   } finally {
     await browser.close();
   }
