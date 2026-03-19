@@ -87,6 +87,7 @@ jobs:
             {'name': 'SMTP_USER', 'value': '${{ secrets.SMTP_USER }}'},
             {'name': 'SMTP_PASS', 'value': '${{ secrets.SMTP_PASS }}'},
             {'name': 'DEPLOY_SHA', 'value': '${{ github.sha }}'},
+            {'name': 'DEPLOY_TAG', 'value': 'sha-' + '${{ github.sha }}'[:7]},
           ]
           print(json.dumps(env_vars))
           ")
