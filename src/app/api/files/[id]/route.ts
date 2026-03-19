@@ -9,6 +9,9 @@ const CONTENT_TYPES: Record<string, string> = {
   pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
   png: "image/png",
   jpg: "image/jpeg",
+  wav: "audio/wav",
+  mp3: "audio/mpeg",
+  webm: "audio/webm",
 };
 
 export async function GET(
@@ -28,6 +31,14 @@ export async function GET(
 
   if (!document) {
     return NextResponse.json({ error: "Arquivo não encontrado" }, { status: 404 });
+  }
+
+  // AUDIO_OVERVIEW é restrito a ADMIN
+  if (document.type === "AUDIO_OVERVIEW") {
+    const userRole = (session.user as { role?: string })?.role;
+    if (userRole !== "ADMIN") {
+      return NextResponse.json({ error: "Acesso restrito ao administrador" }, { status: 403 });
+    }
   }
 
   const buffer = await downloadFile(document.storagePath);

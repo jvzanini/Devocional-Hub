@@ -6,12 +6,13 @@ import { formatDate, formatDateTime } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { DocType, PipelineStatus } from "@prisma/client";
 
-const DOC_CFG: Record<DocType, { label: string; bg: string; color: string; border: string }> = {
+const DOC_CFG: Record<DocType, { label: string; bg: string; color: string; border: string; adminOnly?: boolean }> = {
   TRANSCRIPT_RAW: { label: "Transcrição Bruta", bg: "#f5f5f4", color: "#57534e", border: "#d6d3d1" },
   TRANSCRIPT_CLEAN: { label: "Transcrição Limpa", bg: "#eff6ff", color: "#2563eb", border: "#bfdbfe" },
   BIBLE_TEXT: { label: "Texto Bíblico (NVI)", bg: "#fffbeb", color: "#b45309", border: "#fde68a" },
   INFOGRAPHIC: { label: "Infográfico", bg: "#fff7ed", color: "#ea580c", border: "#fed7aa" },
   SLIDES: { label: "Slides", bg: "#ede9fe", color: "#7c3aed", border: "#c4b5fd" },
+  AUDIO_OVERVIEW: { label: "Áudio Devocional (PT-BR)", bg: "#fdf2f8", color: "#db2777", border: "#fbcfe8", adminOnly: true },
 };
 
 const ST: Record<PipelineStatus, { label: string; variant: "success" | "error" | "warning" | "info" }> = {
@@ -50,6 +51,8 @@ export default async function SessionPage({ params }: { params: Promise<{ id: st
   });
   if (!s) notFound();
   const st = ST[s.status];
+  const userRole = (session.user as { role?: string })?.role || "MEMBER";
+  const isAdmin = userRole === "ADMIN";
 
   // Build a map: participant name/email -> platform user name
   const attendanceMap = new Map<string, { userName: string; isMember: boolean }>();
@@ -150,11 +153,16 @@ export default async function SessionPage({ params }: { params: Promise<{ id: st
         {/* Arquivos */}
         <div className="section-card">
           <div className="section-title">Arquivos</div>
-          {s.documents.length === 0 ? (
+          {(() => {
+            const visibleDocs = s.documents.filter(doc => {
+              const cfg = DOC_CFG[doc.type];
+              return cfg && (!cfg.adminOnly || isAdmin);
+            });
+            return visibleDocs.length === 0 ? (
             <p style={{ fontSize: 13, color: "#a8a29e", textAlign: "center", padding: "14px 0" }}>Nenhum arquivo gerado ainda.</p>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              {s.documents.map((doc) => {
+              {visibleDocs.map((doc) => {
                 const c = DOC_CFG[doc.type];
                 return (
                   <a key={doc.id} href={`/api/files/${doc.id}`} download={doc.fileName}
@@ -180,7 +188,8 @@ export default async function SessionPage({ params }: { params: Promise<{ id: st
                 );
               })}
             </div>
-          )}
+          );
+          })()}
         </div>
 
         {/* Informações */}

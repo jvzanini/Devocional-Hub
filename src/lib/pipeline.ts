@@ -133,18 +133,26 @@ export async function runPipeline(options: PipelineOptions = {}): Promise<string
     if (!options.skipNotebookLM) {
       log(sessionId, "Iniciando automação do NotebookLM...");
       try {
-        const { slidesPath, infographicPath } = await runNotebookLMAutomation(sessionId, processed.cleanText, bibleText, processed.chapterRefString);
-        if (slidesPath && fs.existsSync(slidesPath)) {
+        const nlmResult = await runNotebookLMAutomation(sessionId, processed.cleanText, bibleText, processed.chapterRefString);
+        if (nlmResult.slidesPath && fs.existsSync(nlmResult.slidesPath)) {
           const sp = `sessions/${sessionId}/slides.pdf`;
-          await uploadFile(sp, slidesPath);
+          await uploadFile(sp, nlmResult.slidesPath);
           await prisma.document.create({ data: { sessionId, type: DocType.SLIDES, fileName: "slides.pdf", storagePath: sp, fileSize: getFileSize(sp) } });
-          fs.unlinkSync(slidesPath);
+          fs.unlinkSync(nlmResult.slidesPath);
         }
-        if (infographicPath && fs.existsSync(infographicPath)) {
+        if (nlmResult.infographicPath && fs.existsSync(nlmResult.infographicPath)) {
           const ip = `sessions/${sessionId}/infographic.pdf`;
-          await uploadFile(ip, infographicPath);
+          await uploadFile(ip, nlmResult.infographicPath);
           await prisma.document.create({ data: { sessionId, type: DocType.INFOGRAPHIC, fileName: "infographic.pdf", storagePath: ip, fileSize: getFileSize(ip) } });
-          fs.unlinkSync(infographicPath);
+          fs.unlinkSync(nlmResult.infographicPath);
+        }
+        if (nlmResult.audioOverviewPath && fs.existsSync(nlmResult.audioOverviewPath)) {
+          const ext = nlmResult.audioOverviewPath.split(".").pop() || "wav";
+          const ap = `sessions/${sessionId}/audio-overview.${ext}`;
+          await uploadFile(ap, nlmResult.audioOverviewPath);
+          await prisma.document.create({ data: { sessionId, type: DocType.AUDIO_OVERVIEW, fileName: `audio-overview.${ext}`, storagePath: ap, fileSize: getFileSize(ap) } });
+          fs.unlinkSync(nlmResult.audioOverviewPath);
+          log(sessionId, "Audio Overview (vídeo PT-BR) salvo com sucesso!");
         }
       } catch (err) {
         log(sessionId, `Aviso: falha no NotebookLM: ${err}`);

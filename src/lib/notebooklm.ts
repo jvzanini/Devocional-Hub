@@ -15,6 +15,7 @@ const NOTEBOOKLM_URL = "https://notebooklm.google.com";
 interface NotebookLMResult {
   slidesPath: string | null;
   infographicPath: string | null;
+  audioOverviewPath: string | null;
 }
 
 /**
@@ -191,6 +192,99 @@ async function generateInfographic(page: Page, downloadDir: string): Promise<str
 }
 
 /**
+ * Aciona a geração do Audio Overview (podcast/vídeo) em Português BR
+ */
+async function generateAudioOverview(page: Page, downloadDir: string): Promise<string | null> {
+  try {
+    // Clica no botão "Audio Overview" no Notebook Guide
+    const audioBtn = page.locator(
+      'button:has-text("Audio Overview"), button:has-text("Visão geral em áudio"), button:has-text("Deep Dive"), [aria-label*="Audio"], [aria-label*="audio"]'
+    );
+    await audioBtn.first().click({ timeout: 10000 });
+    await page.waitForTimeout(2000);
+
+    // Tenta configurar idioma para Português antes de gerar
+    const customizeBtn = page.locator(
+      'button:has-text("Customize"), button:has-text("Personalizar"), [aria-label*="customize"], [aria-label*="settings"]'
+    );
+    try {
+      await customizeBtn.first().click({ timeout: 5000 });
+      await page.waitForTimeout(1000);
+
+      // Procura seletor de idioma
+      const langSelect = page.locator('select, [role="listbox"]').first();
+      try {
+        await langSelect.click({ timeout: 3000 });
+        const ptOption = page.locator('option:has-text("Portuguese"), [role="option"]:has-text("Portuguese"), li:has-text("Portuguese"), li:has-text("Português")');
+        await ptOption.first().click({ timeout: 3000 });
+        await page.waitForTimeout(500);
+      } catch {
+        // Tenta campo de texto para instruções de customização
+        const instructionField = page.locator('textarea, input[type="text"]').last();
+        try {
+          await instructionField.fill("Gere o conteúdo inteiramente em português brasileiro. Use linguagem acessível e tom pastoral.");
+          await page.waitForTimeout(500);
+        } catch {
+          console.log("[NotebookLM] Não foi possível customizar idioma, gerando com padrão");
+        }
+      }
+    } catch {
+      console.log("[NotebookLM] Botão de customizar não encontrado, gerando com padrão");
+    }
+
+    // Clica em "Generate" / "Gerar"
+    const generateBtn = page.locator(
+      'button:has-text("Generate"), button:has-text("Gerar"), button:has-text("Create")'
+    );
+    await generateBtn.first().click({ timeout: 10000 });
+
+    // Audio Overview demora mais (2-5 min) — aguarda até 5 minutos
+    console.log("[NotebookLM] Aguardando geração do Audio Overview (pode levar até 5 min)...");
+
+    // Aguarda o player de áudio aparecer (indicando que foi gerado)
+    await page.waitForSelector(
+      'audio, [aria-label*="Play"], button:has-text("Play"), [data-testid*="audio"]',
+      { timeout: 300000 } // 5 minutos
+    );
+    await page.waitForTimeout(3000);
+
+    // Tenta fazer download do áudio
+    const downloadPromise = page.waitForEvent("download", { timeout: 30000 });
+
+    // Procura botão de download/share no player
+    const dlBtn = page.locator(
+      'button[aria-label*="download"], button[aria-label*="Download"], button:has-text("Download"), [aria-label*="more"], button[aria-label*="menu"]'
+    );
+    await dlBtn.first().click({ timeout: 10000 });
+
+    // Se abriu menu, clicar em Download
+    try {
+      const dlOption = page.locator(
+        'li:has-text("Download"), [role="menuitem"]:has-text("Download"), button:has-text("Download audio")'
+      );
+      await dlOption.first().click({ timeout: 5000 });
+    } catch {
+      // Pode ser que o clique direto já iniciou o download
+    }
+
+    const download = await downloadPromise;
+    const ext = download.suggestedFilename().split(".").pop() || "wav";
+    const audioPath = path.join(downloadDir, `audio-overview-${Date.now()}.${ext}`);
+    await download.saveAs(audioPath);
+
+    console.log(`[NotebookLM] Audio Overview salvo: ${audioPath}`);
+    return audioPath;
+  } catch (err) {
+    console.error("[NotebookLM] Falha ao gerar Audio Overview:", err);
+    // Screenshot de debug
+    try {
+      await page.screenshot({ path: path.join(downloadDir, "debug-audio-error.png"), fullPage: true });
+    } catch { /* ignore */ }
+    return null;
+  }
+}
+
+/**
  * Orquestrador principal — roda toda a automação do NotebookLM
  */
 export async function runNotebookLMAutomation(
@@ -216,6 +310,7 @@ export async function runNotebookLMAutomation(
 
   let slidesPath: string | null = null;
   let infographicPath: string | null = null;
+  let audioOverviewPath: string | null = null;
 
   try {
     const context = await getBrowserContext(browser);
@@ -238,6 +333,9 @@ export async function runNotebookLMAutomation(
     slidesPath = await generateSlides(page, downloadDir);
     infographicPath = await generateInfographic(page, downloadDir);
 
+    // Gerar Audio Overview (podcast em PT-BR)
+    audioOverviewPath = await generateAudioOverview(page, downloadDir);
+
     // Screenshot de debug
     const screenshotPath = path.join(downloadDir, "debug-screenshot.png");
     await page.screenshot({ path: screenshotPath, fullPage: true });
@@ -247,7 +345,7 @@ export async function runNotebookLMAutomation(
     await browser.close();
   }
 
-  return { slidesPath, infographicPath };
+  return { slidesPath, infographicPath, audioOverviewPath };
 }
 
 /**

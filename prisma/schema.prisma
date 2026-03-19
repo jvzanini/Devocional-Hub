@@ -96,6 +96,7 @@ enum DocType {
   BIBLE_TEXT
   INFOGRAPHIC
   SLIDES
+  AUDIO_OVERVIEW
 }
 
 enum PipelineStatus {
