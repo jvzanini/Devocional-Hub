@@ -92,13 +92,23 @@ async function zoomFetch(path: string): Promise<{ ok: boolean; data: unknown; st
 export async function getMeetingSummary(meetingId: string): Promise<ZoomMeetingSummary | null> {
   console.log(`[Zoom] Buscando meeting summary para ${meetingId}...`);
 
-  // Estratégia 1: Meeting Summary direto pelo ID
-  const result = await zoomFetch(`/meetings/${meetingId}/meeting_summary`);
-  if (result.ok && result.data) {
-    console.log("[Zoom] Meeting summary encontrado!");
-    return result.data as ZoomMeetingSummary;
+  // Estratégia 1a: /meetings/{id}/meeting_summary
+  const result1 = await zoomFetch(`/meetings/${meetingId}/meeting_summary`);
+  if (result1.ok && result1.data) {
+    console.log("[Zoom] Meeting summary encontrado via /meeting_summary!");
+    return result1.data as ZoomMeetingSummary;
   }
-  console.log(`[Zoom] /meetings/${meetingId}/meeting_summary: ${result.status} - ${JSON.stringify(result.data)}`);
+  console.log(`[Zoom] /meeting_summary: ${result1.status}`);
+
+  // Estratégia 1b: /meetings/{id}/summaries (endpoint alternativo)
+  const result2 = await zoomFetch(`/meetings/${meetingId}/summaries`);
+  if (result2.ok && result2.data) {
+    console.log("[Zoom] Meeting summary encontrado via /summaries!");
+    const summaries = (result2.data as { summaries?: ZoomMeetingSummary[] })?.summaries;
+    if (summaries?.length) return summaries[0];
+    return result2.data as ZoomMeetingSummary;
+  }
+  console.log(`[Zoom] /summaries: ${result2.status}`);
 
   // Estratégia 2: Listar summaries recentes do usuário
   const listResult = await zoomFetch(`/users/me/meeting_summaries?from=${getDateStr(-30)}&to=${getDateStr(0)}&page_size=30`);
