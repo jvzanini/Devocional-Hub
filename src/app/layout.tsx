@@ -20,13 +20,26 @@ export const metadata: Metadata = {
   },
 };
 
+const themeScript = `
+(function() {
+  try {
+    var t = localStorage.getItem('devhub-theme');
+    if (!t) t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', t);
+  } catch(e) {}
+})();
+`;
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt-BR">
+    <html lang="pt-BR" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
       <body className={`${geist.variable} font-sans antialiased`}>
         {children}
       </body>

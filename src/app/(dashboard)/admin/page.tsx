@@ -465,24 +465,17 @@ export default function AdminPage() {
     })
     .sort((a, b) => b[1].count - a[1].count);
 
-  if (loading) return <div className="page-bg login-container"><p style={{ color: "#78716c" }}>Carregando...</p></div>;
+  if (loading) return <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 300 }}><p style={{ color: "var(--text-muted)" }}>Carregando...</p></div>;
 
   return (
-    <div className="page-bg">
-      <header className="app-header">
-        <div className="header-content">
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <a href="/" className="btn-icon" style={{ textDecoration: "none" }}>
-              <svg width={18} height={18} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7"/></svg>
-            </a>
-            <div style={{ fontWeight: 700, fontSize: 18, color: "#1c1917" }}>Administração</div>
-          </div>
-          {msg && <span className="badge badge-success">{msg}</span>}
-        </div>
-      </header>
+    <div>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
+        <h1 style={{ fontWeight: 700, fontSize: 22, color: "var(--text)" }}>Administração</h1>
+        {msg && <span className="badge badge-success">{msg}</span>}
+      </div>
 
       {/* Tabs */}
-      <div style={{ maxWidth: 960, margin: "0 auto", padding: "0 20px" }}>
+      <div>
         <div className="tabs-list">
           {([
             { key: "zoom", label: "Configurações Zoom" },
@@ -500,7 +493,7 @@ export default function AdminPage() {
         </div>
       </div>
 
-      <main style={{ maxWidth: 960, margin: "0 auto", padding: "0 20px 60px" }}>
+      <div>
 
         {/* ─── TAB: Configurações Zoom ─── */}
         {tab === "zoom" && (
@@ -1193,7 +1186,7 @@ export default function AdminPage() {
           </div>
         )}
 
-      </main>
+      </div>
     </div>
   );
 }

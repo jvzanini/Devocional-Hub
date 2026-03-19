@@ -141,8 +141,8 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="page-bg login-container">
-        <p style={{ fontSize: 16, color: "#78716c" }}>Carregando...</p>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 300 }}>
+        <p style={{ fontSize: 16, color: "var(--text-muted)" }}>Carregando...</p>
       </div>
     );
   }
@@ -153,17 +153,8 @@ export default function ProfilePage() {
   const hasMultipleZoom = (user.zoomIdentifiers?.length || 0) > 1;
 
   return (
-    <div className="page-bg">
-      <header className="app-header">
-        <div style={{ maxWidth: 560, margin: "0 auto", padding: "12px 20px", display: "flex", alignItems: "center", gap: 12 }}>
-          <Link href="/" className="btn-icon" style={{ textDecoration: "none" }}>
-            <svg width={18} height={18} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
-          </Link>
-          <div style={{ fontWeight: 700, fontSize: 18, color: "#1c1917" }}>Meu Perfil</div>
-        </div>
-      </header>
-
-      <main style={{ maxWidth: 560, margin: "0 auto", padding: "28px 20px 60px" }}>
+    <div style={{ maxWidth: 560 }}>
+      <h1 style={{ fontSize: 22, fontWeight: 700, color: "var(--text)", marginBottom: 24 }}>Meu Perfil</h1>
         {/* Avatar + Upload */}
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 32 }}>
           <div
@@ -306,7 +297,6 @@ export default function ProfilePage() {
             </div>
           )}
         </div>
-      </main>
-    </div>
+      </div>
   );
 }

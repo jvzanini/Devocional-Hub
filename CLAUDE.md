@@ -25,13 +25,16 @@
 ```
 src/
 ├── app/                          # Routing layer (pages + API routes)
-│   ├── (auth)/                   # Login, Invite
-│   ├── admin/                    # Painel admin
-│   ├── profile/                  # Perfil do usuário
-│   ├── session/[id]/             # Detalhe da sessão
+│   ├── (auth)/                   # Login, Invite (sem sidebar)
+│   ├── (dashboard)/              # Páginas autenticadas (com sidebar)
+│   │   ├── layout.tsx            # Layout compartilhado: Sidebar + auth check
+│   │   ├── page.tsx              # Dashboard (home)
+│   │   ├── admin/page.tsx        # Painel admin
+│   │   ├── profile/page.tsx      # Perfil do usuário
+│   │   └── session/[id]/page.tsx # Detalhe da sessão
 │   ├── api/                      # 23 API endpoints
-│   ├── layout.tsx, page.tsx      # Root layout + Dashboard
-│   └── globals.css               # Design system hardcoded
+│   ├── layout.tsx                # Root layout (font, theme script)
+│   └── globals.css               # Design system com CSS variables + dark mode
 ├── features/                     # Domínios de negócio
 │   ├── auth/lib/                 # Autenticação (NextAuth config)
 │   ├── sessions/                 # Sessões e presença
@@ -46,11 +49,15 @@ src/
 │   ├── zoom/lib/                 # Integração Zoom (OAuth, recordings, participants)
 │   └── email/lib/                # Envio de emails (Gmail SMTP)
 ├── shared/                       # Código compartilhado entre features
-│   ├── components/ui/            # Badge e componentes de UI
+│   ├── components/               # Sidebar e componentes compartilhados
+│   │   ├── Sidebar.tsx           # Sidebar com navegação, tema e logout
+│   │   └── ui/                   # Badge e componentes de UI
 │   └── lib/                      # db.ts, storage.ts, utils.ts
 └── middleware.ts                 # Middleware de autenticação
 ```
-- CSS em `src/app/globals.css` — TODAS as classes visuais são hardcoded aqui (sem CSS variables do Tailwind)
+- CSS em `src/app/globals.css` — Design system com CSS custom properties (:root + [data-theme="dark"])
+- ATENÇÃO: NÃO usar `@theme` inline do Tailwind v4 — apenas CSS custom properties padrão
+- Dark mode: `data-theme="dark"` no `<html>`, salvo em localStorage como `devhub-theme`
 - Imports: `@/features/<feature>/lib/<module>`, `@/features/<feature>/components/<Component>`, `@/shared/lib/<module>`
 
 ## Modelos do Banco (Prisma)

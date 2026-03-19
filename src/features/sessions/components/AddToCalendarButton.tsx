@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 
 interface Props {
   zoomMeetingId: string;
@@ -8,7 +8,6 @@ interface Props {
 }
 
 function generateICS(zoomLink: string): string {
-  // Recurring daily event at 6:00 AM São Paulo time
   const lines = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
@@ -35,6 +34,17 @@ function generateICS(zoomLink: string): string {
 
 export function AddToCalendarButton({ zoomMeetingId, zoomLink }: Props) {
   const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  // Close on click outside
+  useEffect(() => {
+    if (!open) return;
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [open]);
 
   function downloadICS() {
     const ics = generateICS(zoomLink);
@@ -60,25 +70,13 @@ export function AddToCalendarButton({ zoomMeetingId, zoomLink }: Props) {
   }
 
   return (
-    <div style={{ position: "relative" }}>
+    <div style={{ position: "relative" }} ref={ref}>
       <button
         onClick={() => setOpen(!open)}
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 8,
-          padding: "10px 18px",
-          borderRadius: 12,
-          border: "1px solid #e7e5e4",
-          backgroundColor: "#ffffff",
-          cursor: "pointer",
-          fontSize: 14,
-          fontWeight: 600,
-          color: "#44403c",
-          transition: "all 0.15s",
-        }}
+        className="btn-ghost"
+        style={{ gap: 8 }}
       >
-        <svg style={{ width: 18, height: 18, color: "#d97706" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <svg style={{ width: 18, height: 18, color: "var(--accent)" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
         </svg>
         Adicionar à Agenda
@@ -89,11 +87,11 @@ export function AddToCalendarButton({ zoomMeetingId, zoomLink }: Props) {
           position: "absolute",
           top: "calc(100% + 8px)",
           left: 0,
-          backgroundColor: "#ffffff",
-          borderRadius: 14,
-          border: "1px solid #e7e5e4",
-          boxShadow: "0 10px 30px rgba(0,0,0,0.12)",
-          padding: 8,
+          backgroundColor: "var(--surface)",
+          borderRadius: 10,
+          border: "1px solid var(--border)",
+          boxShadow: "var(--shadow-lg)",
+          padding: 6,
           zIndex: 20,
           minWidth: 220,
           animation: "fadeIn 150ms ease-out",
@@ -105,21 +103,22 @@ export function AddToCalendarButton({ zoomMeetingId, zoomLink }: Props) {
               alignItems: "center",
               gap: 10,
               width: "100%",
-              padding: "10px 14px",
-              borderRadius: 10,
+              padding: "10px 12px",
+              borderRadius: 8,
               border: "none",
               backgroundColor: "transparent",
               cursor: "pointer",
               fontSize: 14,
               fontWeight: 500,
-              color: "#44403c",
+              color: "var(--text)",
               textAlign: "left",
+              transition: "background-color 0.15s",
             }}
-            onMouseEnter={e => (e.currentTarget.style.backgroundColor = "#fafaf9")}
+            onMouseEnter={e => (e.currentTarget.style.backgroundColor = "var(--surface-hover)")}
             onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
           >
-            <div style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: "#eff6ff", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <span style={{ fontSize: 16 }}>G</span>
+            <div style={{ width: 30, height: 30, borderRadius: 6, backgroundColor: "var(--info-bg)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <span style={{ fontSize: 14, fontWeight: 700, color: "var(--info)" }}>G</span>
             </div>
             Google Calendar
           </button>
@@ -131,21 +130,22 @@ export function AddToCalendarButton({ zoomMeetingId, zoomLink }: Props) {
               alignItems: "center",
               gap: 10,
               width: "100%",
-              padding: "10px 14px",
-              borderRadius: 10,
+              padding: "10px 12px",
+              borderRadius: 8,
               border: "none",
               backgroundColor: "transparent",
               cursor: "pointer",
               fontSize: 14,
               fontWeight: 500,
-              color: "#44403c",
+              color: "var(--text)",
               textAlign: "left",
+              transition: "background-color 0.15s",
             }}
-            onMouseEnter={e => (e.currentTarget.style.backgroundColor = "#fafaf9")}
+            onMouseEnter={e => (e.currentTarget.style.backgroundColor = "var(--surface-hover)")}
             onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
           >
-            <div style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: "#f5f5f4", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <svg style={{ width: 16, height: 16, color: "#57534e" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <div style={{ width: 30, height: 30, borderRadius: 6, backgroundColor: "var(--surface-hover)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <svg style={{ width: 15, height: 15, color: "var(--text-secondary)" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
               </svg>
             </div>

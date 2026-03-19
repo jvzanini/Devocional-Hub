@@ -102,23 +102,22 @@ export default async function SessionPage({ params }: { params: Promise<{ id: st
     });
 
   return (
-    <div className="page-bg">
-      <header className="app-header">
-        <div style={{ maxWidth: 800, margin: "0 auto", padding: "12px 20px", display: "flex", alignItems: "center", gap: 12 }}>
-          <Link href="/" className="btn-icon" style={{ textDecoration: "none" }}>
-            <svg width={16} height={16} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
-          </Link>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ fontWeight: 700, fontSize: 18, color: "#1c1917", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.chapterRef || "Devocional"}</span>
-              <Badge variant={st.variant}>{st.label}</Badge>
-            </div>
-            <div style={{ fontSize: 13, color: "#78716c", marginTop: 2 }}>{formatDate(s.date)}</div>
+    <div>
+      {/* Page Header */}
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20, flexWrap: "wrap" }}>
+        <Link href="/" className="btn-icon" style={{ textDecoration: "none" }}>
+          <svg width={16} height={16} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
+        </Link>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            <h1 style={{ fontWeight: 700, fontSize: 22, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.chapterRef || "Devocional"}</h1>
+            <Badge variant={st.variant}>{st.label}</Badge>
           </div>
+          <div style={{ fontSize: 14, color: "var(--text-muted)", marginTop: 2 }}>{formatDate(s.date)}</div>
         </div>
-      </header>
+      </div>
 
-      <main style={{ maxWidth: 800, margin: "0 auto", padding: "20px 20px 48px", display: "flex", flexDirection: "column", gap: 14 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
         {/* Erro */}
         {s.status === "ERROR" && s.errorMessage && (
           <div className="alert-error">
@@ -196,7 +195,7 @@ export default async function SessionPage({ params }: { params: Promise<{ id: st
             ))}
           </div>
         </div>
-      </main>
+      </div>
     </div>
   );
 }

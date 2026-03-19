@@ -85,12 +85,16 @@ Sync Attendance + Reading Plan
 ```
 src/
 ├── app/                              # 🛣️  Routing (Pages + API)
-│   ├── (auth)/                       #     Login & Invite pages
-│   ├── admin/                        #     Admin panel
-│   ├── profile/                      #     User profile
-│   ├── session/[id]/                 #     Session details
+│   ├── (auth)/                       #     Login & Invite pages (no sidebar)
+│   ├── (dashboard)/                  #     Authenticated pages (shared sidebar layout)
+│   │   ├── layout.tsx                #     Sidebar + auth check
+│   │   ├── page.tsx                  #     Dashboard (home)
+│   │   ├── admin/page.tsx            #     Admin panel
+│   │   ├── profile/page.tsx          #     User profile
+│   │   └── session/[id]/page.tsx     #     Session details
 │   ├── api/                          #     23 REST endpoints
-│   └── globals.css                   #     Design system
+│   ├── layout.tsx                    #     Root layout (font, dark mode script)
+│   └── globals.css                   #     Design system (CSS vars + dark mode)
 │
 ├── features/                         # 🧩 Business Domains
 │   ├── auth/lib/                     #     NextAuth configuration
@@ -107,7 +111,9 @@ src/
 │   └── email/lib/                    #     Gmail SMTP
 │
 ├── shared/                           # 🔗 Shared Utilities
-│   ├── components/ui/                #     Badge, UI primitives
+│   ├── components/                   #     Sidebar, shared UI
+│   │   ├── Sidebar.tsx               #     Navigation, theme toggle, logout
+│   │   └── ui/                       #     Badge, UI primitives
 │   └── lib/                          #     Database, storage, utils
 │
 └── middleware.ts                     # 🔒 Auth middleware
@@ -121,7 +127,7 @@ src/
 |-------|-----------|
 | **Framework** | Next.js 16 (App Router) |
 | **Language** | TypeScript 5 |
-| **UI** | React 19 + Tailwind CSS 4 |
+| **UI** | React 19 + Tailwind CSS 4 + Dark Mode |
 | **Database** | PostgreSQL 16 + Prisma 5 |
 | **Auth** | NextAuth v5 (JWT) |
 | **AI** | OpenAI + OpenRouter + Google Gemini |
@@ -312,10 +318,10 @@ docker compose -f docker-compose.prod.yml up -d
 
 | Métrica | Valor |
 |---------|-------|
-| Arquivos TypeScript | 52 |
+| Arquivos TypeScript | 54 |
 | API Endpoints | 23 |
 | Páginas | 6 |
-| Componentes React | 8 |
+| Componentes React | 10 |
 | Modelos Prisma | 10 |
 | Features | 8 |
 
