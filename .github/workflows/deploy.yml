@@ -69,12 +69,14 @@ jobs:
       - name: Checkout (for stack file)
         uses: actions/checkout@v4
 
-      - name: Ensure GHCR registry in Portainer
-        continue-on-error: true
+      - name: Ensure GHCR registry and deploy stack
         run: |
-          # Verificar se o registry GHCR já existe no Portainer
-          REGISTRIES=$(curl -s -H "X-API-Key: ${{ secrets.PORTAINER_TOKEN }}" \
-            "https://painel.nexusai360.com/api/registries")
+          PORTAINER_URL="https://painel.nexusai360.com"
+          API_KEY="${{ secrets.PORTAINER_TOKEN }}"
+          STACK_ID="${{ secrets.PORTAINER_STACK_ID }}"
+
+          # ── 1. Atualizar registry GHCR no Portainer ────────────────
+          REGISTRIES=$(curl -s -H "X-API-Key: $API_KEY" "$PORTAINER_URL/api/registries")
 
           GHCR_ID=$(echo "$REGISTRIES" | python3 -c "
           import json, sys
@@ -87,10 +89,10 @@ jobs:
 
           if [ -z "$GHCR_ID" ]; then
             echo "Criando registry GHCR no Portainer..."
-            curl -s -X POST \
-              -H "X-API-Key: ${{ secrets.PORTAINER_TOKEN }}" \
+            GHCR_RESULT=$(curl -s -X POST \
+              -H "X-API-Key: $API_KEY" \
               -H "Content-Type: application/json" \
-              "https://painel.nexusai360.com/api/registries" \
+              "$PORTAINER_URL/api/registries" \
               -d "{
                 \"Name\": \"GitHub Container Registry\",
                 \"Type\": 6,
@@ -99,13 +101,15 @@ jobs:
                 \"Authentication\": true,
                 \"Username\": \"${{ github.actor }}\",
                 \"Password\": \"${{ secrets.GITHUB_TOKEN }}\"
-              }" && echo "Registry GHCR criado com sucesso"
+              }")
+            GHCR_ID=$(echo "$GHCR_RESULT" | python3 -c "import json,sys; print(json.load(sys.stdin).get('Id',''))")
+            echo "Registry GHCR criado (ID: $GHCR_ID)"
           else
-            echo "Registry GHCR já existe (ID: $GHCR_ID), atualizando credenciais..."
+            echo "Registry GHCR já existe (ID: $GHCR_ID), atualizando token..."
             curl -s -X PUT \
-              -H "X-API-Key: ${{ secrets.PORTAINER_TOKEN }}" \
+              -H "X-API-Key: $API_KEY" \
               -H "Content-Type: application/json" \
-              "https://painel.nexusai360.com/api/registries/$GHCR_ID" \
+              "$PORTAINER_URL/api/registries/$GHCR_ID" \
               -d "{
                 \"Name\": \"GitHub Container Registry\",
                 \"Type\": 6,
@@ -114,16 +118,14 @@ jobs:
                 \"Authentication\": true,
                 \"Username\": \"${{ github.actor }}\",
                 \"Password\": \"${{ secrets.GITHUB_TOKEN }}\"
-              }" && echo "Registry GHCR atualizado"
+              }" > /dev/null
           fi
 
-      - name: Redeploy stack on Portainer
-        run: |
-          # Ler stack YAML do repositório (contém ${VAR} placeholders)
+          echo "GHCR Registry ID: $GHCR_ID"
+
+          # ── 2. Atualizar stack com registry ─────────────────────────
           STACK_CONTENT=$(cat portainer-stack.yml)
 
-          # Montar array de variáveis de ambiente com credenciais reais (dos GitHub Secrets)
-          # O Portainer substitui ${VAR} no YAML pelos valores do array Env
           ENV_JSON=$(python3 -c "
           import json
           env_vars = [
@@ -148,7 +150,7 @@ jobs:
           print(json.dumps(env_vars))
           ")
 
-          # Montar payload com stack + env vars
+          # Payload com registries para autenticar o pull
           PAYLOAD=$(python3 -c "
           import json, sys
           stack = sys.stdin.read()
@@ -159,14 +161,18 @@ jobs:
             'pullImage': True,
             'prune': True
           }
+          # Adicionar registries se temos o ID
+          registry_id = '$GHCR_ID'.strip()
+          if registry_id.isdigit():
+            payload['registries'] = [int(registry_id)]
           print(json.dumps(payload))
           " <<< "$STACK_CONTENT")
 
           # Enviar para Portainer
           RESULT=$(curl -s --max-time 120 -X PUT \
-            -H "X-API-Key: ${{ secrets.PORTAINER_TOKEN }}" \
+            -H "X-API-Key: $API_KEY" \
             -H "Content-Type: application/json" \
-            "https://painel.nexusai360.com/api/stacks/${{ secrets.PORTAINER_STACK_ID }}?endpointId=1" \
+            "$PORTAINER_URL/api/stacks/$STACK_ID?endpointId=1" \
             -d "$PAYLOAD")
 
           echo "$RESULT" | python3 -c "
@@ -182,3 +188,44 @@ jobs:
             print('Resposta inesperada')
             sys.exit(1)
           "
+
+          # ── 3. Forçar pull da imagem via Docker API do Portainer ────
+          echo "Forçando pull da imagem..."
+          DEPLOY_TAG="sha-$(echo '${{ github.sha }}' | cut -c1-7)"
+          curl -s -X POST \
+            -H "X-API-Key: $API_KEY" \
+            -H "Content-Type: application/json" \
+            -H "X-Registry-Auth: $(echo -n '{"username":"${{ github.actor }}","password":"${{ secrets.GITHUB_TOKEN }}","serveraddress":"ghcr.io"}' | base64 -w0)" \
+            "$PORTAINER_URL/api/endpoints/1/docker/images/create?fromImage=ghcr.io/jvzanini/devocional-hub&tag=$DEPLOY_TAG" \
+            && echo "Pull da imagem $DEPLOY_TAG concluído"
+
+          # ── 4. Forçar redeploy do service ───────────────────────────
+          echo "Forçando atualização do service..."
+          # Buscar o service ID
+          SERVICES=$(curl -s -H "X-API-Key: $API_KEY" \
+            "$PORTAINER_URL/api/endpoints/1/docker/services" \
+            -G --data-urlencode 'filters={"name":["devocional"]}')
+
+          SERVICE_INFO=$(echo "$SERVICES" | python3 -c "
+          import json, sys
+          services = json.load(sys.stdin)
+          for s in services:
+            if 'devocional' in s.get('Spec', {}).get('Name', ''):
+              print(f\"{s['ID']}|{s['Version']['Index']}\")
+              break
+          ")
+
+          if [ -n "$SERVICE_INFO" ]; then
+            SERVICE_ID=$(echo "$SERVICE_INFO" | cut -d'|' -f1)
+            SERVICE_VERSION=$(echo "$SERVICE_INFO" | cut -d'|' -f2)
+            echo "Service: $SERVICE_ID (version: $SERVICE_VERSION)"
+
+            # Forçar update do service com --force
+            curl -s -X POST \
+              -H "X-API-Key: $API_KEY" \
+              -H "Content-Type: application/json" \
+              -H "X-Registry-Auth: $(echo -n '{"username":"${{ github.actor }}","password":"${{ secrets.GITHUB_TOKEN }}","serveraddress":"ghcr.io"}' | base64 -w0)" \
+              "$PORTAINER_URL/api/endpoints/1/docker/services/$SERVICE_ID/update?version=$SERVICE_VERSION&registryId=$GHCR_ID" \
+              -d "{\"force\": true}" \
+              && echo "Service force-updated"
+          fi
