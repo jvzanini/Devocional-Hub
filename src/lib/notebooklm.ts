@@ -288,13 +288,17 @@ async function addTextSource(page: Page, text: string): Promise<void> {
   await page.waitForTimeout(3000);
 
   // Selecionar "Copied text" / "Texto copiado"
-  log("addTextSource: Procurando opção 'Copied text'...");
+  // Listar opções disponíveis após clicar em "Add source"
+  const allBtns = await page.locator("button, a, [role='option'], [role='menuitem'], [role='listitem'], li").allTextContents().catch(() => []);
+  log(`Opções visíveis após 'Add source': ${allBtns.filter(b => b.trim()).slice(0, 20).join(" | ")}`);
+
+  log("addTextSource: Procurando opção 'Copied text' / 'Texto copiado' / 'Colar texto'...");
   const pasteBtn = page.locator(
-    'button:has-text("Copied text"), button:has-text("Texto copiado"), button:has-text("Paste text"), button:has-text("Colar texto"), [data-value="TEXT"]'
+    'button:has-text("Copied text"), button:has-text("Texto copiado"), button:has-text("Colar texto"), button:has-text("Paste text"), button:has-text("Texto"), [data-value="TEXT"], [role="option"]:has-text("text"), [role="option"]:has-text("texto"), li:has-text("Texto copiado"), li:has-text("Colar texto"), li:has-text("Copied text")'
   );
   await pasteBtn.first().waitFor({ state: "visible", timeout: 15000 });
   await pasteBtn.first().click({ timeout: 10000 });
-  log("addTextSource: Clicou em 'Copied text'");
+  log("addTextSource: Clicou na opção de texto");
   await page.waitForTimeout(2000);
 
   // Preencher textarea
