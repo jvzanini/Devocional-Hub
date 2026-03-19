@@ -328,10 +328,20 @@ async function generateStudioItem(page: Page, itemName: string, downloadDir: str
   try {
     log(`Gerando ${itemName}...`);
 
-    // Clicar no item do Estúdio (pelo texto)
+    // Fechar qualquer overlay/modal que esteja aberto
+    try {
+      const backdrop = page.locator('.cdk-overlay-backdrop');
+      if (await backdrop.count() > 0) {
+        await backdrop.first().click({ force: true, timeout: 3000 });
+        await page.waitForTimeout(1000);
+        log("Overlay fechado antes de clicar no item.");
+      }
+    } catch { /* ignore */ }
+
+    // Clicar no item do Estúdio — usar force para bypass de overlay residual
     const itemBtn = page.locator(`text="${itemName}"`);
     await itemBtn.first().waitFor({ state: "visible", timeout: 15000 });
-    await itemBtn.first().click({ timeout: 10000 });
+    await itemBtn.first().click({ timeout: 10000, force: true });
     log(`Clicou em '${itemName}'`);
     await page.waitForTimeout(5000);
 
@@ -344,16 +354,16 @@ async function generateStudioItem(page: Page, itemName: string, downloadDir: str
       }
     } catch { /* pode não ter botão gerar separado */ }
 
-    // Aguardar geração (pode levar 30s-2min)
-    log(`Aguardando geração de ${itemName} (até 3 min)...`);
-    await page.waitForTimeout(30000);
+    // Aguardar geração (pode levar 30s-3min)
+    log(`Aguardando geração de ${itemName} (até 4 min)...`);
 
-    // Procurar botão de download
-    const downloadPromise = page.waitForEvent("download", { timeout: 180000 });
+    // Configurar listener de download ANTES de clicar
+    const downloadPromise = page.waitForEvent("download", { timeout: 240000 });
 
-    // Tentar clicar em download/baixar
-    const dlBtn = page.locator('button[aria-label*="download" i], button[aria-label*="Download" i], button:has-text("Download"), button:has-text("Baixar"), [aria-label*="Baixar" i]');
-    await dlBtn.first().waitFor({ state: "visible", timeout: 120000 });
+    // Procurar botão de download (pode demorar até aparecer)
+    const dlBtn = page.locator('button[aria-label*="download" i], button[aria-label*="Download" i], button:has-text("Download"), button:has-text("Baixar"), [aria-label*="Baixar" i], [aria-label*="download" i]');
+    await dlBtn.first().waitFor({ state: "visible", timeout: 180000 });
+    log(`Botão de download encontrado para ${itemName}`);
     await dlBtn.first().click({ timeout: 10000 });
 
     const download = await downloadPromise;
@@ -362,13 +372,26 @@ async function generateStudioItem(page: Page, itemName: string, downloadDir: str
     await download.saveAs(filePath);
     log(`${itemName} salvo: ${filePath}`);
 
-    // Voltar ao painel do Estúdio
-    await page.goBack().catch(() => {});
+    // Fechar modal/overlay se existir e aguardar retorno ao Estúdio
+    try {
+      const closeBtn = page.locator('button[aria-label*="close" i], button[aria-label*="fechar" i], button:has-text("×"), button:has-text("Fechar")');
+      if (await closeBtn.count() > 0) {
+        await closeBtn.first().click({ timeout: 5000 });
+      }
+    } catch { /* ignore */ }
     await page.waitForTimeout(3000);
 
     return filePath;
   } catch (err) {
     log(`Falha ao gerar ${itemName}: ${err}`);
+    // Tentar fechar overlay antes de sair
+    try {
+      const backdrop = page.locator('.cdk-overlay-backdrop');
+      if (await backdrop.count() > 0) {
+        await backdrop.first().click({ force: true, timeout: 2000 });
+        await page.waitForTimeout(1000);
+      }
+    } catch { /* ignore */ }
     return null;
   }
 }
