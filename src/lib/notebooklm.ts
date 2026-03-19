@@ -45,6 +45,13 @@ async function launchStealthBrowser(): Promise<Browser> {
     "--no-first-run",
   ];
 
+  log(`PLAYWRIGHT_BROWSERS_PATH: ${process.env.PLAYWRIGHT_BROWSERS_PATH || "(não definido)"}`);
+  try {
+    log(`Playwright executablePath: ${chromium.executablePath()}`);
+  } catch (e) {
+    log(`executablePath erro: ${e}`);
+  }
+
   log("Lançando Chromium bundled do Playwright...");
   const browser = await chromium.launch({ headless: true, args });
   log("Chromium lançado com sucesso.");

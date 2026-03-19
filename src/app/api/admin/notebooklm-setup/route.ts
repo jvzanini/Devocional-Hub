@@ -2,9 +2,11 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { setupGoogleSession, hasGoogleSession, clearGoogleSession } from "@/lib/notebooklm";
+import { chromium } from "playwright";
+import fs from "fs";
 
 /**
- * GET — Verifica status da sessão Google/NotebookLM
+ * GET — Verifica status da sessão Google/NotebookLM + diagnóstico Playwright
  */
 export async function GET() {
   const session = await auth();
@@ -13,11 +15,30 @@ export async function GET() {
   const user = await prisma.user.findUnique({ where: { id: (session.user as { id: string }).id } });
   if (user?.role !== "ADMIN") return NextResponse.json({ error: "Acesso negado" }, { status: 403 });
 
+  // Diagnóstico Playwright
+  let execPath = "desconhecido";
+  try { execPath = chromium.executablePath(); } catch (e) { execPath = `erro: ${e}`; }
+
+  const browsersPath = process.env.PLAYWRIGHT_BROWSERS_PATH || "(não definido)";
+  let browsersDir: string[] = [];
+  try { browsersDir = fs.readdirSync(browsersPath); } catch { browsersDir = ["(diretório não encontrado)"]; }
+
+  const systemChromium = fs.existsSync("/usr/bin/chromium");
+  const systemChromiumBrowser = fs.existsSync("/usr/bin/chromium-browser");
+
   return NextResponse.json({
     hasSession: hasGoogleSession(),
     message: hasGoogleSession()
       ? "Sessão Google ativa. NotebookLM está pronto para uso."
       : "Sessão Google não encontrada. Execute POST para configurar.",
+    diagnostics: {
+      playwrightExecPath: execPath,
+      playwrightBrowsersPath: browsersPath,
+      browsersDir,
+      systemChromiumExists: systemChromium,
+      systemChromiumBrowserExists: systemChromiumBrowser,
+      execPathExists: fs.existsSync(execPath),
+    },
   });
 }
 
