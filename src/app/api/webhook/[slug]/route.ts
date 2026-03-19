@@ -5,6 +5,7 @@
  */
 
 import { NextResponse } from "next/server";
+import crypto from "crypto";
 import { prisma } from "@/lib/db";
 import { runPipeline } from "@/lib/pipeline";
 
@@ -27,15 +28,18 @@ export async function POST(
     return NextResponse.json({ error: "Body inválido" }, { status: 400 });
   }
 
-  // Zoom envia um challenge de validação na configuração
+  // Zoom envia um challenge de validação na configuração do webhook
+  // Docs: https://developers.zoom.us/docs/api/rest/webhook-reference/#validate-your-webhook-endpoint
   if (body.event === "endpoint.url_validation") {
-    const plainToken = body.payload as { plainToken?: string };
-    // Zoom espera que retornemos o plainToken + hash
-    // Para simplificar, retornamos o token direto (funciona para validação básica)
-    return NextResponse.json({
-      plainToken: plainToken?.plainToken || "",
-      encryptedToken: plainToken?.plainToken || "",
-    });
+    const plainToken = (body.payload as { plainToken?: string })?.plainToken || "";
+    const secret = process.env.ZOOM_WEBHOOK_SECRET || webhook.secret || "";
+
+    const encryptedToken = crypto
+      .createHmac("sha256", secret)
+      .update(plainToken)
+      .digest("hex");
+
+    return NextResponse.json({ plainToken, encryptedToken });
   }
 
   // Processar meeting.ended

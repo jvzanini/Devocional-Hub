@@ -19,6 +19,7 @@ services:
       - ZOOM_CLIENT_ID=5YA9ML5tTUW5Wml9GiiWTg
       - ZOOM_CLIENT_SECRET=YDFkbR227SGt5op7x0BF1wpG1zMjEXg6
       - ZOOM_RECURRING_MEETING_ID=89803817919
+      - ZOOM_WEBHOOK_SECRET=2a_SlG_YTVit29if0P3LhQ
 
       # ── Gemini (gratuito) ────────────────────────────────────
       - GEMINI_API_KEY=AIzaSyD6jKWTVDUbF4NJ4OygKvm8AtSx8elUEDQ
