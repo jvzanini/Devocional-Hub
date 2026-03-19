@@ -27,6 +27,36 @@ export interface NotebookLMResult {
 
 // ─── Stealth Browser Launch ──────────────────────────────────────────────
 
+function findBundledChromium(): string | null {
+  const browsersPath = process.env.PLAYWRIGHT_BROWSERS_PATH || "/ms-playwright";
+  try {
+    const entries = fs.readdirSync(browsersPath);
+    log(`Conteúdo de ${browsersPath}: ${JSON.stringify(entries)}`);
+    const chromiumDir = entries.find(e => e.startsWith("chromium-") || e.startsWith("chromium_"));
+    if (chromiumDir) {
+      const execPath = path.join(browsersPath, chromiumDir, "chrome-linux", "chrome");
+      if (fs.existsSync(execPath)) {
+        log(`Chromium bundled encontrado: ${execPath}`);
+        return execPath;
+      }
+      // Tentar caminho alternativo
+      const altPath = path.join(browsersPath, chromiumDir, "chrome", "chrome");
+      if (fs.existsSync(altPath)) {
+        log(`Chromium bundled (alt): ${altPath}`);
+        return altPath;
+      }
+      // Listar conteúdo do diretório para debug
+      try {
+        const subEntries = fs.readdirSync(path.join(browsersPath, chromiumDir));
+        log(`Conteúdo de ${chromiumDir}: ${JSON.stringify(subEntries)}`);
+      } catch { /* ignore */ }
+    }
+  } catch (e) {
+    log(`Erro ao escanear ${browsersPath}: ${e}`);
+  }
+  return null;
+}
+
 async function launchStealthBrowser(): Promise<Browser> {
   const args = [
     "--no-sandbox",
@@ -45,15 +75,33 @@ async function launchStealthBrowser(): Promise<Browser> {
     "--no-first-run",
   ];
 
+  // Encontrar Chromium bundled explicitamente
+  const bundledPath = findBundledChromium();
+
+  // Diagnóstico
   log(`PLAYWRIGHT_BROWSERS_PATH: ${process.env.PLAYWRIGHT_BROWSERS_PATH || "(não definido)"}`);
+  log(`Chromium bundled path: ${bundledPath || "(não encontrado)"}`);
+  log(`/usr/bin/chromium existe: ${fs.existsSync("/usr/bin/chromium")}`);
   try {
-    log(`Playwright executablePath: ${chromium.executablePath()}`);
+    log(`Playwright default executablePath: ${chromium.executablePath()}`);
   } catch (e) {
     log(`executablePath erro: ${e}`);
   }
 
-  log("Lançando Chromium bundled do Playwright...");
-  const browser = await chromium.launch({ headless: true, args });
+  const launchOptions: { headless: boolean; args: string[]; executablePath?: string } = {
+    headless: true,
+    args,
+  };
+
+  if (bundledPath) {
+    launchOptions.executablePath = bundledPath;
+    log(`Usando Chromium bundled: ${bundledPath}`);
+  } else {
+    log("AVISO: Chromium bundled não encontrado, usando default do Playwright");
+  }
+
+  log("Lançando Chromium...");
+  const browser = await chromium.launch(launchOptions);
   log("Chromium lançado com sucesso.");
   return browser;
 }
@@ -475,32 +523,55 @@ export async function runNotebookLMAutomation(
  * Chamado pelo endpoint POST /api/admin/notebooklm-setup
  * Precisa ser executado UMA VEZ após cada deploy (ou quando sessão expirar).
  */
-export async function setupGoogleSession(): Promise<{ success: boolean; message: string }> {
+export async function setupGoogleSession(): Promise<{ success: boolean; message: string; logs?: string[] }> {
+  const setupLogs: string[] = [];
+  const origLog = log;
+
+  // Capturar logs para retornar na resposta
+  const captureLog = (msg: string) => { setupLogs.push(msg); origLog(msg); };
+
+  // Diagnóstico pré-launch
+  const browsersPath = process.env.PLAYWRIGHT_BROWSERS_PATH || "/ms-playwright";
+  captureLog(`PLAYWRIGHT_BROWSERS_PATH: ${browsersPath}`);
+  try {
+    const entries = fs.readdirSync(browsersPath);
+    captureLog(`Conteúdo de ${browsersPath}: ${JSON.stringify(entries)}`);
+  } catch (e) {
+    captureLog(`Erro ao ler ${browsersPath}: ${e}`);
+  }
+  captureLog(`/usr/bin/chromium existe: ${fs.existsSync("/usr/bin/chromium")}`);
+  captureLog(`/usr/bin/chromium-browser existe: ${fs.existsSync("/usr/bin/chromium-browser")}`);
+  try {
+    captureLog(`Playwright executablePath(): ${chromium.executablePath()}`);
+  } catch (e) {
+    captureLog(`executablePath() erro: ${e}`);
+  }
+
   let browser: Browser;
   try {
     browser = await launchStealthBrowser();
   } catch (err) {
-    return { success: false, message: `Chromium não iniciou: ${err}` };
+    return { success: false, message: `Chromium não iniciou: ${err}`, logs: setupLogs };
   }
 
   try {
     const context = await createStealthContext(browser);
     const page = await context.newPage();
-    log("Página criada, iniciando login...");
+    captureLog("Página criada, iniciando login...");
 
     const loggedIn = await loginGoogle(page);
     if (loggedIn) {
       await saveSession(context);
       await context.close();
-      return { success: true, message: "Sessão Google salva com sucesso. NotebookLM está pronto." };
+      return { success: true, message: "Sessão Google salva com sucesso. NotebookLM está pronto.", logs: setupLogs };
     }
 
     await context.close();
-    return { success: false, message: "Login Google falhou. Verifique se 2FA/chave de segurança está desativada temporariamente." };
+    return { success: false, message: "Login Google falhou. Verifique se 2FA/chave de segurança está desativada temporariamente.", logs: setupLogs };
   } catch (err) {
     const errMsg = err instanceof Error ? err.message : String(err);
-    log(`Setup falhou: ${errMsg}`);
-    return { success: false, message: `Erro no setup: ${errMsg}` };
+    captureLog(`Setup falhou: ${errMsg}`);
+    return { success: false, message: `Erro no setup: ${errMsg}`, logs: setupLogs };
   } finally {
     await browser.close();
   }
