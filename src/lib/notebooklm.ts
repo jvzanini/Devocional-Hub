@@ -23,6 +23,7 @@ export interface NotebookLMResult {
   slidesPath: string | null;
   infographicPath: string | null;
   audioOverviewPath: string | null;
+  logs: string[];
 }
 
 // ─── Stealth Browser Launch ──────────────────────────────────────────────
@@ -511,6 +512,9 @@ export async function runNotebookLMAutomation(
   chapterRef: string,
   knowledgeBase?: string
 ): Promise<NotebookLMResult> {
+  // Ativar captura de logs para retornar junto com o resultado
+  _capturedLogs = [];
+
   const downloadDir = path.join(os.tmpdir(), `devocional-${sessionId}`);
   fs.mkdirSync(downloadDir, { recursive: true });
 
@@ -525,39 +529,64 @@ export async function runNotebookLMAutomation(
     const page = await context.newPage();
 
     // Login
+    log("Passo 1: Login Google...");
     const loggedIn = await loginGoogle(page);
     if (!loggedIn) {
       log("Login falhou. Execute POST /api/admin/notebooklm-setup para configurar a sessão.");
       await context.close();
-      return { slidesPath: null, infographicPath: null, audioOverviewPath: null };
+      { const l = _capturedLogs || []; _capturedLogs = null; return { slidesPath: null, infographicPath: null, audioOverviewPath: null, logs: l }; }
     }
+    log("Passo 1: Login OK");
     await saveSession(context);
 
     // Criar notebook com KB unificada (se disponível) ou fontes separadas
+    log(`Passo 2: Criar notebook (KB: ${!!knowledgeBase}, ref: ${chapterRef})...`);
+    log(`URL antes de criar: ${page.url()}`);
     const created = knowledgeBase
       ? await createNotebookWithKB(page, knowledgeBase, chapterRef)
       : await createNotebook(page, transcriptText, bibleText, chapterRef);
     if (!created) {
+      log("Passo 2: Criação do notebook falhou.");
+      // Screenshot de diagnóstico
+      try {
+        await page.screenshot({ path: path.join(downloadDir, "debug-notebook-fail.png"), fullPage: true });
+        log(`Screenshot salvo em ${downloadDir}/debug-notebook-fail.png`);
+        log(`URL atual: ${page.url()}`);
+        const bodyText = await page.textContent("body").catch(() => "");
+        log(`Conteúdo da página (500 chars): ${bodyText?.substring(0, 500)}`);
+      } catch { /* ignore */ }
       await context.close();
-      return { slidesPath: null, infographicPath: null, audioOverviewPath: null };
+      { const l = _capturedLogs || []; _capturedLogs = null; return { slidesPath: null, infographicPath: null, audioOverviewPath: null, logs: l }; }
     }
+    log("Passo 2: Notebook criado OK");
 
     // Gerar conteúdos (cada um independente)
+    log("Passo 3: Gerando slides...");
     slidesPath = await generateSlides(page, downloadDir);
+    log(`Slides: ${slidesPath ? "OK" : "FALHOU"}`);
+
+    log("Passo 4: Gerando infográfico...");
     infographicPath = await generateInfographic(page, downloadDir);
+    log(`Infográfico: ${infographicPath ? "OK" : "FALHOU"}`);
+
+    log("Passo 5: Gerando Audio Overview...");
     audioOverviewPath = await generateAudioOverview(page, downloadDir);
+    log(`Audio Overview: ${audioOverviewPath ? "OK" : "FALHOU"}`);
 
     // Screenshot final
     await page.screenshot({ path: path.join(downloadDir, "debug-final.png"), fullPage: true });
 
     await context.close();
   } catch (err) {
-    log(`Erro geral: ${err}`);
+    const errMsg = err instanceof Error ? `${err.message}\n${err.stack}` : String(err);
+    log(`Erro geral NotebookLM: ${errMsg}`);
   } finally {
     await browser.close();
   }
 
-  return { slidesPath, infographicPath, audioOverviewPath };
+  const logs = _capturedLogs || [];
+  _capturedLogs = null;
+  return { slidesPath, infographicPath, audioOverviewPath, logs };
 }
 
 // ─── Setup: Login interativo para salvar sessão ─────────────────────────

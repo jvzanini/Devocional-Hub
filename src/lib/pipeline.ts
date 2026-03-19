@@ -263,7 +263,18 @@ export async function runPipeline(options: PipelineOptions = {}): Promise<string
         if (nlmGenerated.length > 0) {
           log(sessionId, `NotebookLM gerou: ${nlmGenerated.join(", ")}`);
         } else {
-          log(sessionId, "NotebookLM não gerou nenhum documento (automação pode ter falhado na criação do notebook).");
+          log(sessionId, "NotebookLM não gerou nenhum documento.");
+          // Salvar logs do NLM para diagnóstico
+          if (nlmResult.logs && nlmResult.logs.length > 0) {
+            const nlmLogStr = nlmResult.logs.join("\n");
+            log(sessionId, `NLM logs:\n${nlmLogStr}`);
+            try {
+              await prisma.session.update({
+                where: { id: sessionId },
+                data: { errorMessage: `[NLM] ${nlmLogStr.substring(0, 1000)}` },
+              });
+            } catch { /* ignore */ }
+          }
         }
       } catch (err) {
         const errMsg = err instanceof Error ? `${err.message}\n${err.stack}` : String(err);
