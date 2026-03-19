@@ -5,7 +5,7 @@
 
 import { prisma } from "@/lib/db";
 import { getVttTranscript, getVttByMeetingId, getDetailedParticipants, getMeetingSummary, getMeetingInstances } from "@/lib/zoom";
-import { processTranscript } from "@/lib/ai";
+import { processTranscript, generateTheologicalResearch, buildNotebookKnowledgeBase, extractSessionPassword } from "@/lib/ai";
 import { getChaptersText } from "@/lib/bible";
 import { runNotebookLMAutomation } from "@/lib/notebooklm";
 import { uploadText, uploadFile, ensureBucket, getFileSize } from "@/lib/storage";
@@ -175,17 +175,65 @@ export async function runPipeline(options: PipelineOptions = {}): Promise<string
       }
     }
 
+    // 8.5. Gerar pesquisa teológica
+    let theologicalResearch = "";
+    if ((process.env.OPENROUTER_API_KEY || process.env.GEMINI_API_KEY) && bibleText) {
+      log(sessionId, "Gerando pesquisa teológica com Gemini...");
+      try {
+        theologicalResearch = await generateTheologicalResearch(processed.chapterRefString, processed.cleanText, bibleText);
+        log(sessionId, `Pesquisa teológica gerada: ${theologicalResearch.length} chars`);
+      } catch (err) {
+        log(sessionId, `Aviso: falha na pesquisa teológica: ${err}`);
+      }
+    }
+
+    // 8.6. Construir Knowledge Base unificada para NotebookLM
+    let knowledgeBase = "";
+    if (theologicalResearch || bibleText) {
+      knowledgeBase = buildNotebookKnowledgeBase(
+        processed.cleanText,
+        bibleText,
+        theologicalResearch,
+        processed.chapterRefString
+      );
+      log(sessionId, `KB unificada construída: ${knowledgeBase.length} chars`);
+    }
+
+    // 8.7. Extrair senha da transcrição
+    let contentPassword: string | null = null;
+    try {
+      log(sessionId, "Extraindo senha da transcrição...");
+      contentPassword = await extractSessionPassword(processed.cleanText);
+      if (contentPassword) {
+        log(sessionId, `Senha encontrada: "${contentPassword}"`);
+      } else {
+        log(sessionId, "Nenhuma senha encontrada na transcrição.");
+      }
+    } catch (err) {
+      log(sessionId, `Aviso: falha ao extrair senha: ${err}`);
+    }
+
     // 9. Atualizar sessão
     await prisma.session.update({
       where: { id: sessionId },
-      data: { chapterRef: processed.chapterRefString, summary: processed.summary },
+      data: {
+        chapterRef: processed.chapterRefString,
+        summary: processed.summary,
+        contentPassword,
+      },
     });
 
     // 10. NotebookLM (opcional)
     if (!options.skipNotebookLM) {
       log(sessionId, "Iniciando automação do NotebookLM...");
       try {
-        const nlmResult = await runNotebookLMAutomation(sessionId, processed.cleanText, bibleText, processed.chapterRefString);
+        const nlmResult = await runNotebookLMAutomation(
+          sessionId,
+          processed.cleanText,
+          bibleText,
+          processed.chapterRefString,
+          knowledgeBase || undefined
+        );
         if (nlmResult.slidesPath && fs.existsSync(nlmResult.slidesPath)) {
           const sp = `sessions/${sessionId}/slides.pdf`;
           await uploadFile(sp, nlmResult.slidesPath);

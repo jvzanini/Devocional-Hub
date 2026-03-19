@@ -18,7 +18,8 @@
 - NextAuth v5 beta (credentials provider, JWT strategy, `trustHost: true`)
 - Nodemailer para emails (Gmail SMTP)
 - Playwright para automação NotebookLM
-- Google Gemini API (gratuita) para processar transcrições
+- OpenRouter API (primário) — Nemotron 120B gratuito para IA pesada
+- Google Gemini API (fallback) — gemini-2.5-flash para processar transcrições
 
 ## Arquitetura
 - API routes em `src/app/api/`
@@ -29,7 +30,7 @@
 
 ## Modelos do Banco (Prisma)
 - User: email, password?, name, role (ADMIN/MEMBER), church, team, subTeam, photoUrl, inviteToken
-- Session: date, zoomMeetingId, zoomUuid, chapterRef, summary, status, documents[], participants[]
+- Session: date, zoomMeetingId, zoomUuid, chapterRef, summary, contentPassword?, status, documents[], participants[]
 - Participant: name, email, joinTime, leaveTime, duration (segundos)
 - Document: type (TRANSCRIPT_RAW/CLEAN, BIBLE_TEXT, INFOGRAPHIC, SLIDES), fileName, storagePath
 - Webhook: name, slug, active
@@ -57,7 +58,7 @@
 - Todas as credenciais são configuradas via variáveis de ambiente no Portainer
 - No repositório, usar SEMPRE valores genéricos (YOUR_*, changeme, etc.)
 - NUNCA commitar senhas, API keys, tokens ou emails reais no Git
-- Variáveis usadas: ADMIN_EMAIL, ADMIN_PASSWORD, SMTP_USER, SMTP_PASS, ZOOM_*, GEMINI_API_KEY, BIBLE_API_KEY, GOOGLE_EMAIL, GOOGLE_PASSWORD
+- Variáveis usadas: ADMIN_EMAIL, ADMIN_PASSWORD, SMTP_USER, SMTP_PASS, ZOOM_*, GEMINI_API_KEY, OPENROUTER_API_KEY, BIBLE_API_KEY, GOOGLE_EMAIL, GOOGLE_PASSWORD
 
 ## Segurança — REGRAS OBRIGATÓRIAS
 - NUNCA commitar credenciais, senhas, API keys, tokens ou emails reais no Git

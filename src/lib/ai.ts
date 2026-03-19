@@ -1,12 +1,13 @@
 /**
- * Processamento de transcrições com Google Gemini (gratuito)
- * Crie sua API Key GRATUITA em: https://aistudio.google.com/app/apikey
- * Adicione GEMINI_API_KEY no .env
+ * Processamento de transcrições com IA
  *
- * Limites gratuitos do gemini-1.5-flash:
- *   - 15 requisições/minuto
- *   - 1.000.000 tokens/dia
- *   - Completamente suficiente para uso diário
+ * Providers disponíveis:
+ * 1. OpenRouter (primário) — Nemotron 120B gratuito via openrouter.ai
+ *    - OPENROUTER_API_KEY no .env
+ *    - Modelo: nvidia/nemotron-3-super-120b-a12b:free (262K contexto)
+ *
+ * 2. Google Gemini (fallback) — gemini-2.5-flash gratuito
+ *    - GEMINI_API_KEY no .env
  */
 
 export interface ProcessedTranscript {
@@ -103,20 +104,65 @@ export function extractChapterRefsFromText(
   return found;
 }
 
-// ─── Gemini API ───────────────────────────────────────────────────────────────
+// ─── Cascata de Modelos Gratuitos ─────────────────────────────────────────────
+//
+// Ordem de fallback:
+//   1. Nemotron 3 Super 120B (OpenRouter, gratuito, 262K ctx)
+//   2. Gemini 2.5 Flash (Google API direta, gratuito)
+//   3. Step 3.5 Flash (OpenRouter, gratuito, 256K ctx)
+//   4. Nemotron 3 Nano 30B (OpenRouter, gratuito, 256K ctx)
+//   5. Erro
+//
 
-async function callGemini(prompt: string): Promise<string> {
+const OPENROUTER_MODELS = [
+  { id: "nvidia/nemotron-3-super-120b-a12b:free", name: "Nemotron 120B" },
+  { id: "stepfun/step-3.5-flash:free", name: "Step 3.5 Flash" },
+  { id: "nvidia/nemotron-3-nano-30b-a3b:free", name: "Nemotron 30B" },
+];
+
+async function callOpenRouter(model: string, prompt: string, maxTokens: number): Promise<string> {
+  const apiKey = process.env.OPENROUTER_API_KEY;
+  if (!apiKey) throw new Error("OPENROUTER_API_KEY não configurada");
+
+  const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+      "HTTP-Referer": "https://devocional.nexusai360.com",
+      "X-OpenRouter-Title": "DevocionalHub",
+    },
+    body: JSON.stringify({
+      model,
+      messages: [{ role: "user", content: prompt }],
+      max_tokens: maxTokens,
+      temperature: 0.3,
+    }),
+  });
+
+  if (!response.ok) {
+    const err = await response.text();
+    throw new Error(`OpenRouter (${model}) erro ${response.status}: ${err}`);
+  }
+
+  const data = await response.json();
+  const content = data?.choices?.[0]?.message?.content;
+  if (!content) throw new Error(`OpenRouter (${model}) retornou resposta vazia`);
+  return content;
+}
+
+async function callGemini(prompt: string, maxTokens: number): Promise<string> {
   const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) throw new Error("GEMINI_API_KEY não configurada no .env");
+  if (!apiKey) throw new Error("GEMINI_API_KEY não configurada");
 
   const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${apiKey}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { maxOutputTokens: 4096, temperature: 0.3 },
+        generationConfig: { maxOutputTokens: maxTokens, temperature: 0.3 },
       }),
     }
   );
@@ -127,7 +173,71 @@ async function callGemini(prompt: string): Promise<string> {
   }
 
   const data = await response.json();
-  return data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+  const content = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!content) throw new Error("Gemini retornou resposta vazia");
+  return content;
+}
+
+// ─── Chamada unificada com cascata de fallbacks ──────────────────────────────
+
+async function callAI(prompt: string, maxTokens = 16384): Promise<string> {
+  const errors: string[] = [];
+
+  // 1. Nemotron 120B (OpenRouter)
+  if (process.env.OPENROUTER_API_KEY) {
+    try {
+      const m = OPENROUTER_MODELS[0];
+      console.log(`[AI] Tentando ${m.name}...`);
+      return await callOpenRouter(m.id, prompt, maxTokens);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.warn(`[AI] ${OPENROUTER_MODELS[0].name} falhou: ${msg}`);
+      errors.push(`${OPENROUTER_MODELS[0].name}: ${msg}`);
+    }
+  }
+
+  // 2. Gemini 2.5 Flash (Google API direta)
+  if (process.env.GEMINI_API_KEY) {
+    try {
+      console.log("[AI] Tentando Gemini 2.5 Flash...");
+      return await callGemini(prompt, maxTokens);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.warn(`[AI] Gemini falhou: ${msg}`);
+      errors.push(`Gemini: ${msg}`);
+    }
+  }
+
+  // 3. Step 3.5 Flash (OpenRouter)
+  if (process.env.OPENROUTER_API_KEY) {
+    try {
+      const m = OPENROUTER_MODELS[1];
+      console.log(`[AI] Tentando ${m.name}...`);
+      return await callOpenRouter(m.id, prompt, maxTokens);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.warn(`[AI] ${OPENROUTER_MODELS[1].name} falhou: ${msg}`);
+      errors.push(`${OPENROUTER_MODELS[1].name}: ${msg}`);
+    }
+  }
+
+  // 4. Nemotron 30B (OpenRouter)
+  if (process.env.OPENROUTER_API_KEY) {
+    try {
+      const m = OPENROUTER_MODELS[2];
+      console.log(`[AI] Tentando ${m.name}...`);
+      return await callOpenRouter(m.id, prompt, maxTokens);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.warn(`[AI] ${OPENROUTER_MODELS[2].name} falhou: ${msg}`);
+      errors.push(`${OPENROUTER_MODELS[2].name}: ${msg}`);
+    }
+  }
+
+  // 5. Todos falharam
+  throw new Error(
+    `Todos os modelos de IA falharam:\n${errors.map((e, i) => `  ${i + 1}. ${e}`).join("\n")}`
+  );
 }
 
 /**
@@ -136,7 +246,7 @@ async function callGemini(prompt: string): Promise<string> {
  * - Mantém APENAS o conteúdo da explicação do capítulo bíblico
  * - Gera o resumo
  */
-async function processWithGemini(rawTranscript: string, mainSpeakerName?: string): Promise<{
+async function processWithAI(rawTranscript: string, mainSpeakerName?: string): Promise<{
   cleanText: string;
   chapterRef: string;
   summary: string;
@@ -174,7 +284,7 @@ O campo "specificChapters" deve conter os números dos capítulos específicos q
 TRANSCRIÇÃO:
 ${rawTranscript.substring(0, 15000)}`;
 
-  const responseText = await callGemini(prompt);
+  const responseText = await callAI(prompt);
 
   const jsonMatch = responseText.match(/\{[\s\S]*\}/);
   if (!jsonMatch) throw new Error("Gemini não retornou JSON válido");
@@ -227,8 +337,8 @@ export async function processTranscript(rawTranscript: string, mainSpeakerName?:
 
   let specificChapters: number[] = [];
 
-  if (process.env.GEMINI_API_KEY) {
-    const result = await processWithGemini(rawTranscript, mainSpeakerName);
+  if (process.env.OPENROUTER_API_KEY || process.env.GEMINI_API_KEY) {
+    const result = await processWithAI(rawTranscript, mainSpeakerName);
     cleanText = result.cleanText;
     chapterRefString = result.chapterRef;
     summary = result.summary;
@@ -247,4 +357,177 @@ export async function processTranscript(rawTranscript: string, mainSpeakerName?:
   ).map((r) => ({ book: r.book, chapter: r.chapter }));
 
   return { cleanText, chapterRefs, chapterRefString, summary, specificChapters };
+}
+
+// ─── Pesquisa Teológica (Gemini) ──────────────────────────────────────────
+
+/**
+ * Gera pesquisa teológica rica com insights, hebraico/grego, curiosidades
+ * históricas e cruzamento com a transcrição. Output: 2000-4000 palavras.
+ */
+export async function generateTheologicalResearch(
+  chapterRef: string,
+  cleanTranscript: string,
+  bibleText: string
+): Promise<string> {
+  const prompt = `Você é um teólogo pastoral com profundo conhecimento bíblico. Gere uma pesquisa teológica rica e acessível sobre ${chapterRef}.
+
+FONTES DISPONÍVEIS:
+1. Transcrição do devocional (o que foi ensinado):
+${cleanTranscript.substring(0, 8000)}
+
+2. Texto bíblico (NVI):
+${bibleText.substring(0, 8000)}
+
+GERE UMA PESQUISA COMPLETA COM:
+
+## Visão Geral do Texto
+- Contexto histórico e literário do capítulo/livro
+- Quem escreveu, para quem, em que circunstâncias
+
+## Palavras-Chave no Original
+- 5-8 palavras importantes no hebraico (AT) ou grego (NT)
+- Transliteração, significado literal e profundo
+- Como o significado original enriquece a compreensão
+
+## Insights e Revelações
+- Pontos-chave do texto que merecem atenção especial
+- Conexões com outros textos bíblicos (referências cruzadas)
+- O que foi destacado na transcrição e por quê é relevante
+
+## Curiosidades Históricas e Culturais
+- Costumes, práticas, geografia da época
+- Elementos que o leitor moderno pode não perceber
+- Como o contexto cultural ilumina o texto
+
+## Aplicação Prática
+- Como os princípios se aplicam à vida diária
+- Pontos de reflexão e meditação
+- Conexão com temas centrais do devocional
+
+ESTILO:
+- Tom pastoral, acessível, de estudo e aprofundamento
+- Sem linguagem acadêmica rebuscada — deve ser compreensível para qualquer pessoa
+- Focado em entendimento e edificação
+- Aproximadamente 2500-3500 palavras
+- Em português brasileiro
+
+Responda APENAS com o texto da pesquisa (sem JSON, sem markdown de código).`;
+
+  return await callAI(prompt);
+}
+
+// ─── Knowledge Base para NotebookLM ──────────────────────────────────────
+
+/**
+ * Constrói uma base de conhecimento unificada otimizada para o NotebookLM
+ * gerar slides, infográficos e vídeo resumo de alta qualidade.
+ */
+export function buildNotebookKnowledgeBase(
+  cleanTranscript: string,
+  bibleText: string,
+  theologicalResearch: string,
+  chapterRef: string
+): string {
+  return `═══════════════════════════════════════════════════════════════
+BASE DE CONHECIMENTO — DEVOCIONAL: ${chapterRef}
+═══════════════════════════════════════════════════════════════
+
+Este documento contém todo o material necessário para gerar conteúdos visuais e narrativos sobre o devocional de ${chapterRef}. Use TODAS as seções abaixo como fonte de informação.
+
+───────────────────────────────────────────────────────────────
+SEÇÃO 1: TEXTO BÍBLICO (NVI) — ${chapterRef}
+───────────────────────────────────────────────────────────────
+
+${bibleText.substring(0, 30000)}
+
+───────────────────────────────────────────────────────────────
+SEÇÃO 2: TRANSCRIÇÃO DO DEVOCIONAL
+───────────────────────────────────────────────────────────────
+
+O pastor explicou ${chapterRef} durante o devocional diário. Os pontos principais da explanação foram:
+
+${cleanTranscript.substring(0, 30000)}
+
+───────────────────────────────────────────────────────────────
+SEÇÃO 3: PESQUISA TEOLÓGICA E CONTEXTUAL
+───────────────────────────────────────────────────────────────
+
+${theologicalResearch.substring(0, 30000)}
+
+───────────────────────────────────────────────────────────────
+INSTRUÇÕES PARA GERAÇÃO DE CONTEÚDO
+───────────────────────────────────────────────────────────────
+
+Ao gerar SLIDES (Apresentação):
+- Organize em tópicos claros com títulos impactantes
+- Inclua versículos-chave como citações destacadas
+- Use pontos concisos e diretos por slide
+- Inclua significados de palavras no original (hebraico/grego)
+- Finalize com aplicação prática
+
+Ao gerar INFOGRÁFICO:
+- Crie fluxos visuais e comparações
+- Use timeline quando aplicável (contexto histórico)
+- Destaque dados: números de versículos, palavras no original
+- Organize visualmente os tópicos principais
+- Inclua curiosidades históricas como blocos visuais
+
+Ao gerar VÍDEO RESUMO (Audio Overview):
+- Use narrativa conversacional e envolvente
+- Conte a história por trás do texto bíblico
+- Intercale explicação com aplicação prática
+- Tom pastoral, como uma conversa entre amigos sobre a Bíblia
+- Inclua os insights mais interessantes da pesquisa teológica
+- Tudo em português brasileiro
+
+═══════════════════════════════════════════════════════════════`;
+}
+
+// ─── Extração de Senha da Transcrição ────────────────────────────────────
+
+/**
+ * Tenta extrair a senha mencionada durante o devocional.
+ * Retorna null se nenhuma senha for encontrada.
+ */
+export async function extractSessionPassword(transcript: string): Promise<string | null> {
+  if (!process.env.OPENROUTER_API_KEY && !process.env.GEMINI_API_KEY) return null;
+
+  const prompt = `Analise a transcrição abaixo de um devocional bíblico e extraia a SENHA mencionada pelo orador.
+
+O orador frequentemente menciona uma senha durante o devocional, usando frases como:
+- "a senha é..."
+- "a senha de hoje é..."
+- "a senha vai ser..."
+- "password..."
+- "a palavra-chave é..."
+- "o código é..."
+- "a senha para acessar..."
+
+A senha geralmente é uma palavra ou frase curta relacionada ao tema do devocional.
+
+TRANSCRIÇÃO:
+${transcript.substring(0, 10000)}
+
+Responda APENAS com JSON:
+{
+  "found": true/false,
+  "password": "a senha encontrada" ou null
+}
+
+Se NÃO encontrar nenhuma menção a senha, responda com found: false e password: null.`;
+
+  try {
+    const response = await callAI(prompt);
+    const jsonMatch = response.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) return null;
+
+    const parsed = JSON.parse(jsonMatch[0]);
+    if (parsed.found && parsed.password) {
+      return String(parsed.password).trim();
+    }
+    return null;
+  } catch {
+    return null;
+  }
 }

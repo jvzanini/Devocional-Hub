@@ -59,6 +59,7 @@ model Session {
   zoomUuid        String         @default("")
   chapterRef      String         @default("")
   summary         String         @default("") @db.Text
+  contentPassword String?
   status          PipelineStatus @default(PENDING)
   errorMessage    String?
   documents       Document[]

@@ -319,6 +319,62 @@ async function addTextSource(page: Page, text: string): Promise<void> {
   await page.waitForTimeout(2000);
 }
 
+/**
+ * Cria notebook com KB unificada (fonte única otimizada) e nome padronizado
+ */
+async function createNotebookWithKB(page: Page, knowledgeBase: string, chapterRef: string): Promise<boolean> {
+  try {
+    log("Criando novo notebook com KB unificada...");
+
+    // Clica em "Novo notebook"
+    const newBtn = page.locator('button:has-text("New notebook"), button:has-text("Novo notebook"), button:has-text("Create new"), [aria-label*="new notebook" i], [aria-label*="novo notebook" i]');
+    await newBtn.first().click({ timeout: 15000 });
+    await page.waitForTimeout(3000);
+
+    // Adicionar fonte única: KB unificada
+    log("Adicionando fonte: KB unificada...");
+    await addTextSource(page, knowledgeBase.substring(0, 100000));
+    await page.waitForTimeout(3000);
+
+    // Renomear notebook para o padrão "{Livro} {Capítulo}"
+    await renameNotebook(page, chapterRef);
+
+    log("Notebook criado com KB unificada e nome padronizado.");
+    return true;
+  } catch (err) {
+    log(`Erro ao criar notebook com KB: ${err}`);
+    return false;
+  }
+}
+
+/**
+ * Renomeia o notebook para o padrão correto (ex: "Romanos 10")
+ */
+async function renameNotebook(page: Page, chapterRef: string): Promise<void> {
+  try {
+    // Tentar clicar no título do notebook para editar
+    const titleEl = page.locator(
+      '[contenteditable="true"], input[aria-label*="title" i], input[aria-label*="título" i], h1[contenteditable], [data-testid*="title" i]'
+    );
+
+    if (await titleEl.count() > 0) {
+      await titleEl.first().click({ timeout: 5000 });
+      await page.waitForTimeout(500);
+
+      // Selecionar todo o texto e substituir
+      await page.keyboard.press("Control+A");
+      await page.keyboard.type(chapterRef);
+      await page.keyboard.press("Enter");
+      await page.waitForTimeout(1000);
+      log(`Notebook renomeado para: "${chapterRef}"`);
+    } else {
+      log("Campo de título não encontrado — notebook ficará com nome padrão.");
+    }
+  } catch (err) {
+    log(`Aviso: não foi possível renomear notebook: ${err}`);
+  }
+}
+
 // ─── Content Generation ─────────────────────────────────────────────────
 
 async function generateSlides(page: Page, downloadDir: string): Promise<string | null> {
@@ -467,7 +523,8 @@ export async function runNotebookLMAutomation(
   sessionId: string,
   transcriptText: string,
   bibleText: string,
-  chapterRef: string
+  chapterRef: string,
+  knowledgeBase?: string
 ): Promise<NotebookLMResult> {
   const downloadDir = path.join(os.tmpdir(), `devocional-${sessionId}`);
   fs.mkdirSync(downloadDir, { recursive: true });
@@ -491,8 +548,10 @@ export async function runNotebookLMAutomation(
     }
     await saveSession(context);
 
-    // Criar notebook
-    const created = await createNotebook(page, transcriptText, bibleText, chapterRef);
+    // Criar notebook com KB unificada (se disponível) ou fontes separadas
+    const created = knowledgeBase
+      ? await createNotebookWithKB(page, knowledgeBase, chapterRef)
+      : await createNotebook(page, transcriptText, bibleText, chapterRef);
     if (!created) {
       await context.close();
       return { slidesPath: null, infographicPath: null, audioOverviewPath: null };
