@@ -22,7 +22,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="page-bg" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh", padding: 20 }}>
+    <div className="page-bg login-container">
       <div style={{ width: "100%", maxWidth: 400 }}>
         {/* Logo */}
         <div style={{ textAlign: "center", marginBottom: 36 }}>
@@ -31,8 +31,8 @@ export default function LoginPage() {
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
             </svg>
           </div>
-          <h1 style={{ fontSize: 24, fontWeight: 700, color: "#1c1917", letterSpacing: "-0.01em" }}>Devocional Hub</h1>
-          <p style={{ fontSize: 14, color: "#a8a29e", marginTop: 6 }}>Acesse sua conta para continuar</p>
+          <h1 style={{ fontSize: 26, fontWeight: 700, color: "#1c1917", letterSpacing: "-0.01em" }}>Devocional Hub</h1>
+          <p style={{ fontSize: 15, color: "#a8a29e", marginTop: 6 }}>Acesse sua conta para continuar</p>
         </div>
 
         {/* Card */}
@@ -41,7 +41,7 @@ export default function LoginPage() {
             <div>
               <label htmlFor="email" className="label">Email</label>
               <input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)}
-                required autoFocus autoComplete="email" className="input-field" placeholder="seu@email.com" />
+                required autoFocus autoComplete="username" className="input-field" placeholder="seu@email.com" />
             </div>
             <div>
               <label htmlFor="password" className="label">Senha</label>
@@ -56,7 +56,7 @@ export default function LoginPage() {
                 {error}
               </div>
             )}
-            <button type="submit" disabled={loading} className="btn-primary" style={{ width: "100%", padding: "12px 16px" }}>
+            <button type="submit" disabled={loading} className="btn-primary" style={{ width: "100%", padding: "12px 16px", fontSize: 16 }}>
               {loading ? (
                 <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <svg style={{ width: 16, height: 16, animation: "spin 1s linear infinite" }} fill="none" viewBox="0 0 24 24">

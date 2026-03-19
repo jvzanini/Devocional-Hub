@@ -54,14 +54,12 @@ export default async function SessionPage({ params }: { params: Promise<{ id: st
   // Build a map: participant name/email -> platform user name
   const attendanceMap = new Map<string, { userName: string; isMember: boolean }>();
   if (s.attendances) {
-    // Get all zoom identifiers for users with attendance
     const userIds = s.attendances.map(a => a.userId);
     const zoomIds = await prisma.zoomIdentifier.findMany({
       where: { userId: { in: userIds } },
       select: { userId: true, value: true },
     });
 
-    // Map zoom identifier value -> userName
     for (const a of s.attendances) {
       const userZoomValues = zoomIds.filter(z => z.userId === a.userId).map(z => z.value.toLowerCase());
       for (const val of userZoomValues) {
@@ -71,14 +69,12 @@ export default async function SessionPage({ params }: { params: Promise<{ id: st
   }
 
   function getParticipantDisplay(name: string, email: string | null): { displayName: string; isMember: boolean } {
-    // Check by email first, then by name
     const byEmail = email ? attendanceMap.get(email.toLowerCase()) : undefined;
     if (byEmail) return { displayName: byEmail.userName, isMember: true };
 
     const byName = attendanceMap.get(name.toLowerCase());
     if (byName) return { displayName: byName.userName, isMember: true };
 
-    // Not correlated — show Zoom username (never email for privacy)
     return { displayName: name, isMember: false };
   }
 
@@ -91,10 +87,10 @@ export default async function SessionPage({ params }: { params: Promise<{ id: st
           </Link>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ fontWeight: 700, fontSize: 16, color: "#1c1917", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.chapterRef || "Devocional"}</span>
+              <span style={{ fontWeight: 700, fontSize: 18, color: "#1c1917", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.chapterRef || "Devocional"}</span>
               <Badge variant={st.variant}>{st.label}</Badge>
             </div>
-            <div style={{ fontSize: 12, color: "#78716c", marginTop: 2 }}>{formatDate(s.date)}</div>
+            <div style={{ fontSize: 13, color: "#78716c", marginTop: 2 }}>{formatDate(s.date)}</div>
           </div>
         </div>
       </header>
@@ -112,7 +108,7 @@ export default async function SessionPage({ params }: { params: Promise<{ id: st
         {s.summary && (
           <div className="section-card">
             <div className="section-title">Resumo</div>
-            <p style={{ fontSize: 14, color: "#44403c", lineHeight: 1.7, whiteSpace: "pre-wrap" }}>{s.summary}</p>
+            <p style={{ fontSize: 15, color: "#44403c", lineHeight: 1.7, whiteSpace: "pre-wrap" }}>{s.summary}</p>
           </div>
         )}
 
@@ -130,14 +126,14 @@ export default async function SessionPage({ params }: { params: Promise<{ id: st
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                        <span style={{ fontWeight: 600, fontSize: 14, color: "#1c1917" }}>{displayName}</span>
+                        <span style={{ fontWeight: 600, fontSize: 15, color: "#1c1917" }}>{displayName}</span>
                         <span className={`badge badge-${isMember ? "success" : "info"}`} style={{ fontSize: 10, padding: "1px 6px" }}>
                           {isMember ? "Membro" : "Visitante"}
                         </span>
                       </div>
                     </div>
                     <div style={{ textAlign: "right", flexShrink: 0 }}>
-                      <div style={{ fontSize: 12, color: "#57534e" }}>
+                      <div style={{ fontSize: 13, color: "#57534e" }}>
                         {fmtTime(p.joinTime)} → {fmtTime(p.leaveTime)}
                       </div>
                       <div style={{ fontSize: 11, color: "#d97706", fontWeight: 600 }}>

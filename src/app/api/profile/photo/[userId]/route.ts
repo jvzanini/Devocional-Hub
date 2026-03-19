@@ -16,7 +16,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ use
       const buffer = await readFile(filepath);
       const contentType = ext === "png" ? "image/png" : ext === "webp" ? "image/webp" : ext === "gif" ? "image/gif" : "image/jpeg";
       return new NextResponse(buffer, {
-        headers: { "Content-Type": contentType, "Cache-Control": "public, max-age=3600" },
+        headers: { "Content-Type": contentType, "Cache-Control": "no-cache, must-revalidate" },
       });
     }
   }

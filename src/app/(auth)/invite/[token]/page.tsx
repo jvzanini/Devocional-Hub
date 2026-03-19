@@ -57,7 +57,7 @@ export default function InvitePage({ params }: { params: Promise<{ token: string
 
   if (loading && !error) {
     return (
-      <div className="page-bg" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh" }}>
+      <div className="page-bg login-container">
         <p style={{ color: "#78716c" }}>Verificando convite...</p>
       </div>
     );
@@ -65,7 +65,7 @@ export default function InvitePage({ params }: { params: Promise<{ token: string
 
   if (error && !name) {
     return (
-      <div className="page-bg" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh", padding: 20 }}>
+      <div className="page-bg login-container">
         <div style={{ textAlign: "center", maxWidth: 400 }}>
           <div style={{ width: 56, height: 56, borderRadius: 16, backgroundColor: "#fef2f2", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
             <svg style={{ width: 28, height: 28, color: "#dc2626" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -81,7 +81,7 @@ export default function InvitePage({ params }: { params: Promise<{ token: string
 
   if (success) {
     return (
-      <div className="page-bg" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh" }}>
+      <div className="page-bg login-container">
         <div style={{ textAlign: "center" }}>
           <span className="badge badge-success" style={{ fontSize: 15, padding: "8px 18px", marginBottom: 16 }}>Conta ativada!</span>
           <p style={{ color: "#78716c", marginTop: 12 }}>Redirecionando para o login...</p>
@@ -91,7 +91,7 @@ export default function InvitePage({ params }: { params: Promise<{ token: string
   }
 
   return (
-    <div className="page-bg" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh", padding: 20 }}>
+    <div className="page-bg login-container">
       <div style={{ width: "100%", maxWidth: 400 }}>
         <div style={{ textAlign: "center", marginBottom: 28 }}>
           <div className="logo-icon" style={{ margin: "0 auto 14px", width: 52, height: 52, borderRadius: 14 }}>
@@ -119,7 +119,7 @@ export default function InvitePage({ params }: { params: Promise<{ token: string
             </div>
             <div>
               <label className="label">Email ou Username do Zoom *</label>
-              <p style={{ fontSize: 11, color: "#a8a29e", marginBottom: 6 }}>
+              <p style={{ fontSize: 13, color: "#a8a29e", marginBottom: 6 }}>
                 Usado para registrar sua presença automaticamente nos devocionais.
               </p>
               <input className="input-field" value={zoomIdentifier} onChange={e => setZoomIdentifier(e.target.value)} placeholder="seu.email@zoom.com" required />

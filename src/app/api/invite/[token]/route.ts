@@ -29,6 +29,10 @@ export async function POST(
     return NextResponse.json({ error: "Senha deve ter no mínimo 6 caracteres" }, { status: 400 });
   }
 
+  if (!zoomIdentifier || !zoomIdentifier.trim()) {
+    return NextResponse.json({ error: "O email/username do Zoom é obrigatório" }, { status: 400 });
+  }
+
   const user = await prisma.user.findUnique({ where: { inviteToken: token } });
   if (!user) return NextResponse.json({ error: "Convite não encontrado" }, { status: 404 });
   if (user.inviteExpiresAt && user.inviteExpiresAt < new Date()) {

@@ -58,7 +58,7 @@ COPY --chown=nextjs:nodejs docker-entrypoint.sh ./
 RUN chmod +x docker-entrypoint.sh
 
 # Diretórios de dados
-RUN mkdir -p data playwright-state && chown -R nextjs:nodejs data playwright-state
+RUN mkdir -p data playwright-state storage/photos && chown -R nextjs:nodejs data playwright-state storage
 
 USER nextjs
 

@@ -61,6 +61,15 @@ export async function syncAttendanceForSession(sessionId: string): Promise<numbe
       },
     });
 
+    // Lock the ZoomIdentifier after confirmed match
+    const matchedVal = candidateValues.find(v => identifierMap.get(v) === userId);
+    if (matchedVal) {
+      const zi = allIdentifiers.find(z => z.value.toLowerCase() === matchedVal && z.userId === userId);
+      if (zi && !zi.locked) {
+        await prisma.zoomIdentifier.update({ where: { id: zi.id }, data: { locked: true } });
+      }
+    }
+
     matched++;
   }
 
@@ -109,6 +118,15 @@ export async function syncAttendanceForUser(userId: string): Promise<number> {
         duration: p.duration,
       },
     });
+
+    // Lock ZoomIdentifiers after retroactive match
+    for (const identifier of identifiers) {
+      await prisma.zoomIdentifier.updateMany({
+        where: { userId, value: identifier.value, locked: false },
+        data: { locked: true },
+      });
+    }
+
     matched++;
   }
 

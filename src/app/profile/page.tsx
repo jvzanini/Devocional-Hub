@@ -10,6 +10,35 @@ interface UserProfile {
   zoomIdentifiers: ZoomIdentifier[];
 }
 
+function compressImage(file: File, maxWidth: number = 800): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const canvas = document.createElement("canvas");
+      let w = img.width;
+      let h = img.height;
+      if (w > maxWidth) {
+        h = (h * maxWidth) / w;
+        w = maxWidth;
+      }
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) { reject(new Error("Canvas not supported")); return; }
+      ctx.drawImage(img, 0, 0, w, h);
+      canvas.toBlob(
+        (blob) => blob ? resolve(blob) : reject(new Error("Compression failed")),
+        "image/jpeg",
+        0.85
+      );
+    };
+    img.onerror = () => reject(new Error("Image load failed"));
+    img.src = url;
+  });
+}
+
 export default function ProfilePage() {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -20,6 +49,7 @@ export default function ProfilePage() {
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     fetch("/api/profile")
@@ -36,7 +66,7 @@ export default function ProfilePage() {
       .finally(() => setLoading(false));
   }, []);
 
-  function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
     const validTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
@@ -57,11 +87,20 @@ export default function ProfilePage() {
   async function save() {
     if (!user) return;
     setSaving(true);
+    setUploading(!!selectedFile);
     setMsg(null);
 
     const formData = new FormData();
     if (name.trim() && name.trim() !== user.name) formData.append("name", name.trim());
-    if (selectedFile) formData.append("photo", selectedFile);
+
+    if (selectedFile) {
+      try {
+        const compressed = await compressImage(selectedFile);
+        formData.append("photo", compressed, "photo.jpg");
+      } catch {
+        formData.append("photo", selectedFile);
+      }
+    }
 
     const existingZoom = user.zoomIdentifiers?.[0]?.value || "";
     if (zoomValue.trim() && zoomValue.trim() !== existingZoom) {
@@ -72,6 +111,7 @@ export default function ProfilePage() {
     if ([...formData.entries()].length === 0) {
       setMsg({ text: "Nenhuma alteração para salvar", ok: false });
       setSaving(false);
+      setUploading(false);
       setTimeout(() => setMsg(null), 3000);
       return;
     }
@@ -91,16 +131,17 @@ export default function ProfilePage() {
         setMsg({ text: d.error || "Erro ao salvar", ok: false });
       }
     } catch {
-      setMsg({ text: "Erro de conexão", ok: false });
+      setMsg({ text: "Erro de conexão. Verifique sua internet e tente novamente.", ok: false });
     } finally {
       setSaving(false);
+      setUploading(false);
       setTimeout(() => setMsg(null), 3000);
     }
   }
 
   if (loading) {
     return (
-      <div className="page-bg" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh" }}>
+      <div className="page-bg login-container">
         <p style={{ fontSize: 16, color: "#78716c" }}>Carregando...</p>
       </div>
     );
@@ -109,6 +150,7 @@ export default function ProfilePage() {
   if (!user) return null;
 
   const zoomLocked = user.zoomIdentifiers?.[0]?.locked || false;
+  const hasMultipleZoom = (user.zoomIdentifiers?.length || 0) > 1;
 
   return (
     <div className="page-bg">
@@ -134,6 +176,17 @@ export default function ProfilePage() {
               display: "flex", alignItems: "center", justifyContent: "center",
             }}
           >
+            {uploading && (
+              <div style={{
+                position: "absolute", inset: 0, backgroundColor: "rgba(0,0,0,0.4)",
+                display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2,
+              }}>
+                <svg style={{ width: 24, height: 24, color: "#fff", animation: "spin 1s linear infinite" }} fill="none" viewBox="0 0 24 24">
+                  <circle style={{ opacity: 0.25 }} cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path style={{ opacity: 0.75 }} fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+              </div>
+            )}
             {photoPreview ? (
               <img src={photoPreview} alt="Foto" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
             ) : (
@@ -167,16 +220,36 @@ export default function ProfilePage() {
             <label className="label">Email ou Username do Zoom</label>
             <p style={{ fontSize: 12, color: "#a8a29e", marginBottom: 8 }}>
               Usado para registrar sua presença automaticamente.
-              {zoomLocked && " Este campo está travado pois já foi correlacionado."}
+              {zoomLocked && " Para alteração, entre em contato com a equipe do Devocional Hub."}
             </p>
-            <input
-              className="input-field"
-              value={zoomValue}
-              onChange={e => setZoomValue(e.target.value)}
-              placeholder="seu.email@zoom.com"
-              disabled={zoomLocked}
-              style={{ opacity: zoomLocked ? 0.6 : 1 }}
-            />
+
+            {/* Show all zoom identifiers when there are multiple */}
+            {hasMultipleZoom ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {user.zoomIdentifiers.map((zi, idx) => (
+                  <div key={zi.id}>
+                    <input
+                      className="input-field"
+                      value={idx === 0 ? zoomValue : zi.value}
+                      onChange={idx === 0 && !zi.locked ? e => setZoomValue(e.target.value) : undefined}
+                      readOnly={idx !== 0 || zi.locked}
+                      disabled={zi.locked}
+                      style={{ opacity: zi.locked ? 0.6 : 1 }}
+                    />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <input
+                className="input-field"
+                value={zoomValue}
+                onChange={e => setZoomValue(e.target.value)}
+                placeholder="seu.email@zoom.com"
+                disabled={zoomLocked}
+                style={{ opacity: zoomLocked ? 0.6 : 1 }}
+              />
+            )}
+
             {zoomLocked && (
               <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 6, fontSize: 12, color: "#059669" }}>
                 <svg width={14} height={14} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -204,12 +277,15 @@ export default function ProfilePage() {
                     </svg>
                   </div>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 11, color: "#a8a29e", fontWeight: 500 }}>{item.label}</div>
+                    <div style={{ fontSize: 13, color: "#a8a29e", fontWeight: 500 }}>{item.label}</div>
                     <div style={{ fontSize: 15, color: "#1c1917", fontWeight: 500 }}>{item.value}</div>
                   </div>
                 </div>
               ))}
             </div>
+            <p style={{ fontSize: 12, color: "#a8a29e", marginTop: 12, textAlign: "center" }}>
+              Apenas o administrador pode alterar estes dados
+            </p>
           </div>
 
           {/* Role badge */}
@@ -220,8 +296,8 @@ export default function ProfilePage() {
           </div>
 
           {/* Save button */}
-          <button onClick={save} disabled={saving} className="btn-primary" style={{ width: "100%", padding: "12px 0", fontSize: 15, borderRadius: 12 }}>
-            {saving ? "Salvando..." : "Salvar Alterações"}
+          <button onClick={save} disabled={saving} className="btn-primary" style={{ width: "100%", padding: "12px 0", fontSize: 16, borderRadius: 12 }}>
+            {saving ? (uploading ? "Enviando foto..." : "Salvando...") : "Salvar Alterações"}
           </button>
 
           {msg && (

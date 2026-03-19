@@ -14,6 +14,7 @@ export interface ProcessedTranscript {
   chapterRefs: Array<{ book: string; chapter: number }>;
   chapterRefString: string;
   summary: string;
+  specificChapters: number[];
 }
 
 // ─── Mapeamento de livros da Bíblia ──────────────────────────────────────────
@@ -139,6 +140,7 @@ async function processWithGemini(rawTranscript: string, mainSpeakerName?: string
   cleanText: string;
   chapterRef: string;
   summary: string;
+  specificChapters: number[];
 }> {
   const speakerNote = mainSpeakerName
     ? `\nIMPORTANTE: O orador principal (pregador) é "${mainSpeakerName}" ou o nome mais semelhante que aparecer na transcrição. Foque na fala deste orador. As falas de outros participantes são secundárias (perguntas, comentários).`
@@ -163,8 +165,11 @@ Responda APENAS com JSON válido neste formato:
 {
   "cleanText": "texto limpo apenas com o conteúdo do ensinamento bíblico...",
   "chapterRef": "Nome do Livro Capítulo (ex: Romanos 10)",
-  "summary": "resumo em 3-4 parágrafos..."
+  "summary": "resumo em 3-4 parágrafos...",
+  "specificChapters": [10, 11]
 }
+
+O campo "specificChapters" deve conter os números dos capítulos específicos que foram discutidos em detalhe durante o devocional (apenas números inteiros).
 
 TRANSCRIÇÃO:
 ${rawTranscript.substring(0, 15000)}`;
@@ -179,6 +184,7 @@ ${rawTranscript.substring(0, 15000)}`;
     cleanText: parsed.cleanText ?? rawTranscript,
     chapterRef: parsed.chapterRef ?? "",
     summary: parsed.summary ?? "",
+    specificChapters: Array.isArray(parsed.specificChapters) ? parsed.specificChapters.map(Number).filter((n: number) => !isNaN(n)) : [],
   };
 }
 
@@ -190,6 +196,7 @@ function processLocally(rawTranscript: string): {
   cleanText: string;
   chapterRef: string;
   summary: string;
+  specificChapters: number[];
 } {
   const refs = extractChapterRefsFromText(rawTranscript);
   const chapterRef = refs.map((r) => `${r.name} ${r.chapter}`).join(", ") || "Não identificado";
@@ -203,7 +210,7 @@ function processLocally(rawTranscript: string): {
   const cleanText = lines.join("\n").trim() || rawTranscript;
   const summary = `Devocional sobre ${chapterRef}.`;
 
-  return { cleanText, chapterRef, summary };
+  return { cleanText, chapterRef, summary, specificChapters: refs.map(r => r.chapter) };
 }
 
 // ─── Exportação principal ─────────────────────────────────────────────────────
@@ -218,16 +225,20 @@ export async function processTranscript(rawTranscript: string, mainSpeakerName?:
   let chapterRefString: string;
   let summary: string;
 
+  let specificChapters: number[] = [];
+
   if (process.env.GEMINI_API_KEY) {
     const result = await processWithGemini(rawTranscript, mainSpeakerName);
     cleanText = result.cleanText;
     chapterRefString = result.chapterRef;
     summary = result.summary;
+    specificChapters = result.specificChapters;
   } else {
     const result = processLocally(rawTranscript);
     cleanText = result.cleanText;
     chapterRefString = result.chapterRef;
     summary = result.summary;
+    specificChapters = result.specificChapters;
   }
 
   // Extrai referências estruturadas para buscar na API.Bible
@@ -235,5 +246,5 @@ export async function processTranscript(rawTranscript: string, mainSpeakerName?:
     chapterRefString + " " + cleanText
   ).map((r) => ({ book: r.book, chapter: r.chapter }));
 
-  return { cleanText, chapterRefs, chapterRefString, summary };
+  return { cleanText, chapterRefs, chapterRefString, summary, specificChapters };
 }

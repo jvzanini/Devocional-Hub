@@ -11,6 +11,7 @@ import { runNotebookLMAutomation } from "@/lib/notebooklm";
 import { uploadText, uploadFile, ensureBucket, getFileSize } from "@/lib/storage";
 import { DocType, PipelineStatus } from "@prisma/client";
 import { syncAttendanceForSession } from "@/lib/attendance-sync";
+import { syncReadingPlanWithTranscription } from "@/lib/reading-plan-sync";
 import fs from "fs";
 
 export interface PipelineOptions {
@@ -158,7 +159,15 @@ export async function runPipeline(options: PipelineOptions = {}): Promise<string
       log(sessionId, `Aviso: falha no sync de presenças: ${err}`);
     }
 
-    // 12. Concluir
+    // 12. Auto-ajuste do plano de leitura
+    log(sessionId, "Verificando ajuste do plano de leitura...");
+    try {
+      await syncReadingPlanWithTranscription(sessionId);
+    } catch (err) {
+      log(sessionId, `Aviso: falha no auto-ajuste do plano: ${err}`);
+    }
+
+    // 13. Concluir
     await prisma.session.update({ where: { id: sessionId }, data: { status: PipelineStatus.COMPLETED } });
     log(sessionId, "Pipeline concluído com sucesso!");
     return sessionId;

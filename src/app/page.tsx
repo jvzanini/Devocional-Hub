@@ -20,14 +20,36 @@ function getGreetingName(fullName: string): string {
   if (parts.length === 0) return "usuário";
   const first = parts[0];
   if (first.length >= 6 || parts.length === 1) return first;
-  return `${first} ${parts[1]}`;
+  return `${first} ${parts[1] || ""}`.trim();
 }
 
 function getGreeting(): string {
-  const h = new Date().getHours();
+  const now = new Date();
+  const brTime = new Date(now.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
+  const h = brTime.getHours();
   if (h < 12) return "Bom dia";
   if (h < 18) return "Boa tarde";
   return "Boa noite";
+}
+
+function buildScheduleString(settingsMap: Record<string, string>): string {
+  const dayNames = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+  const keys = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+  const timeGroups: Record<string, string[]> = {};
+
+  for (let i = 0; i < keys.length; i++) {
+    const time = settingsMap[`schedule_${keys[i]}`];
+    if (time) {
+      if (!timeGroups[time]) timeGroups[time] = [];
+      timeGroups[time].push(dayNames[i]);
+    }
+  }
+
+  if (Object.keys(timeGroups).length === 0) return "Horário não definido";
+
+  return Object.entries(timeGroups)
+    .map(([time, days]) => `${days.join(", ")} ${time}`)
+    .join(" | ");
 }
 
 export default async function DashboardPage() {
@@ -55,6 +77,10 @@ export default async function DashboardPage() {
   const isAdmin = userRole === "ADMIN";
   const userId = (session.user as { id?: string })?.id;
 
+  // Fetch user photo
+  const userRecord = userId ? await prisma.user.findUnique({ where: { id: userId }, select: { photoUrl: true } }) : null;
+  const userPhotoUrl = userRecord?.photoUrl || null;
+
   const recentCompleted = sessions.find(s => s.status === "COMPLETED");
 
   // Calendar data
@@ -71,7 +97,7 @@ export default async function DashboardPage() {
     }
   }
 
-  // Bible book groups
+  // Bible book groups — only COMPLETED and RUNNING
   const bookMap = new Map<string, { id: string; chapterRef: string; date: string; summary: string; status: string }[]>();
   for (const s of sessions) {
     if (s.status !== "COMPLETED" && s.status !== "RUNNING") continue;
@@ -90,6 +116,13 @@ export default async function DashboardPage() {
     include: { days: { orderBy: { date: "asc" } } },
   });
 
+  // Upcoming plan (for preview when ≤ 3 days remaining)
+  const upcomingPlan = await prisma.readingPlan.findFirst({
+    where: { status: "UPCOMING" },
+    orderBy: { startDate: "asc" },
+    select: { bookName: true, bookCode: true, startDate: true },
+  });
+
   // User attendance
   let attendancePercentage = 0;
   let attendedCount = 0;
@@ -99,52 +132,80 @@ export default async function DashboardPage() {
     attendancePercentage = totalCompleted > 0 ? Math.round((attendedCount / totalCompleted) * 100) : 0;
   }
 
-  // Schedule for display
-  const scheduleStr = settingsMap.schedule_monday || "06:00";
+  // Schedule display
+  const scheduleDisplay = buildScheduleString(settingsMap);
 
-  // Reading plan data for calendar
-  const planDays: Record<string, { chapters: string; bookAbbr: string; completed: boolean }> = {};
+  // Progress bar for active plan
+  let planProgress = 0;
+  let planDaysCompleted = 0;
+  let planTotalDays = 0;
+  let daysRemaining = 0;
   if (activePlan) {
-    const { BIBLE_BOOKS } = await import("@/lib/bible-books");
-    const book = BIBLE_BOOKS.find(b => b.code === activePlan.bookCode);
-    for (const day of activePlan.days) {
+    planTotalDays = activePlan.days.length;
+    planDaysCompleted = activePlan.days.filter(d => d.completed).length;
+    planProgress = planTotalDays > 0 ? Math.round((planDaysCompleted / planTotalDays) * 100) : 0;
+    const today = new Date();
+    const endDate = new Date(activePlan.endDate);
+    daysRemaining = Math.max(0, Math.ceil((endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)));
+  }
+
+  // Reading plan data for calendar — include all active/in-progress plans
+  const planDays: Record<string, { chapters: string; bookAbbr: string; completed: boolean }> = {};
+  const allActivePlans = await prisma.readingPlan.findMany({
+    where: { status: { in: ["IN_PROGRESS", "UPCOMING"] } },
+    include: { days: { orderBy: { date: "asc" } } },
+  });
+  const { BIBLE_BOOKS } = await import("@/lib/bible-books");
+  for (const plan of allActivePlans) {
+    const book = BIBLE_BOOKS.find(b => b.code === plan.bookCode);
+    for (const day of plan.days) {
       const dk = new Date(day.date).toISOString().split("T")[0];
-      planDays[dk] = { chapters: day.chapters, bookAbbr: book?.abbr || "?", completed: day.completed };
+      if (!planDays[dk]) {
+        planDays[dk] = { chapters: day.chapters, bookAbbr: book?.abbr || "?", completed: day.completed };
+      }
     }
   }
 
   return (
     <div className="page-bg">
       <header className="app-header">
-        <div style={{ maxWidth: 960, margin: "0 auto", padding: "12px 20px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div className="header-content">
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <div className="logo-icon-sm" style={{ width: 40, height: 40, borderRadius: 10 }}>
-              <svg style={{ width: 20, height: 20, color: "#fff" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <svg className="icon-header" style={{ color: "#fff" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
               </svg>
             </div>
             <div>
               <div style={{ fontWeight: 700, fontSize: 18, color: "#1c1917", letterSpacing: "-0.01em" }}>Devocional Hub</div>
-              <div style={{ fontSize: 13, color: "#78716c" }}>{getGreeting()}, {greetingName}</div>
+              <div style={{ fontSize: 15, color: "#78716c" }}>{getGreeting()}, {greetingName}</div>
             </div>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <div className="header-actions">
             {isAdmin && (
               <a href="/admin" className="btn-icon" style={{ textDecoration: "none" }} aria-label="Admin">
-                <svg style={{ width: 18, height: 18 }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <svg className="icon-header" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.241-.438.613-.431.992a7.723 7.723 0 010 .255c-.007.378.138.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 010-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28z" />
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
               </a>
             )}
             <a href="/profile" className="btn-icon" style={{ textDecoration: "none" }} aria-label="Perfil">
-              <svg style={{ width: 18, height: 18 }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
-              </svg>
+              {userPhotoUrl ? (
+                <img
+                  src={`/api/profile/photo/${userId}`}
+                  alt="Foto"
+                  className="profile-avatar-header"
+                />
+              ) : (
+                <span style={{ fontSize: 16, fontWeight: 700, color: "#d97706" }}>
+                  {userName.charAt(0).toUpperCase()}
+                </span>
+              )}
             </a>
             <form action={async () => { "use server"; await signOut({ redirectTo: "/login" }); }}>
               <button type="submit" className="btn-icon" aria-label="Sair">
-                <svg style={{ width: 18, height: 18 }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <svg className="icon-header" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
                 </svg>
               </button>
@@ -153,14 +214,10 @@ export default async function DashboardPage() {
         </div>
       </header>
 
-      <main style={{ maxWidth: 960, margin: "0 auto", padding: "24px 20px 60px" }}>
+      <main className="page-container">
 
         {/* ─── Top Panel: Livro Atual + Zoom ─── */}
-        <div style={{
-          background: "linear-gradient(135deg, #451a03 0%, #78350f 50%, #92400e 100%)",
-          borderRadius: 18, padding: "22px 24px", marginBottom: 24, color: "#ffffff",
-          position: "relative", overflow: "hidden",
-        }}>
+        <div className="hero-panel">
           <div style={{ position: "absolute", top: -40, right: -40, width: 140, height: 140, borderRadius: "50%", background: "rgba(251,191,36,0.08)" }} />
           <div style={{ position: "absolute", bottom: -20, right: 60, width: 70, height: 70, borderRadius: "50%", background: "rgba(251,191,36,0.05)" }} />
 
@@ -169,8 +226,8 @@ export default async function DashboardPage() {
               <div>
                 {activePlan && (
                   <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-                    <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: "rgba(251,191,36,0.2)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <svg style={{ width: 18, height: 18, color: "#fbbf24" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <div style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: "rgba(251,191,36,0.2)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <svg style={{ width: 20, height: 20, color: "#fbbf24" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
                       </svg>
                     </div>
@@ -183,25 +240,48 @@ export default async function DashboardPage() {
                   </div>
                 )}
 
+                {/* Progress bar */}
+                {activePlan && (
+                  <div style={{ marginBottom: 12 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "rgba(255,255,255,0.5)", marginBottom: 4 }}>
+                      <span>{planDaysCompleted}/{planTotalDays} dias</span>
+                      <span>{planProgress}%</span>
+                    </div>
+                    <div style={{ height: 6, borderRadius: 3, backgroundColor: "rgba(255,255,255,0.15)", overflow: "hidden" }}>
+                      <div style={{ height: "100%", borderRadius: 3, backgroundColor: "#fbbf24", width: `${planProgress}%`, transition: "width 0.3s" }} />
+                    </div>
+                  </div>
+                )}
+
+                {/* Preview do próximo livro */}
+                {daysRemaining <= 3 && daysRemaining > 0 && upcomingPlan && (
+                  <div style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
+                    <svg style={{ width: 14, height: 14 }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+                    </svg>
+                    Próximo: {upcomingPlan.bookName} (em {daysRemaining} dia{daysRemaining !== 1 ? "s" : ""})
+                  </div>
+                )}
+
                 <div style={{ fontSize: 14, color: "rgba(255,255,255,0.6)", marginBottom: 4 }}>Devocional Diário</div>
-                <div style={{ fontSize: 13, color: "rgba(255,255,255,0.5)" }}>Todos os dias às {scheduleStr}</div>
+                <div style={{ fontSize: 13, color: "rgba(255,255,255,0.5)" }}>{scheduleDisplay}</div>
               </div>
 
               {/* Stats mini */}
-              <div style={{ display: "flex", gap: 12 }}>
+              <div className="stats-mini">
                 <div style={{ textAlign: "center", padding: "8px 14px", borderRadius: 10, backgroundColor: "rgba(255,255,255,0.08)" }}>
-                  <div style={{ fontSize: 20, fontWeight: 700 }}>{attendedCount}</div>
-                  <div style={{ fontSize: 11, color: "rgba(255,255,255,0.5)" }}>Presenças</div>
+                  <div style={{ fontSize: 24, fontWeight: 700 }}>{attendedCount}</div>
+                  <div style={{ fontSize: 13, color: "rgba(255,255,255,0.5)" }}>Presenças</div>
                 </div>
                 <div style={{ textAlign: "center", padding: "8px 14px", borderRadius: 10, backgroundColor: "rgba(255,255,255,0.08)" }}>
-                  <div style={{ fontSize: 20, fontWeight: 700 }}>{attendancePercentage}%</div>
-                  <div style={{ fontSize: 11, color: "rgba(255,255,255,0.5)" }}>Frequência</div>
+                  <div style={{ fontSize: 24, fontWeight: 700 }}>{attendancePercentage}%</div>
+                  <div style={{ fontSize: 13, color: "rgba(255,255,255,0.5)" }}>Frequência</div>
                 </div>
               </div>
             </div>
 
             {zoomLink && (
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 16, alignItems: "center" }}>
+              <div className="zoom-actions">
                 <a href={zoomLink} target="_blank" rel="noopener noreferrer" style={{
                   display: "inline-flex", alignItems: "center", gap: 8,
                   padding: "10px 20px", borderRadius: 10, backgroundColor: "#fbbf24",
@@ -250,7 +330,7 @@ export default async function DashboardPage() {
 
                 {recentCompleted.summary && (
                   <p style={{
-                    fontSize: 14, color: "#57534e", lineHeight: 1.7,
+                    fontSize: 15, color: "#57534e", lineHeight: 1.7,
                     overflow: "hidden", display: "-webkit-box",
                     WebkitLineClamp: 2, WebkitBoxOrient: "vertical", marginBottom: 12,
                   }}>
@@ -288,7 +368,7 @@ export default async function DashboardPage() {
         )}
 
         {/* ─── Calendário + Livros ─── */}
-        <div className="dashboard-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, alignItems: "start" }}>
+        <div className="dashboard-grid">
           <div>
             <div className="section-title">Calendário</div>
             <DashboardCalendar datesWithDevotional={datesWithDevotional} dateToSessionId={dateToSessionId} planDays={planDays} />
