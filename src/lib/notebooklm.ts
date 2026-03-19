@@ -539,21 +539,42 @@ export async function runNotebookLMAutomation(
     log("Passo 1: Login OK");
     await saveSession(context);
 
+    // Aguardar carregamento completo da página
+    await page.waitForTimeout(3000);
+
+    // Detectar e entrar em iframes do NotebookLM
+    log(`Frames na página: ${page.frames().length}`);
+    let workPage: Page | import("playwright").Frame = page;
+    const frames = page.frames();
+    for (const frame of frames) {
+      const url = frame.url();
+      if (url.includes("notebooklm") && url !== page.url()) {
+        log(`Usando iframe: ${url}`);
+        workPage = frame as unknown as Page;
+        break;
+      }
+    }
+
+    // Se não encontrou iframe, tentar aguardar mais e verificar novamente
+    if (workPage === page && frames.length <= 1) {
+      log("Nenhum iframe detectado, usando página principal.");
+      // Verificar se o conteúdo está diretamente na página
+      const bodyText = await page.textContent("body").catch(() => "");
+      log(`Conteúdo body (200 chars): ${bodyText?.substring(0, 200)}`);
+    }
+
     // Criar notebook com KB unificada (se disponível) ou fontes separadas
     log(`Passo 2: Criar notebook (KB: ${!!knowledgeBase}, ref: ${chapterRef})...`);
-    log(`URL antes de criar: ${page.url()}`);
     const created = knowledgeBase
-      ? await createNotebookWithKB(page, knowledgeBase, chapterRef)
-      : await createNotebook(page, transcriptText, bibleText, chapterRef);
+      ? await createNotebookWithKB(workPage as Page, knowledgeBase, chapterRef)
+      : await createNotebook(workPage as Page, transcriptText, bibleText, chapterRef);
     if (!created) {
       log("Passo 2: Criação do notebook falhou.");
-      // Screenshot de diagnóstico
       try {
         await page.screenshot({ path: path.join(downloadDir, "debug-notebook-fail.png"), fullPage: true });
-        log(`Screenshot salvo em ${downloadDir}/debug-notebook-fail.png`);
-        log(`URL atual: ${page.url()}`);
-        const bodyText = await page.textContent("body").catch(() => "");
-        log(`Conteúdo da página (500 chars): ${bodyText?.substring(0, 500)}`);
+        // Listar todos os botões visíveis para diagnóstico
+        const buttons = await (workPage as Page).locator("button").allTextContents().catch(() => []);
+        log(`Botões visíveis: ${buttons.slice(0, 20).join(" | ")}`);
       } catch { /* ignore */ }
       await context.close();
       { const l = _capturedLogs || []; _capturedLogs = null; return { slidesPath: null, infographicPath: null, audioOverviewPath: null, logs: l }; }
@@ -562,15 +583,15 @@ export async function runNotebookLMAutomation(
 
     // Gerar conteúdos (cada um independente)
     log("Passo 3: Gerando slides...");
-    slidesPath = await generateSlides(page, downloadDir);
+    slidesPath = await generateSlides(workPage as Page, downloadDir);
     log(`Slides: ${slidesPath ? "OK" : "FALHOU"}`);
 
     log("Passo 4: Gerando infográfico...");
-    infographicPath = await generateInfographic(page, downloadDir);
+    infographicPath = await generateInfographic(workPage as Page, downloadDir);
     log(`Infográfico: ${infographicPath ? "OK" : "FALHOU"}`);
 
     log("Passo 5: Gerando Audio Overview...");
-    audioOverviewPath = await generateAudioOverview(page, downloadDir);
+    audioOverviewPath = await generateAudioOverview(workPage as Page, downloadDir);
     log(`Audio Overview: ${audioOverviewPath ? "OK" : "FALHOU"}`);
 
     // Screenshot final
