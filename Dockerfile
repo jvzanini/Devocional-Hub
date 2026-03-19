@@ -20,7 +20,7 @@ WORKDIR /app
 FROM base AS deps
 COPY package*.json ./
 COPY prisma ./prisma/
-RUN npm ci && npx prisma generate
+RUN npm ci --legacy-peer-deps && npx prisma generate
 
 # ── Build ─────────────────────────────────────────────────────
 FROM base AS builder
