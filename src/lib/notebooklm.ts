@@ -524,11 +524,9 @@ export async function runNotebookLMAutomation(
  * Precisa ser executado UMA VEZ após cada deploy (ou quando sessão expirar).
  */
 export async function setupGoogleSession(): Promise<{ success: boolean; message: string; logs?: string[] }> {
-  const setupLogs: string[] = [];
-  const origLog = log;
-
-  // Capturar logs para retornar na resposta
-  const captureLog = (msg: string) => { setupLogs.push(msg); origLog(msg); };
+  // Ativar captura global de logs
+  _capturedLogs = [];
+  const captureLog = log;
 
   // Diagnóstico pré-launch
   const browsersPath = process.env.PLAYWRIGHT_BROWSERS_PATH || "/ms-playwright";
@@ -551,7 +549,7 @@ export async function setupGoogleSession(): Promise<{ success: boolean; message:
   try {
     browser = await launchStealthBrowser();
   } catch (err) {
-    return { success: false, message: `Chromium não iniciou: ${err}`, logs: setupLogs };
+    return { success: false, message: `Chromium não iniciou: ${err}`, logs: _capturedLogs || [] };
   }
 
   try {
@@ -563,17 +561,18 @@ export async function setupGoogleSession(): Promise<{ success: boolean; message:
     if (loggedIn) {
       await saveSession(context);
       await context.close();
-      return { success: true, message: "Sessão Google salva com sucesso. NotebookLM está pronto.", logs: setupLogs };
+      return { success: true, message: "Sessão Google salva com sucesso. NotebookLM está pronto.", logs: _capturedLogs || [] };
     }
 
     await context.close();
-    return { success: false, message: "Login Google falhou. Verifique se 2FA/chave de segurança está desativada temporariamente.", logs: setupLogs };
+    return { success: false, message: "Login Google falhou. Verifique se 2FA/chave de segurança está desativada temporariamente.", logs: _capturedLogs || [] };
   } catch (err) {
     const errMsg = err instanceof Error ? err.message : String(err);
     captureLog(`Setup falhou: ${errMsg}`);
-    return { success: false, message: `Erro no setup: ${errMsg}`, logs: setupLogs };
+    return { success: false, message: `Erro no setup: ${errMsg}`, logs: _capturedLogs || [] };
   } finally {
     await browser.close();
+    _capturedLogs = null;
   }
 }
 
@@ -590,6 +589,10 @@ export function clearGoogleSession(): void {
   }
 }
 
+// Log capturable — durante setup, logs são coletados para retornar na resposta
+let _capturedLogs: string[] | null = null;
+
 function log(message: string): void {
   console.log(`[NotebookLM] ${message}`);
+  if (_capturedLogs) _capturedLogs.push(message);
 }
