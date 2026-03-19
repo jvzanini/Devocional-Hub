@@ -96,7 +96,9 @@ async function loginGoogle(page: Page): Promise<boolean> {
   log("Fazendo login no Google...");
 
   try {
-    await page.goto(NOTEBOOKLM_URL, { waitUntil: "networkidle", timeout: 30000 });
+    log("Navegando para NotebookLM...");
+    await page.goto(NOTEBOOKLM_URL, { waitUntil: "domcontentloaded", timeout: 30000 });
+    log(`URL atual: ${page.url()}`);
 
     if (await isLoggedIn(page)) {
       log("Já logado (sessão salva).");
@@ -104,31 +106,84 @@ async function loginGoogle(page: Page): Promise<boolean> {
     }
 
     // Email
-    await page.waitForSelector('input[type="email"]', { timeout: 15000 });
-    await page.waitForTimeout(1000);
+    log("Aguardando campo de email...");
+    await page.waitForSelector('input[type="email"]', { timeout: 20000 });
+    await page.waitForTimeout(1500);
     await page.fill('input[type="email"]', GOOGLE_EMAIL);
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(800);
+
+    // Screenshot antes de clicar Next
+    await page.screenshot({ path: path.join(os.tmpdir(), "nlm-step1-email.png") });
+    log("Email preenchido, clicando Next...");
     await page.click("#identifierNext");
+    await page.waitForTimeout(3000);
+    log(`URL após email: ${page.url()}`);
+
+    // Screenshot após email
+    await page.screenshot({ path: path.join(os.tmpdir(), "nlm-step2-after-email.png") });
+
+    // Verificar se pede senha ou alguma tela intermediária
+    const pageContent = await page.textContent("body").catch(() => "");
+    log(`Conteúdo da página (100 chars): ${pageContent?.substring(0, 100)}`);
 
     // Password
-    await page.waitForSelector('input[type="password"]:visible', { timeout: 15000 });
-    await page.waitForTimeout(1000);
+    log("Aguardando campo de senha...");
+    await page.waitForSelector('input[type="password"]:visible', { timeout: 20000 });
+    await page.waitForTimeout(1500);
     await page.fill('input[type="password"]', GOOGLE_PASSWORD);
-    await page.waitForTimeout(500);
-    await page.click("#passwordNext");
+    await page.waitForTimeout(800);
 
-    // Aguarda redirecionamento para NotebookLM
-    await page.waitForURL("**/notebooklm.google.com/**", { timeout: 60000 });
-    log("Login realizado com sucesso!");
-    return true;
+    await page.screenshot({ path: path.join(os.tmpdir(), "nlm-step3-password.png") });
+    log("Senha preenchida, clicando Next...");
+    await page.click("#passwordNext");
+    await page.waitForTimeout(5000);
+
+    log(`URL após senha: ${page.url()}`);
+    await page.screenshot({ path: path.join(os.tmpdir(), "nlm-step4-after-password.png") });
+
+    // Verificar se tem tela intermediária (termos, verificação de telefone, etc.)
+    const currentUrl = page.url();
+    if (currentUrl.includes("challenge") || currentUrl.includes("signin")) {
+      log(`Tela intermediária detectada: ${currentUrl}`);
+      const bodyText = await page.textContent("body").catch(() => "");
+      log(`Texto: ${bodyText?.substring(0, 200)}`);
+
+      // Tentar aceitar termos se existirem
+      try {
+        const agreeBtn = page.locator('button:has-text("I agree"), button:has-text("Concordo"), button:has-text("Accept"), button:has-text("Aceitar"), button:has-text("Next"), button:has-text("Avançar")');
+        if (await agreeBtn.count() > 0) {
+          await agreeBtn.first().click({ timeout: 5000 });
+          await page.waitForTimeout(3000);
+          log("Clicou em botão de aceitar/avançar.");
+        }
+      } catch { /* ignore */ }
+    }
+
+    // Aguarda NotebookLM ou qualquer URL do Google
+    try {
+      await page.waitForURL("**/notebooklm.google.com/**", { timeout: 30000 });
+      log("Login realizado com sucesso!");
+      return true;
+    } catch {
+      log(`URL final: ${page.url()}`);
+      // Se chegou em alguma página Google que não é login, considerar sucesso parcial
+      if (!page.url().includes("accounts.google.com/v3/signin")) {
+        log("Não é mais a página de login — tentando navegar para NotebookLM...");
+        await page.goto(NOTEBOOKLM_URL, { waitUntil: "domcontentloaded", timeout: 15000 });
+        await page.waitForTimeout(3000);
+        if (await isLoggedIn(page)) {
+          log("Login confirmado após redirect manual!");
+          return true;
+        }
+      }
+      log("Login não completado.");
+      await page.screenshot({ path: path.join(os.tmpdir(), "nlm-step5-final.png"), fullPage: true });
+      return false;
+    }
   } catch (err) {
     log(`Falha no login: ${err}`);
-    // Screenshot de debug
     try {
-      const debugDir = path.join(os.tmpdir(), "notebooklm-debug");
-      fs.mkdirSync(debugDir, { recursive: true });
-      await page.screenshot({ path: path.join(debugDir, `login-error-${Date.now()}.png`), fullPage: true });
-      log(`Screenshot de debug salva em ${debugDir}`);
+      await page.screenshot({ path: path.join(os.tmpdir(), "nlm-error.png"), fullPage: true });
     } catch { /* ignore */ }
     return false;
   }
