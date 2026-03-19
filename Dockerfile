@@ -8,7 +8,8 @@ RUN apk add --no-cache \
     harfbuzz \
     ca-certificates \
     ttf-freefont \
-    openssl
+    openssl \
+    curl
 
 ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 ENV PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium-browser
@@ -49,9 +50,10 @@ COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
 COPY --from=builder /app/prisma ./prisma
 
-# Script de inicialização (roda migrations antes de subir o app)
+# Scripts de inicialização
 COPY --chown=nextjs:nodejs docker-entrypoint.sh ./
-RUN chmod +x docker-entrypoint.sh
+COPY --chown=nextjs:nodejs cron-worker.sh ./
+RUN chmod +x docker-entrypoint.sh cron-worker.sh
 
 # Diretórios de dados
 RUN mkdir -p data playwright-state && chown -R nextjs:nodejs data playwright-state
