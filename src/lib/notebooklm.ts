@@ -540,42 +540,86 @@ export async function runNotebookLMAutomation(
     await saveSession(context);
 
     // Aguardar carregamento completo da página
-    await page.waitForTimeout(3000);
+    await page.waitForTimeout(5000);
 
-    // Detectar e entrar em iframes do NotebookLM
-    log(`Frames na página: ${page.frames().length}`);
-    let workPage: Page | import("playwright").Frame = page;
-    const frames = page.frames();
-    for (const frame of frames) {
-      const url = frame.url();
-      if (url.includes("notebooklm") && url !== page.url()) {
-        log(`Usando iframe: ${url}`);
-        workPage = frame as unknown as Page;
-        break;
+    // Diagnóstico de frames
+    log(`Frames: ${page.frames().length}`);
+    for (const f of page.frames()) {
+      log(`  Frame: ${f.url().substring(0, 100)}`);
+    }
+
+    // Tentar encontrar o botão "New notebook" — primeiro na página, depois em iframes
+    log("Passo 2: Procurando botão 'New notebook'...");
+
+    // Seletor para o botão de novo notebook
+    const newNotebookSelector = 'button:has-text("New notebook"), button:has-text("Novo notebook"), button:has-text("Create new"), [aria-label*="new notebook" i], [aria-label*="novo notebook" i], a:has-text("New notebook"), a:has-text("Create new")';
+
+    // Primeiro tentar na página principal
+    let newBtnFound = false;
+    try {
+      const btn = page.locator(newNotebookSelector).first();
+      await btn.waitFor({ state: "visible", timeout: 5000 });
+      newBtnFound = true;
+      log("Botão encontrado na página principal.");
+    } catch {
+      log("Botão não encontrado na página principal, buscando em iframes...");
+    }
+
+    // Se não encontrou, tentar em cada iframe (exceto RotateCookies)
+    if (!newBtnFound) {
+      for (const frame of page.frames()) {
+        const url = frame.url();
+        if (url.includes("RotateCookies") || url === page.url()) continue;
+        try {
+          const btn = frame.locator(newNotebookSelector).first();
+          await btn.waitFor({ state: "visible", timeout: 3000 });
+          log(`Botão encontrado no frame: ${url.substring(0, 80)}`);
+          newBtnFound = true;
+          break;
+        } catch { /* continue */ }
       }
     }
 
-    // Se não encontrou iframe, tentar aguardar mais e verificar novamente
-    if (workPage === page && frames.length <= 1) {
-      log("Nenhum iframe detectado, usando página principal.");
-      // Verificar se o conteúdo está diretamente na página
-      const bodyText = await page.textContent("body").catch(() => "");
-      log(`Conteúdo body (200 chars): ${bodyText?.substring(0, 200)}`);
+    // Se ainda não encontrou, tentar via frameLocator (iframe aninhado)
+    if (!newBtnFound) {
+      log("Tentando frameLocator para iframes aninhados...");
+      try {
+        const iframeBtn = page.frameLocator("iframe").locator(newNotebookSelector).first();
+        await iframeBtn.waitFor({ state: "visible", timeout: 10000 });
+        log("Botão encontrado via frameLocator!");
+        newBtnFound = true;
+      } catch {
+        log("Botão não encontrado via frameLocator.");
+      }
+    }
+
+    // Diagnóstico: listar botões visíveis em todos os contextos
+    if (!newBtnFound) {
+      try {
+        const mainBtns = await page.locator("button").allTextContents();
+        log(`Botões na página: ${mainBtns.slice(0, 15).join(" | ")}`);
+        try {
+          const iframeBtns = await page.frameLocator("iframe").locator("button").allTextContents();
+          log(`Botões no iframe: ${iframeBtns.slice(0, 15).join(" | ")}`);
+        } catch { /* ignore */ }
+        // Listar links também
+        const links = await page.locator("a").allTextContents();
+        log(`Links: ${links.slice(0, 15).join(" | ")}`);
+      } catch { /* ignore */ }
+
+      log("Passo 2: Botão 'New notebook' não encontrado em nenhum contexto.");
+      await page.screenshot({ path: path.join(downloadDir, "debug-notebook-fail.png"), fullPage: true });
+      await context.close();
+      { const l = _capturedLogs || []; _capturedLogs = null; return { slidesPath: null, infographicPath: null, audioOverviewPath: null, logs: l }; }
     }
 
     // Criar notebook com KB unificada (se disponível) ou fontes separadas
-    log(`Passo 2: Criar notebook (KB: ${!!knowledgeBase}, ref: ${chapterRef})...`);
     const created = knowledgeBase
-      ? await createNotebookWithKB(workPage as Page, knowledgeBase, chapterRef)
-      : await createNotebook(workPage as Page, transcriptText, bibleText, chapterRef);
+      ? await createNotebookWithKB(page, knowledgeBase, chapterRef)
+      : await createNotebook(page, transcriptText, bibleText, chapterRef);
     if (!created) {
       log("Passo 2: Criação do notebook falhou.");
-      try {
-        await page.screenshot({ path: path.join(downloadDir, "debug-notebook-fail.png"), fullPage: true });
-        // Listar todos os botões visíveis para diagnóstico
-        const buttons = await (workPage as Page).locator("button").allTextContents().catch(() => []);
-        log(`Botões visíveis: ${buttons.slice(0, 20).join(" | ")}`);
-      } catch { /* ignore */ }
+      await page.screenshot({ path: path.join(downloadDir, "debug-notebook-fail.png"), fullPage: true });
       await context.close();
       { const l = _capturedLogs || []; _capturedLogs = null; return { slidesPath: null, infographicPath: null, audioOverviewPath: null, logs: l }; }
     }
@@ -583,15 +627,15 @@ export async function runNotebookLMAutomation(
 
     // Gerar conteúdos (cada um independente)
     log("Passo 3: Gerando slides...");
-    slidesPath = await generateSlides(workPage as Page, downloadDir);
+    slidesPath = await generateSlides(page, downloadDir);
     log(`Slides: ${slidesPath ? "OK" : "FALHOU"}`);
 
     log("Passo 4: Gerando infográfico...");
-    infographicPath = await generateInfographic(workPage as Page, downloadDir);
+    infographicPath = await generateInfographic(page, downloadDir);
     log(`Infográfico: ${infographicPath ? "OK" : "FALHOU"}`);
 
     log("Passo 5: Gerando Audio Overview...");
-    audioOverviewPath = await generateAudioOverview(workPage as Page, downloadDir);
+    audioOverviewPath = await generateAudioOverview(page, downloadDir);
     log(`Audio Overview: ${audioOverviewPath ? "OK" : "FALHOU"}`);
 
     // Screenshot final
