@@ -78,33 +78,15 @@ async function launchStealthBrowser(): Promise<Browser> {
     "--no-first-run",
   ];
 
-  // Encontrar Chromium bundled explicitamente
-  const bundledPath = findBundledChromium();
-
-  // Diagnóstico
-  log(`PLAYWRIGHT_BROWSERS_PATH: ${process.env.PLAYWRIGHT_BROWSERS_PATH || "(não definido)"}`);
-  log(`Chromium bundled path: ${bundledPath || "(não encontrado)"}`);
-  log(`/usr/bin/chromium existe: ${fs.existsSync("/usr/bin/chromium")}`);
+  // Deixar Playwright descobrir o browser automaticamente (mais confiável)
   try {
-    log(`Playwright default executablePath: ${chromium.executablePath()}`);
+    log(`Playwright executablePath: ${chromium.executablePath()}`);
   } catch (e) {
     log(`executablePath erro: ${e}`);
   }
 
-  const launchOptions: { headless: boolean; args: string[]; executablePath?: string } = {
-    headless: true,
-    args,
-  };
-
-  if (bundledPath) {
-    launchOptions.executablePath = bundledPath;
-    log(`Usando Chromium bundled: ${bundledPath}`);
-  } else {
-    log("AVISO: Chromium bundled não encontrado, usando default do Playwright");
-  }
-
-  log("Lançando Chromium...");
-  const browser = await chromium.launch(launchOptions);
+  log("Lançando Chromium via Playwright (auto-discovery)...");
+  const browser = await chromium.launch({ headless: true, args });
   log("Chromium lançado com sucesso.");
   return browser;
 }
