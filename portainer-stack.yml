@@ -63,7 +63,7 @@ services:
       resources:
         limits:
           cpus: "1"
-          memory: 1024M
+          memory: 2048M
       labels:
         - traefik.enable=true
         # HTTPS router (principal)

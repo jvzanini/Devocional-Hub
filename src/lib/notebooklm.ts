@@ -37,10 +37,12 @@ async function launchStealthBrowser(): Promise<Browser> {
       "--disable-setuid-sandbox",
       "--disable-dev-shm-usage",
       "--disable-gpu",
+      "--disable-software-rasterizer",
+      "--disable-extensions",
+      "--disable-crash-reporter",
       "--disable-blink-features=AutomationControlled",
-      "--disable-features=IsolateOrigins,site-per-process",
-      "--window-size=1920,1080",
-      "--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+      "--disable-features=IsolateOrigins,site-per-process,VizDisplayCompositor",
+      "--single-process",
     ],
   });
 }
