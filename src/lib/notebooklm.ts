@@ -34,16 +34,17 @@ function findBundledChromium(): string | null {
     log(`Conteúdo de ${browsersPath}: ${JSON.stringify(entries)}`);
     const chromiumDir = entries.find(e => e.startsWith("chromium-") || e.startsWith("chromium_"));
     if (chromiumDir) {
-      const execPath = path.join(browsersPath, chromiumDir, "chrome-linux", "chrome");
-      if (fs.existsSync(execPath)) {
-        log(`Chromium bundled encontrado: ${execPath}`);
-        return execPath;
-      }
-      // Tentar caminho alternativo
-      const altPath = path.join(browsersPath, chromiumDir, "chrome", "chrome");
-      if (fs.existsSync(altPath)) {
-        log(`Chromium bundled (alt): ${altPath}`);
-        return altPath;
+      // Tentar vários caminhos possíveis
+      const candidates = [
+        path.join(browsersPath, chromiumDir, "chrome-linux64", "chrome"),
+        path.join(browsersPath, chromiumDir, "chrome-linux", "chrome"),
+        path.join(browsersPath, chromiumDir, "chrome", "chrome"),
+      ];
+      for (const candidate of candidates) {
+        if (fs.existsSync(candidate)) {
+          log(`Chromium bundled encontrado: ${candidate}`);
+          return candidate;
+        }
       }
       // Listar conteúdo do diretório para debug
       try {

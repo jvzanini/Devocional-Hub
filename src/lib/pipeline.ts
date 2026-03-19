@@ -254,8 +254,29 @@ export async function runPipeline(options: PipelineOptions = {}): Promise<string
           fs.unlinkSync(nlmResult.audioOverviewPath);
           log(sessionId, "Audio Overview (vídeo PT-BR) salvo com sucesso!");
         }
+        // Log resultado detalhado do NotebookLM
+        const nlmGenerated = [
+          nlmResult.slidesPath ? "slides" : null,
+          nlmResult.infographicPath ? "infographic" : null,
+          nlmResult.audioOverviewPath ? "audio" : null,
+        ].filter(Boolean);
+        if (nlmGenerated.length > 0) {
+          log(sessionId, `NotebookLM gerou: ${nlmGenerated.join(", ")}`);
+        } else {
+          log(sessionId, "NotebookLM não gerou nenhum documento (automação pode ter falhado na criação do notebook).");
+        }
       } catch (err) {
-        log(sessionId, `Aviso: falha no NotebookLM: ${err}`);
+        const errMsg = err instanceof Error ? `${err.message}\n${err.stack}` : String(err);
+        log(sessionId, `Aviso: falha no NotebookLM: ${errMsg}`);
+        // Salvar erro do NLM como nota na sessão para diagnóstico
+        try {
+          const currentSession = await prisma.session.findUnique({ where: { id: sessionId } });
+          const existingError = currentSession?.errorMessage || "";
+          await prisma.session.update({
+            where: { id: sessionId },
+            data: { errorMessage: existingError ? `${existingError}\n[NLM] ${errMsg.substring(0, 500)}` : `[NLM] ${errMsg.substring(0, 500)}` },
+          });
+        } catch { /* ignore */ }
       }
     }
 
