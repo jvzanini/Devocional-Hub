@@ -72,6 +72,8 @@ async function launchStealthBrowser(): Promise<Browser> {
     "--disable-default-apps",
     "--disable-sync",
     "--disable-translate",
+    "--disable-crash-reporter",
+    "--disable-breakpad",
     "--metrics-recording-only",
     "--no-first-run",
   ];
