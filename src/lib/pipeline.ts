@@ -132,9 +132,25 @@ export async function runPipeline(options: PipelineOptions = {}): Promise<string
       if (setting) mainSpeaker = setting.value;
     } catch { /* tabela pode não existir ainda */ }
 
-    // 6. Processar com Gemini AI
-    log(sessionId, "Processando transcrição com Gemini AI...");
-    const processed = await processTranscript(rawTranscript, mainSpeaker);
+    // 6. Processar com Gemini AI (ou usar Meeting Summary direto)
+    let processed: Awaited<ReturnType<typeof processTranscript>>;
+    if (usedMeetingSummary) {
+      // Meeting Summary do AI Companion já é o resumo — usar direto
+      log(sessionId, "Usando Meeting Summary como resumo (sem Gemini)...");
+      const { extractChapterRefsFromText } = await import("@/lib/ai");
+      const refs = extractChapterRefsFromText(rawTranscript);
+      const chapterRefString = refs.map(r => `${r.name} ${r.chapter}`).join(", ") || "Não identificado";
+      processed = {
+        cleanText: rawTranscript,
+        chapterRefs: refs.map(r => ({ book: r.book, chapter: r.chapter })),
+        chapterRefString,
+        summary: rawTranscript.split("\n").filter(l => l.trim() && !l.startsWith("#")).slice(0, 10).join("\n"),
+        specificChapters: refs.map(r => r.chapter),
+      };
+    } else {
+      log(sessionId, "Processando transcrição com Gemini AI...");
+      processed = await processTranscript(rawTranscript, mainSpeaker);
+    }
 
     // 7. Salvar transcrição limpa
     const cleanPath = `sessions/${sessionId}/transcript-clean.txt`;
