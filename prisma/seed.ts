@@ -5,7 +5,7 @@ const prisma = new PrismaClient();
 
 async function main() {
   const email = process.env.SEED_EMAIL || "admin@devocional.com";
-  const password = process.env.SEED_PASSWORD || "devocional123";
+  const password = process.env.SEED_PASSWORD || "changeme";
   const name = process.env.SEED_NAME || "Admin";
 
   const existing = await prisma.user.findUnique({ where: { email } });
@@ -19,8 +19,7 @@ async function main() {
     data: { email, password: hashed, name },
   });
 
-  console.log(`✅ Usuário criado: ${user.email}`);
-  console.log(`   Senha: ${password}`);
+  console.log(`Usuário criado: ${user.email}`);
 }
 
 main()

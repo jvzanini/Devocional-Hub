@@ -7,7 +7,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: devocional
-      POSTGRES_PASSWORD: devocional123
+      POSTGRES_PASSWORD: YOUR_LOCAL_DB_PASSWORD
       POSTGRES_DB: devocional_hub
     ports:
       - "5432:5432"

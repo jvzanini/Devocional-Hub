@@ -7,7 +7,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-devocional}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-devocional123}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB:-devocional_hub}
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -24,7 +24,7 @@ services:
     container_name: devocional_app
     restart: unless-stopped
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-devocional}:${POSTGRES_PASSWORD:-devocional123}@postgres:5432/${POSTGRES_DB:-devocional_hub}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-devocional}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-devocional_hub}
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
       NEXTAUTH_URL: ${NEXTAUTH_URL}
       ZOOM_ACCOUNT_ID: ${ZOOM_ACCOUNT_ID}

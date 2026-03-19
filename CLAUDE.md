@@ -46,22 +46,25 @@
 8. Salva tudo no banco + storage local
 
 ## Infraestrutura
-- VPS Hostinger: 82.29.61.175
 - Domínio: devocional.nexusai360.com (Cloudflare DNS)
-- Docker Swarm via Portainer (painel.nexusai360.com)
-- Portainer Stack ID: 86
+- Docker Swarm via Portainer
 - Rede: rede_nexusAI (overlay)
 - Traefik: reverse proxy + Let's Encrypt SSL + HSTS
 - GHCR: ghcr.io/jvzanini/devocional-hub:latest
 - GitHub: github.com/jvzanini/Devocional-Hub
 
-## Credenciais (definidas na stack do Portainer)
-- Admin: ADMIN_EMAIL + ADMIN_PASSWORD (seed automático no entrypoint)
-- Gmail SMTP: SMTP_HOST/PORT/USER/PASS
-- Zoom: ZOOM_ACCOUNT_ID/CLIENT_ID/CLIENT_SECRET, meeting ID: 89803817919
-- Gemini: GEMINI_API_KEY
-- Bible: BIBLE_API_KEY + BIBLE_NVI_ID
-- Google (Playwright): GOOGLE_EMAIL + GOOGLE_PASSWORD
+## Credenciais (definidas APENAS no Portainer, NUNCA no código)
+- Todas as credenciais são configuradas via variáveis de ambiente no Portainer
+- No repositório, usar SEMPRE valores genéricos (YOUR_*, changeme, etc.)
+- NUNCA commitar senhas, API keys, tokens ou emails reais no Git
+- Variáveis usadas: ADMIN_EMAIL, ADMIN_PASSWORD, SMTP_USER, SMTP_PASS, ZOOM_*, GEMINI_API_KEY, BIBLE_API_KEY, GOOGLE_EMAIL, GOOGLE_PASSWORD
+
+## Segurança — REGRAS OBRIGATÓRIAS
+- NUNCA commitar credenciais, senhas, API keys, tokens ou emails reais no Git
+- Arquivos com credenciais (portainer-stack.yml, docker-compose.yml) devem ter SEMPRE valores genéricos no repositório (YOUR_*, changeme)
+- As credenciais reais ficam APENAS no Portainer (variáveis de ambiente da stack)
+- Antes de cada commit, verificar se não há dados sensíveis nos arquivos alterados
+- O .env está no .gitignore e NUNCA deve ser commitado
 
 ## Gotchas Críticos
 - NUNCA usar `@theme inline` do Tailwind v4 — as CSS variables não existem em runtime no Docker

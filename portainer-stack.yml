@@ -8,42 +8,42 @@ services:
       - rede_nexusAI
     environment:
       # ── Banco de Dados (reutiliza o postgres existente) ──────
-      - DATABASE_URL=postgresql://postgres:nexus.AI%40360@postgres:5432/devocional_hub?connection_limit=5&connect_timeout=30&pool_timeout=30
+      - DATABASE_URL=postgresql://postgres:YOUR_DB_PASSWORD@postgres:5432/devocional_hub?connection_limit=5&connect_timeout=30&pool_timeout=30
 
       # ── Auth ─────────────────────────────────────────────────
-      - NEXTAUTH_SECRET=devocional-hub-secret-nexusai360-2024
+      - NEXTAUTH_SECRET=YOUR_NEXTAUTH_SECRET
       - NEXTAUTH_URL=https://devocional.nexusai360.com
 
       # ── Zoom ─────────────────────────────────────────────────
-      - ZOOM_ACCOUNT_ID=51vc4kXaQgumFizGGpFDgg
-      - ZOOM_CLIENT_ID=5YA9ML5tTUW5Wml9GiiWTg
-      - ZOOM_CLIENT_SECRET=YDFkbR227SGt5op7x0BF1wpG1zMjEXg6
-      - ZOOM_RECURRING_MEETING_ID=89803817919
-      - ZOOM_WEBHOOK_SECRET=2a_SlG_YTVit29if0P3LhQ
+      - ZOOM_ACCOUNT_ID=YOUR_ZOOM_ACCOUNT_ID
+      - ZOOM_CLIENT_ID=YOUR_ZOOM_CLIENT_ID
+      - ZOOM_CLIENT_SECRET=YOUR_ZOOM_CLIENT_SECRET
+      - ZOOM_RECURRING_MEETING_ID=YOUR_ZOOM_MEETING_ID
+      - ZOOM_WEBHOOK_SECRET=YOUR_ZOOM_WEBHOOK_SECRET
 
       # ── Gemini (gratuito) ────────────────────────────────────
-      - GEMINI_API_KEY=AIzaSyD6jKWTVDUbF4NJ4OygKvm8AtSx8elUEDQ
+      - GEMINI_API_KEY=YOUR_GEMINI_API_KEY
 
       # ── Bíblia NVI ───────────────────────────────────────────
-      - BIBLE_API_KEY=GWhLJusrh2UJdt0GpKYwa
+      - BIBLE_API_KEY=YOUR_BIBLE_API_KEY
       - BIBLE_NVI_ID=a556c5305ee15c3f-01
 
       # ── Storage local ────────────────────────────────────────
       - STORAGE_PATH=/app/data
 
       # ── Google (Playwright / NotebookLM) ─────────────────────
-      - GOOGLE_EMAIL=joaovtzanini@gmail.com
-      - GOOGLE_PASSWORD=C@misa107
+      - GOOGLE_EMAIL=YOUR_GOOGLE_EMAIL
+      - GOOGLE_PASSWORD=YOUR_GOOGLE_PASSWORD
 
       # ── Admin ─────────────────────────────────────────────────
-      - ADMIN_EMAIL=joaovtzanini@gmail.com
-      - ADMIN_PASSWORD=C@misa107
+      - ADMIN_EMAIL=YOUR_ADMIN_EMAIL
+      - ADMIN_PASSWORD=YOUR_ADMIN_PASSWORD
 
       # ── Email (Gmail SMTP) ─────────────────────────────────
       - SMTP_HOST=smtp.gmail.com
       - SMTP_PORT=587
-      - SMTP_USER=joaovtzanini@gmail.com
-      - SMTP_PASS=C@misa107
+      - SMTP_USER=YOUR_SMTP_USER
+      - SMTP_PASS=YOUR_SMTP_PASS
 
       # ── App ──────────────────────────────────────────────────
       - NODE_ENV=production
