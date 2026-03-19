@@ -4,7 +4,7 @@
  */
 
 import { prisma } from "@/lib/db";
-import { getVttTranscript, getVttByMeetingId, getDetailedParticipants } from "@/lib/zoom";
+import { getVttTranscript, getVttByMeetingId, getDetailedParticipants, getMeetingSummary, getMeetingInstances } from "@/lib/zoom";
 import { processTranscript } from "@/lib/ai";
 import { getChaptersText } from "@/lib/bible";
 import { runNotebookLMAutomation } from "@/lib/notebooklm";
@@ -40,25 +40,61 @@ export async function runPipeline(options: PipelineOptions = {}): Promise<string
   }
 
   try {
-    // 2. Buscar VTT transcript
+    // 2. Buscar VTT transcript (ou Meeting Summary como fallback)
     let rawTranscript: string;
     let meetingUuid = options.meetingUuid || "";
+    let usedMeetingSummary = false;
 
     if (meetingUuid) {
       // Temos UUID (via webhook) — buscar VTT direto
       log(sessionId, `Buscando VTT por UUID: ${meetingUuid}...`);
-      rawTranscript = await getVttTranscript(meetingUuid);
+      try {
+        rawTranscript = await getVttTranscript(meetingUuid);
+      } catch {
+        // Fallback: buscar Meeting Summary do AI Companion
+        log(sessionId, `VTT não disponível, buscando Meeting Summary do AI Companion...`);
+        const summary = await getMeetingSummary(meetingUuid);
+        rawTranscript = `${summary.summaryContent}\n\n${summary.summaryOverview}`;
+        usedMeetingSummary = true;
+
+        await prisma.session.update({
+          where: { id: sessionId },
+          data: { zoomUuid: meetingUuid, date: new Date(summary.startTime) },
+        });
+      }
     } else {
       // Sem UUID — buscar por Meeting ID
       log(sessionId, `Buscando VTT por Meeting ID: ${meetingId}...`);
-      const result = await getVttByMeetingId(meetingId);
-      rawTranscript = result.text;
-      meetingUuid = result.uuid;
+      try {
+        const result = await getVttByMeetingId(meetingId);
+        rawTranscript = result.text;
+        meetingUuid = result.uuid;
 
-      await prisma.session.update({
-        where: { id: sessionId },
-        data: { zoomUuid: meetingUuid, date: new Date(result.startTime) },
-      });
+        await prisma.session.update({
+          where: { id: sessionId },
+          data: { zoomUuid: meetingUuid, date: new Date(result.startTime) },
+        });
+      } catch {
+        // Fallback: buscar instância mais recente e usar Meeting Summary
+        log(sessionId, `VTT não disponível, buscando Meeting Summary do AI Companion...`);
+        const instances = await getMeetingInstances(meetingId);
+        const latest = instances.sort((a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime())[0];
+        if (!latest) throw new Error(`Nenhuma instância encontrada para meeting ${meetingId}`);
+
+        meetingUuid = latest.uuid;
+        const summary = await getMeetingSummary(meetingUuid);
+        rawTranscript = `${summary.summaryContent}\n\n${summary.summaryOverview}`;
+        usedMeetingSummary = true;
+
+        await prisma.session.update({
+          where: { id: sessionId },
+          data: { zoomUuid: meetingUuid, date: new Date(summary.startTime) },
+        });
+      }
+    }
+
+    if (usedMeetingSummary) {
+      log(sessionId, `Usando Meeting Summary do AI Companion (${rawTranscript.length} chars)`);
     }
 
     // 3. Salvar transcrição bruta

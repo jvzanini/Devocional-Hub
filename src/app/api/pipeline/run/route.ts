@@ -12,6 +12,7 @@ export async function POST(request: Request) {
     const body = await request.json().catch(() => ({}));
     const options = {
       meetingId: body.meetingId,
+      meetingUuid: body.meetingUuid,
       skipNotebookLM: body.skipNotebookLM ?? false,
     };
 

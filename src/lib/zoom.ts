@@ -194,6 +194,72 @@ export async function getMeetingInstances(meetingId: string): Promise<Array<{ uu
   return data.meetings || [];
 }
 
+// ─── Meeting Summary (AI Companion) ─────────────────────────────────────
+
+export interface ZoomMeetingSummary {
+  meetingUuid: string;
+  topic: string;
+  startTime: string;
+  endTime: string;
+  summaryOverview: string;
+  summaryContent: string;
+  summaryDetails: Array<{ label: string; summary: string }>;
+}
+
+/**
+ * Busca o Meeting Summary gerado pelo Zoom AI Companion
+ * Útil quando não há gravação na nuvem, mas o AI Companion estava ativo
+ */
+export async function getMeetingSummary(meetingUuid: string): Promise<ZoomMeetingSummary> {
+  const encoded = encodeUuid(meetingUuid);
+  console.log(`[Zoom] Buscando Meeting Summary para UUID: ${meetingUuid}...`);
+
+  const result = await zoomFetch(`/meetings/${encoded}/meeting_summary`);
+
+  if (!result.ok) {
+    throw new Error(`Meeting Summary não encontrado para UUID ${meetingUuid}: ${result.status}`);
+  }
+
+  const data = result.data as {
+    meeting_uuid: string;
+    meeting_topic: string;
+    meeting_start_time: string;
+    meeting_end_time: string;
+    summary_overview: string;
+    summary_content: string;
+    summary_details: Array<{ label: string; summary: string }>;
+  };
+
+  return {
+    meetingUuid: data.meeting_uuid,
+    topic: data.meeting_topic,
+    startTime: data.meeting_start_time,
+    endTime: data.meeting_end_time,
+    summaryOverview: data.summary_overview,
+    summaryContent: data.summary_content || "",
+    summaryDetails: data.summary_details || [],
+  };
+}
+
+/**
+ * Busca Meeting Summary por Meeting ID (busca a instância mais recente)
+ */
+export async function getMeetingSummaryByDate(meetingId: string, targetDate: string): Promise<{ summary: ZoomMeetingSummary; uuid: string }> {
+  const instances = await getMeetingInstances(meetingId);
+
+  // Filtrar pela data alvo
+  const match = instances
+    .filter(m => m.start_time.startsWith(targetDate))
+    .sort((a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime())[0];
+
+  if (!match) {
+    throw new Error(`Nenhuma instância encontrada para ${meetingId} em ${targetDate}`);
+  }
+
+  const summary = await getMeetingSummary(match.uuid);
+  return { summary, uuid: match.uuid };
+}
+
 // ─── Helpers ─────────────────────────────────────────────────────────────
 
 function parseVttToText(vtt: string): string {
