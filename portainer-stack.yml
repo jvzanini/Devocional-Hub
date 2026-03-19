@@ -21,7 +21,8 @@ services:
       - ZOOM_RECURRING_MEETING_ID=${ZOOM_RECURRING_MEETING_ID}
       - ZOOM_WEBHOOK_SECRET=${ZOOM_WEBHOOK_SECRET}
 
-      # ── IA (OpenRouter primário + Gemini fallback) ─────────
+      # ── IA (OpenAI primário + OpenRouter/Gemini fallback) ──
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
       - GEMINI_API_KEY=${GEMINI_API_KEY}
 

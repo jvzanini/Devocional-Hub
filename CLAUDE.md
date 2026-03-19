@@ -34,7 +34,7 @@
 - Participant: name, email, joinTime, leaveTime, duration (segundos)
 - Document: type (TRANSCRIPT_RAW/CLEAN, BIBLE_TEXT, INFOGRAPHIC, SLIDES), fileName, storagePath
 - Webhook: name, slug, active
-- AppSetting: key-value (mainSpeakerName, zoomMeetingId)
+- AppSetting: key-value (mainSpeakerName, zoomMeetingId, aiModel)
 
 ## Pipeline de Processamento
 1. Webhook Zoom (`meeting.ended`) → recebe meeting_id + uuid
@@ -49,12 +49,16 @@
 10. Salva tudo no banco + storage local
 
 ## Cascata de IA (callAI)
-Todos os modelos são gratuitos. Fallback automático se um falhar:
-1. Nemotron 120B (`nvidia/nemotron-3-super-120b-a12b:free`) — OpenRouter
-2. Gemini 2.5 Flash — Google API direta
-3. Step 3.5 Flash (`stepfun/step-3.5-flash:free`) — OpenRouter
-4. Nemotron 30B (`nvidia/nemotron-3-nano-30b-a3b:free`) — OpenRouter
-5. Erro com log de todas as falhas
+OpenAI como primário (modelo configurável via admin), fallback automático para gratuitos:
+1. **OpenAI** — Modelo selecionado no admin (padrão: `gpt-4.1-mini`) — `OPENAI_API_KEY`
+2. Nemotron 120B (`nvidia/nemotron-3-super-120b-a12b:free`) — OpenRouter (fallback gratuito)
+3. Step 3.5 Flash (`stepfun/step-3.5-flash:free`) — OpenRouter (fallback gratuito)
+4. Nemotron 30B (`nvidia/nemotron-3-nano-30b-a3b:free`) — OpenRouter (fallback gratuito)
+5. Gemini 2.5 Flash — Google API direta (fallback gratuito)
+6. Erro com log de todas as falhas
+
+O modelo OpenAI pode ser alterado no painel admin (aba "IA") sem necessidade de deploy.
+Modelos disponíveis: gpt-4.1-mini, gpt-4.1, gpt-4.1-nano, gpt-4o, gpt-4o-mini, o4-mini, o3, o3-mini, gpt-3.5-turbo
 
 ## Infraestrutura
 - Domínio: devocional.nexusai360.com (Cloudflare DNS)
@@ -68,7 +72,7 @@ Todos os modelos são gratuitos. Fallback automático se um falhar:
 - Todas as credenciais são configuradas via variáveis de ambiente no Portainer
 - No repositório, usar SEMPRE valores genéricos (YOUR_*, changeme, etc.)
 - NUNCA commitar senhas, API keys, tokens ou emails reais no Git
-- Variáveis usadas: ADMIN_EMAIL, ADMIN_PASSWORD, SMTP_USER, SMTP_PASS, ZOOM_*, GEMINI_API_KEY, OPENROUTER_API_KEY, BIBLE_API_KEY, GOOGLE_EMAIL, GOOGLE_PASSWORD
+- Variáveis usadas: ADMIN_EMAIL, ADMIN_PASSWORD, SMTP_USER, SMTP_PASS, ZOOM_*, OPENAI_API_KEY, GEMINI_API_KEY, OPENROUTER_API_KEY, BIBLE_API_KEY, GOOGLE_EMAIL, GOOGLE_PASSWORD
 
 ## Segurança — REGRAS OBRIGATÓRIAS
 - NUNCA commitar credenciais, senhas, API keys, tokens ou emails reais no Git

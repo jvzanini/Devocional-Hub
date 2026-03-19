@@ -104,21 +104,63 @@ export function extractChapterRefsFromText(
   return found;
 }
 
-// ─── Cascata de Modelos Gratuitos ─────────────────────────────────────────────
+// ─── Modelos disponíveis ──────────────────────────────────────────────────────
 //
-// Ordem de fallback:
-//   1. Nemotron 3 Super 120B (OpenRouter, gratuito, 262K ctx)
-//   2. Gemini 2.5 Flash (Google API direta, gratuito)
-//   3. Step 3.5 Flash (OpenRouter, gratuito, 256K ctx)
-//   4. Nemotron 3 Nano 30B (OpenRouter, gratuito, 256K ctx)
-//   5. Erro
+// Cascata de prioridade:
+//   1. OpenAI (primário, configurável via admin) — padrão: gpt-4.1-mini
+//   2. OpenRouter (fallback gratuito) — Nemotron 120B, Step 3.5, Nemotron 30B
+//   3. Gemini 2.5 Flash (fallback gratuito)
 //
+
+/** Modelos OpenAI disponíveis para seleção no painel admin */
+export const OPENAI_MODELS = [
+  { id: "gpt-4.1-mini", name: "GPT-4.1 Mini", description: "Rápido e econômico" },
+  { id: "gpt-4.1", name: "GPT-4.1", description: "Mais capaz, custo moderado" },
+  { id: "gpt-4.1-nano", name: "GPT-4.1 Nano", description: "Mais rápido e barato" },
+  { id: "gpt-4o", name: "GPT-4o", description: "Multimodal, alta qualidade" },
+  { id: "gpt-4o-mini", name: "GPT-4o Mini", description: "Versão compacta do 4o" },
+  { id: "o4-mini", name: "o4-mini", description: "Raciocínio avançado, compacto" },
+  { id: "o3", name: "o3", description: "Raciocínio avançado" },
+  { id: "o3-mini", name: "o3-mini", description: "Raciocínio avançado, econômico" },
+  { id: "gpt-3.5-turbo", name: "GPT-3.5 Turbo", description: "Legado, mais barato" },
+];
 
 const OPENROUTER_MODELS = [
   { id: "nvidia/nemotron-3-super-120b-a12b:free", name: "Nemotron 120B" },
   { id: "stepfun/step-3.5-flash:free", name: "Step 3.5 Flash" },
   { id: "nvidia/nemotron-3-nano-30b-a3b:free", name: "Nemotron 30B" },
 ];
+
+// ─── Providers ─────────────────────────────────────────────────────────────────
+
+async function callOpenAI(model: string, prompt: string, maxTokens: number): Promise<string> {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) throw new Error("OPENAI_API_KEY não configurada");
+
+  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model,
+      messages: [{ role: "user", content: prompt }],
+      max_tokens: maxTokens,
+      temperature: 0.3,
+    }),
+  });
+
+  if (!response.ok) {
+    const err = await response.text();
+    throw new Error(`OpenAI (${model}) erro ${response.status}: ${err}`);
+  }
+
+  const data = await response.json();
+  const content = data?.choices?.[0]?.message?.content;
+  if (!content) throw new Error(`OpenAI (${model}) retornou resposta vazia`);
+  return content;
+}
 
 async function callOpenRouter(model: string, prompt: string, maxTokens: number): Promise<string> {
   const apiKey = process.env.OPENROUTER_API_KEY;
@@ -179,27 +221,52 @@ async function callGemini(prompt: string, maxTokens: number): Promise<string> {
 }
 
 // ─── Chamada unificada com cascata de fallbacks ──────────────────────────────
+// Prioridade: OpenAI (modelo configurável) → OpenRouter gratuito → Gemini
+
+async function getAISettings(): Promise<{ model: string }> {
+  try {
+    const { prisma } = await import("@/lib/db");
+    const setting = await prisma.appSetting.findUnique({ where: { key: "aiModel" } });
+    return { model: setting?.value || "gpt-4.1-mini" };
+  } catch {
+    return { model: "gpt-4.1-mini" };
+  }
+}
 
 async function callAI(prompt: string, maxTokens = 16384): Promise<string> {
   const errors: string[] = [];
+  const aiSettings = await getAISettings();
 
-  // 1. Nemotron 120B (OpenRouter)
-  if (process.env.OPENROUTER_API_KEY) {
+  // 1. OpenAI (primário)
+  if (process.env.OPENAI_API_KEY) {
     try {
-      const m = OPENROUTER_MODELS[0];
-      console.log(`[AI] Tentando ${m.name}...`);
-      return await callOpenRouter(m.id, prompt, maxTokens);
+      console.log(`[AI] Tentando OpenAI ${aiSettings.model}...`);
+      return await callOpenAI(aiSettings.model, prompt, maxTokens);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      console.warn(`[AI] ${OPENROUTER_MODELS[0].name} falhou: ${msg}`);
-      errors.push(`${OPENROUTER_MODELS[0].name}: ${msg}`);
+      console.warn(`[AI] OpenAI ${aiSettings.model} falhou: ${msg}`);
+      errors.push(`OpenAI ${aiSettings.model}: ${msg}`);
     }
   }
 
-  // 2. Gemini 2.5 Flash (Google API direta)
+  // 2. OpenRouter gratuito (fallback)
+  if (process.env.OPENROUTER_API_KEY) {
+    for (const m of OPENROUTER_MODELS) {
+      try {
+        console.log(`[AI] Tentando ${m.name} (fallback)...`);
+        return await callOpenRouter(m.id, prompt, maxTokens);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.warn(`[AI] ${m.name} falhou: ${msg}`);
+        errors.push(`${m.name}: ${msg}`);
+      }
+    }
+  }
+
+  // 3. Gemini (último fallback)
   if (process.env.GEMINI_API_KEY) {
     try {
-      console.log("[AI] Tentando Gemini 2.5 Flash...");
+      console.log("[AI] Tentando Gemini 2.5 Flash (fallback)...");
       return await callGemini(prompt, maxTokens);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -208,33 +275,7 @@ async function callAI(prompt: string, maxTokens = 16384): Promise<string> {
     }
   }
 
-  // 3. Step 3.5 Flash (OpenRouter)
-  if (process.env.OPENROUTER_API_KEY) {
-    try {
-      const m = OPENROUTER_MODELS[1];
-      console.log(`[AI] Tentando ${m.name}...`);
-      return await callOpenRouter(m.id, prompt, maxTokens);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      console.warn(`[AI] ${OPENROUTER_MODELS[1].name} falhou: ${msg}`);
-      errors.push(`${OPENROUTER_MODELS[1].name}: ${msg}`);
-    }
-  }
-
-  // 4. Nemotron 30B (OpenRouter)
-  if (process.env.OPENROUTER_API_KEY) {
-    try {
-      const m = OPENROUTER_MODELS[2];
-      console.log(`[AI] Tentando ${m.name}...`);
-      return await callOpenRouter(m.id, prompt, maxTokens);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      console.warn(`[AI] ${OPENROUTER_MODELS[2].name} falhou: ${msg}`);
-      errors.push(`${OPENROUTER_MODELS[2].name}: ${msg}`);
-    }
-  }
-
-  // 5. Todos falharam
+  // Todos falharam
   throw new Error(
     `Todos os modelos de IA falharam:\n${errors.map((e, i) => `  ${i + 1}. ${e}`).join("\n")}`
   );

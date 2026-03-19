@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { BIBLE_BOOKS } from "@/lib/bible-books";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 
-type Tab = "zoom" | "schedule" | "webhooks" | "users" | "reading" | "attendance";
+type Tab = "zoom" | "schedule" | "webhooks" | "users" | "reading" | "attendance" | "ia";
 
 interface ZoomIdentifier { id: string; value: string; type: string; locked: boolean; }
 interface Webhook { id: string; name: string; slug: string; active: boolean; createdAt: string; }
@@ -491,6 +491,7 @@ export default function AdminPage() {
             { key: "users", label: "Usuários" },
             { key: "reading", label: "Leitura" },
             { key: "attendance", label: "Presença" },
+            { key: "ia", label: "IA" },
           ] as { key: Tab; label: string }[]).map(t => (
             <button key={t.key} onClick={() => setTab(t.key)} className={`tab-trigger ${tab === t.key ? "active" : ""}`}>
               {t.label}
@@ -1119,6 +1120,79 @@ export default function AdminPage() {
             )}
           </div>
         )}
+        {/* ─── TAB: Configuração de IA ─── */}
+        {tab === "ia" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            <div className="section-card" style={{ padding: 18 }}>
+              <div className="section-title">Modelo de IA</div>
+              <p style={{ fontSize: 14, color: "#a8a29e", marginBottom: 16 }}>
+                Selecione o modelo OpenAI para processamento de transcrições, pesquisa teológica e extração de senha.
+                Os modelos gratuitos do OpenRouter são usados como fallback automático.
+              </p>
+
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#d6d3d1", marginBottom: 6 }}>
+                  Modelo Principal (OpenAI)
+                </label>
+                <select
+                  className="input-field"
+                  value={settings.aiModel || "gpt-4.1-mini"}
+                  onChange={async (e) => {
+                    const val = e.target.value;
+                    await saveSetting("aiModel", val);
+                  }}
+                  style={{ maxWidth: 400 }}
+                >
+                  <optgroup label="GPT-4.1 (Mais recentes)">
+                    <option value="gpt-4.1-mini">GPT-4.1 Mini — Rápido e econômico</option>
+                    <option value="gpt-4.1">GPT-4.1 — Mais capaz, custo moderado</option>
+                    <option value="gpt-4.1-nano">GPT-4.1 Nano — Mais rápido e barato</option>
+                  </optgroup>
+                  <optgroup label="GPT-4o">
+                    <option value="gpt-4o">GPT-4o — Multimodal, alta qualidade</option>
+                    <option value="gpt-4o-mini">GPT-4o Mini — Versão compacta do 4o</option>
+                  </optgroup>
+                  <optgroup label="Série o (Raciocínio)">
+                    <option value="o4-mini">o4-mini — Raciocínio avançado, compacto</option>
+                    <option value="o3">o3 — Raciocínio avançado</option>
+                    <option value="o3-mini">o3-mini — Raciocínio avançado, econômico</option>
+                  </optgroup>
+                  <optgroup label="Legado">
+                    <option value="gpt-3.5-turbo">GPT-3.5 Turbo — Mais barato</option>
+                  </optgroup>
+                </select>
+              </div>
+
+              <div style={{ padding: 14, background: "#1c1917", borderRadius: 8, border: "1px solid #44403c" }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "#d6d3d1", marginBottom: 8 }}>Cascata de Fallback</div>
+                <div style={{ fontSize: 13, color: "#a8a29e", lineHeight: 1.8 }}>
+                  <div>1. <span style={{ color: "#10b981" }}>OpenAI</span> — <strong>{settings.aiModel || "gpt-4.1-mini"}</strong> (primário)</div>
+                  <div>2. <span style={{ color: "#f59e0b" }}>OpenRouter</span> — Nemotron 120B, Step 3.5, Nemotron 30B (gratuito)</div>
+                  <div>3. <span style={{ color: "#3b82f6" }}>Gemini</span> — 2.5 Flash (gratuito)</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="section-card" style={{ padding: 18 }}>
+              <div className="section-title">Status das APIs</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 12 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={{ width: 10, height: 10, borderRadius: "50%", background: process.env.NEXT_PUBLIC_HAS_OPENAI === "true" ? "#10b981" : "#78716c", display: "inline-block" }} />
+                  <span style={{ fontSize: 14, color: "#d6d3d1" }}>OpenAI — Configurada via variável de ambiente</span>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={{ width: 10, height: 10, borderRadius: "50%", background: "#78716c", display: "inline-block" }} />
+                  <span style={{ fontSize: 14, color: "#d6d3d1" }}>OpenRouter — Fallback gratuito</span>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={{ width: 10, height: 10, borderRadius: "50%", background: "#78716c", display: "inline-block" }} />
+                  <span style={{ fontSize: 14, color: "#d6d3d1" }}>Gemini — Fallback gratuito</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
       </main>
     </div>
   );
