@@ -162,7 +162,7 @@ export function Sidebar({
 
   const menuItems = [
     { href: "/", label: "Início", icon: <IconHome /> },
-    { href: "/books", label: "Livros da Bíblia", icon: <IconBook /> },
+    { href: "/books", label: "Devocional", icon: <IconBook /> },
     { href: "/profile", label: "Meu Perfil", icon: <IconUser /> },
   ];
 

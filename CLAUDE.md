@@ -29,7 +29,7 @@ src/
 │   ├── (dashboard)/              # Páginas autenticadas (com sidebar)
 │   │   ├── layout.tsx            # Layout compartilhado: Sidebar + auth check
 │   │   ├── page.tsx              # Dashboard (home) — stats, hero, insights IA, calendário
-│   │   ├── books/page.tsx        # Livros da Bíblia (lista + grid de cards)
+│   │   ├── books/page.tsx        # Devocional (lista + grid de cards)
 │   │   ├── reports/page.tsx      # Relatórios (filtros, gráfico, tabela)
 │   │   ├── admin/page.tsx        # Painel admin (7 abas com ícones)
 │   │   ├── profile/page.tsx      # Perfil do usuário
@@ -62,8 +62,8 @@ src/
 | Rota | Arquivo | Descrição |
 |------|---------|-----------|
 | `/` | `(dashboard)/page.tsx` | Dashboard com stats, hero, insights IA, calendário |
-| `/books` | `(dashboard)/books/page.tsx` | Livros da Bíblia (lista lateral + grid cards azuis) |
-| `/reports` | `(dashboard)/reports/page.tsx` | Relatórios com gráfico e tabela |
+| `/books` | `(dashboard)/books/page.tsx` | Devocional (lista lateral + grid responsivo de cards azuis) |
+| `/reports` | `(dashboard)/reports/page.tsx` | Relatórios (filtros, insights, gráfico semanal, tabela por usuário) |
 | `/profile` | `(dashboard)/profile/page.tsx` | Perfil do usuário |
 | `/admin` | `(dashboard)/admin/page.tsx` | Painel admin (7 abas) |
 | `/session/[id]` | `(dashboard)/session/[id]/page.tsx` | Detalhe da sessão |
@@ -72,13 +72,20 @@ src/
 ### Design System v3 (`globals.css`)
 - CSS em `src/app/globals.css` — Design system v3 com CSS custom properties (:root + [data-theme="dark"])
 - ATENÇÃO: NÃO usar `@theme` inline do Tailwind v4 — apenas CSS custom properties padrão
-- Dark mode (tema principal): bg `#0c0c0e`, surface `#151518`, accent `#f5a623`
+- Dark mode (tema principal): bg `#0c0c0e`, surface `#141416`, accent `#f5a623`
 - Light mode: bg `#f5f5f7`, surface `#ffffff`, accent `#d97706`
 - Cores SEMPRE via `var()`: `var(--text)`, `var(--accent)`, `var(--surface)`, etc.
 - NUNCA usar cores hardcoded (#hex) em componentes — sempre CSS variables
 - Classes de layout: `.dashboard-two-col`, `.books-layout`, `.reports-top-grid`, `.session-detail-grid`
+- Classes de reports: `.reports-stat-card`, `.reports-chart-card`, `.reports-table-card`, `.reports-table`
 - Dark mode: `data-theme="dark"` no `<html>`, salvo em localStorage como `devhub-theme`
+- Responsive breakpoints: Mobile (<768px), Small tablet (480-767px), Tablet (768-1023px), Desktop (1024-1279px), Large (≥1440px)
 - Imports: `@/features/<feature>/lib/<module>`, `@/features/<feature>/components/<Component>`, `@/shared/lib/<module>`
+
+### Navegação (Sidebar)
+- Menu principal: Início (/), Devocional (/books), Meu Perfil (/profile)
+- Admin: Relatórios (/reports), Painel Admin (/admin)
+- A seção "Devocional" (antes "Livros da Bíblia") mostra livros estudados com sessões de devocional
 
 ## Modelos do Banco (Prisma)
 - User: email, password?, name, role (ADMIN/MEMBER), church, team, subTeam, photoUrl, inviteToken

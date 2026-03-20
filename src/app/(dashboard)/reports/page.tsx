@@ -277,13 +277,20 @@ export default function ReportsPage() {
     URL.revokeObjectURL(url);
   }
 
+  // ─── Computed extras ────────────────────────────
+
+  const topMember = userStatsList.length > 0 ? userStatsList[0] : null;
+  const avgDuration = attendances.length > 0
+    ? Math.round(attendances.reduce((sum, a) => sum + (a.duration || 0), 0) / attendances.length / 60)
+    : 0;
+
   // ─── Render ──────────────────────────────────────
 
   return (
     <div style={{ maxWidth: 1100, margin: "0 auto" }}>
       {/* Top bar */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
-        <h1 style={{ fontSize: 26, fontWeight: 700, color: "var(--text)", margin: 0 }}>Relatórios</h1>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 28, flexWrap: "wrap", gap: 12 }}>
+        <h1 style={{ fontSize: 28, fontWeight: 700, color: "var(--text)", margin: 0, letterSpacing: "-0.02em" }}>Relatórios</h1>
         <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
           <select
             className="input-field"
@@ -322,91 +329,126 @@ export default function ReportsPage() {
         <div className="section-card">
           <div className="section-title" style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <IconFilter size={14} />
-            FILTROS
+            Filtros
           </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            <select
-              className="input-field"
-              value={filterUser}
-              onChange={e => setFilterUser(e.target.value)}
-              style={{ width: "100%", fontSize: 13 }}
-            >
-              <option value="">Todos os usuários</option>
-              {users.map(u => (
-                <option key={u.id} value={u.id}>{u.name}</option>
-              ))}
-            </select>
-            <select
-              className="input-field"
-              value={filterChurch}
-              onChange={e => setFilterChurch(e.target.value)}
-              style={{ width: "100%", fontSize: 13 }}
-            >
-              <option value="">Todas</option>
-              {churches.map(c => (
-                <option key={c} value={c}>{c}</option>
-              ))}
-            </select>
-            <select
-              className="input-field"
-              value={filterTeam}
-              onChange={e => setFilterTeam(e.target.value)}
-              style={{ width: "100%", fontSize: 13 }}
-            >
-              <option value="">Todas</option>
-              {teams.map(t => (
-                <option key={t} value={t}>{t}</option>
-              ))}
-            </select>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 500, color: "var(--text-muted)", marginBottom: 4, display: "block" }}>Usuário Específico</label>
+              <select
+                className="input-field"
+                value={filterUser}
+                onChange={e => setFilterUser(e.target.value)}
+                style={{ width: "100%", fontSize: 14 }}
+              >
+                <option value="">Todos os usuários</option>
+                {users.map(u => (
+                  <option key={u.id} value={u.id}>{u.name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 500, color: "var(--text-muted)", marginBottom: 4, display: "block" }}>Igreja</label>
+              <select
+                className="input-field"
+                value={filterChurch}
+                onChange={e => setFilterChurch(e.target.value)}
+                style={{ width: "100%", fontSize: 14 }}
+              >
+                <option value="">Todas</option>
+                {churches.map(c => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 500, color: "var(--text-muted)", marginBottom: 4, display: "block" }}>Equipe</label>
+              <select
+                className="input-field"
+                value={filterTeam}
+                onChange={e => setFilterTeam(e.target.value)}
+                style={{ width: "100%", fontSize: 14 }}
+              >
+                <option value="">Todas</option>
+                {teams.map(t => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
 
         {/* Stats row */}
         <div className="reports-stats-row">
-          <div className="section-card" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 24 }}>
-            <div style={{ color: "var(--success)", marginBottom: 8 }}>
+          <div className="reports-stat-card">
+            <div style={{ color: "var(--success)", marginBottom: 10 }}>
               <IconCheck size={28} />
             </div>
-            <div style={{ fontSize: 11, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>
-              TOTAL PRESENÇAS
+            <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>
+              Total Presenças
             </div>
-            <div style={{ fontSize: 32, fontWeight: 700, color: "var(--text)" }}>
+            <div style={{ fontSize: 36, fontWeight: 700, color: "var(--text)", lineHeight: 1 }}>
               {loading ? "..." : totalAttendances}
             </div>
           </div>
 
-          <div className="section-card" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 24 }}>
-            <div style={{ color: "var(--text-secondary)", marginBottom: 8 }}>
+          <div className="reports-stat-card">
+            <div style={{ color: "var(--text-secondary)", marginBottom: 10 }}>
               <IconPeople size={28} />
             </div>
-            <div style={{ fontSize: 11, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>
-              MEMBROS ÚNICOS
+            <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>
+              Membros Únicos
             </div>
-            <div style={{ fontSize: 32, fontWeight: 700, color: "var(--text)" }}>
+            <div style={{ fontSize: 36, fontWeight: 700, color: "var(--text)", lineHeight: 1 }}>
               {loading ? "..." : uniqueMembers}
             </div>
           </div>
 
-          <div className="section-card" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 24 }}>
-            <div style={{ color: "var(--accent)", marginBottom: 8 }}>
+          <div className="reports-stat-card">
+            <div style={{ color: "var(--accent)", marginBottom: 10 }}>
               <IconChart size={28} />
             </div>
-            <div style={{ fontSize: 11, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>
-              FREQ. MÉDIA
+            <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>
+              Freq. Média
             </div>
-            <div style={{ fontSize: 32, fontWeight: 700, color: "var(--accent)" }}>
+            <div style={{ fontSize: 36, fontWeight: 700, color: "var(--accent)", lineHeight: 1 }}>
               {loading ? "..." : `${avgFrequency}%`}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Chart section */}
-      <div className="section-card" style={{ marginBottom: 20 }}>
-        <div className="section-title" style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <IconChart size={14} />
-          Presenças por Semana
+      {/* Summary insights row */}
+      {!loading && userStatsList.length > 0 && (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 14, marginBottom: 24 }}>
+          <div className="section-card" style={{ padding: "16px 18px" }}>
+            <div style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 500, marginBottom: 4 }}>Sessões no mês</div>
+            <div style={{ fontSize: 22, fontWeight: 700, color: "var(--text)" }}>{uniqueSessions}</div>
+          </div>
+          {topMember && (
+            <div className="section-card" style={{ padding: "16px 18px" }}>
+              <div style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 500, marginBottom: 4 }}>Membro mais presente</div>
+              <div style={{ fontSize: 15, fontWeight: 600, color: "var(--text)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{topMember.name}</div>
+              <div style={{ fontSize: 13, color: "var(--accent)", fontWeight: 600 }}>{topMember.attendances} presenças</div>
+            </div>
+          )}
+          {avgDuration > 0 && (
+            <div className="section-card" style={{ padding: "16px 18px" }}>
+              <div style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 500, marginBottom: 4 }}>Duração média</div>
+              <div style={{ fontSize: 22, fontWeight: 700, color: "var(--text)" }}>{avgDuration}min</div>
+            </div>
+          )}
+          <div className="section-card" style={{ padding: "16px 18px" }}>
+            <div style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 500, marginBottom: 4 }}>Período</div>
+            <div style={{ fontSize: 15, fontWeight: 600, color: "var(--text)" }}>{MONTH_NAMES[month - 1]} {year}</div>
+          </div>
         </div>
+      )}
+
+      {/* Chart section */}
+      <div className="reports-chart-card">
+        <h2 style={{ fontSize: 18, fontWeight: 700, color: "var(--text)", margin: "0 0 20px" }}>
+          Presenças por Semana
+        </h2>
         <div style={{ width: "100%", height: 280 }}>
           {loading ? (
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "var(--text-muted)" }}>
@@ -415,30 +457,33 @@ export default function ReportsPage() {
           ) : (
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={weeklyData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
                 <XAxis
                   dataKey="name"
-                  tick={{ fill: "var(--text-muted)", fontSize: 12 }}
+                  tick={{ fill: "var(--text-muted)", fontSize: 13 }}
                   axisLine={{ stroke: "var(--border)" }}
-                  tickLine={{ stroke: "var(--border)" }}
+                  tickLine={false}
                 />
                 <YAxis
-                  tick={{ fill: "var(--text-muted)", fontSize: 12 }}
-                  axisLine={{ stroke: "var(--border)" }}
-                  tickLine={{ stroke: "var(--border)" }}
+                  tick={{ fill: "var(--text-muted)", fontSize: 13 }}
+                  axisLine={false}
+                  tickLine={false}
                   allowDecimals={false}
                 />
                 <Tooltip
                   contentStyle={{
                     backgroundColor: "var(--surface)",
                     border: "1px solid var(--border)",
-                    borderRadius: 8,
+                    borderRadius: 10,
                     color: "var(--text)",
-                    fontSize: 13,
+                    fontSize: 14,
+                    padding: "10px 14px",
+                    boxShadow: "var(--shadow-md)",
                   }}
                   cursor={{ fill: "var(--surface-hover)" }}
+                  labelStyle={{ fontWeight: 600, marginBottom: 4 }}
                 />
-                <Bar dataKey="presenças" fill="#f5a623" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="presenças" fill="var(--accent)" radius={[6, 6, 0, 0]} maxBarSize={60} />
               </BarChart>
             </ResponsiveContainer>
           )}
@@ -446,11 +491,10 @@ export default function ReportsPage() {
       </div>
 
       {/* Table section */}
-      <div className="section-card">
-        <div className="section-title" style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <IconPeople size={14} />
+      <div className="reports-table-card">
+        <h2 style={{ fontSize: 18, fontWeight: 700, color: "var(--text)", margin: "0 0 20px" }}>
           Detalhamento por Usuário
-        </div>
+        </h2>
 
         {loading ? (
           <div style={{ padding: 40, textAlign: "center", color: "var(--text-muted)" }}>Carregando...</div>
@@ -460,28 +504,20 @@ export default function ReportsPage() {
           </div>
         ) : (
           <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <table className="reports-table">
               <thead>
                 <tr>
-                  <th style={{ textAlign: "left", padding: "10px 12px", fontSize: 11, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em", borderBottom: "1px solid var(--border)" }}>
-                    MEMBRO
-                  </th>
-                  <th style={{ textAlign: "center", padding: "10px 12px", fontSize: 11, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em", borderBottom: "1px solid var(--border)" }}>
-                    PRESENÇAS
-                  </th>
-                  <th style={{ textAlign: "left", padding: "10px 12px", fontSize: 11, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em", borderBottom: "1px solid var(--border)", minWidth: 160 }}>
-                    FREQUÊNCIA
-                  </th>
-                  <th style={{ textAlign: "right", padding: "10px 12px", fontSize: 11, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em", borderBottom: "1px solid var(--border)" }}>
-                    ÚLTIMA PRESENÇA
-                  </th>
+                  <th style={{ textAlign: "left" }}>Membro</th>
+                  <th style={{ textAlign: "center" }}>Presenças</th>
+                  <th style={{ textAlign: "left", minWidth: 180 }}>Frequência</th>
+                  <th style={{ textAlign: "right" }}>Última Presença</th>
                 </tr>
               </thead>
               <tbody>
                 {userStatsList.map(u => (
-                  <tr key={u.userId} style={{ borderBottom: "1px solid var(--border)" }}>
-                    <td style={{ padding: "12px 12px" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <tr key={u.userId}>
+                    <td>
+                      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                         <div
                           className="avatar-sm"
                           style={{ backgroundColor: getAvatarColor(u.name) }}
@@ -491,10 +527,10 @@ export default function ReportsPage() {
                         <span style={{ fontSize: 14, fontWeight: 500, color: "var(--text)" }}>{u.name}</span>
                       </div>
                     </td>
-                    <td style={{ textAlign: "center", padding: "12px 12px", fontSize: 14, fontWeight: 600, color: "var(--text)" }}>
+                    <td style={{ textAlign: "center", fontSize: 15, fontWeight: 600, color: "var(--text)" }}>
                       {u.attendances}
                     </td>
-                    <td style={{ padding: "12px 12px" }}>
+                    <td>
                       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                         <div className="progress-bar" style={{ flex: 1 }}>
                           <div
@@ -510,7 +546,7 @@ export default function ReportsPage() {
                         </span>
                       </div>
                     </td>
-                    <td style={{ textAlign: "right", padding: "12px 12px", fontSize: 13, color: "var(--text-secondary)" }}>
+                    <td style={{ textAlign: "right", fontSize: 13, color: "var(--text-secondary)" }}>
                       {u.lastPresence ? formatDate(u.lastPresence) : "-"}
                     </td>
                   </tr>
