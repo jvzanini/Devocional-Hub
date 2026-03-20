@@ -13,11 +13,6 @@ interface SidebarProps {
   signOutAction: () => Promise<void>;
 }
 
-function getFirstName(fullName: string): string {
-  const parts = fullName.trim().split(/\s+/);
-  return parts[0] || "Usuário";
-}
-
 /* ─── Icons ───────────────────────────────────── */
 
 function IconHome() {
@@ -28,10 +23,26 @@ function IconHome() {
   );
 }
 
+function IconBook() {
+  return (
+    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
+    </svg>
+  );
+}
+
 function IconUser() {
   return (
     <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+    </svg>
+  );
+}
+
+function IconChart() {
+  return (
+    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
     </svg>
   );
 }
@@ -85,14 +96,6 @@ function IconX() {
   );
 }
 
-function IconBook() {
-  return (
-    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
-    </svg>
-  );
-}
-
 /* ─── Theme Toggle ───────────────────────────── */
 
 function ThemeToggle() {
@@ -135,12 +138,10 @@ export function Sidebar({
   const [mobileOpen, setMobileOpen] = useState(false);
   const isAdmin = userRole === "ADMIN";
 
-  // Close sidebar on route change
   useEffect(() => {
     setMobileOpen(false);
   }, [pathname]);
 
-  // Close on Escape
   useEffect(() => {
     if (!mobileOpen) return;
     function handleKeyDown(e: KeyboardEvent) {
@@ -150,7 +151,6 @@ export function Sidebar({
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [mobileOpen]);
 
-  // Prevent body scroll when mobile sidebar is open
   useEffect(() => {
     if (mobileOpen) {
       document.body.style.overflow = "hidden";
@@ -160,18 +160,27 @@ export function Sidebar({
     return () => { document.body.style.overflow = ""; };
   }, [mobileOpen]);
 
-  const navItems = [
+  const menuItems = [
     { href: "/", label: "Início", icon: <IconHome /> },
+    { href: "/books", label: "Livros da Bíblia", icon: <IconBook /> },
     { href: "/profile", label: "Meu Perfil", icon: <IconUser /> },
+  ];
+
+  const reportItems = [
+    { href: "/reports", label: "Relatórios", icon: <IconChart /> },
   ];
 
   const adminItems = [
     { href: "/admin", label: "Painel Admin", icon: <IconShield /> },
   ];
 
+  function isActive(href: string) {
+    if (href === "/") return pathname === "/";
+    return pathname.startsWith(href);
+  }
+
   return (
     <>
-      {/* Mobile hamburger */}
       <button
         className="sidebar-mobile-trigger"
         onClick={() => setMobileOpen(true)}
@@ -180,7 +189,6 @@ export function Sidebar({
         <IconMenu />
       </button>
 
-      {/* Scrim overlay */}
       {mobileOpen && (
         <div
           className="sidebar-scrim visible"
@@ -189,9 +197,7 @@ export function Sidebar({
         />
       )}
 
-      {/* Sidebar */}
       <aside className={`app-sidebar ${mobileOpen ? "open" : ""}`}>
-        {/* Mobile close button */}
         <button
           className="sidebar-mobile-close"
           onClick={() => setMobileOpen(false)}
@@ -200,23 +206,23 @@ export function Sidebar({
           <IconX />
         </button>
 
-        {/* Logo */}
         <div className="sidebar-logo">
           <div className="sidebar-logo-icon">
-            <IconBook />
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
+            </svg>
           </div>
           <span className="sidebar-logo-text">Devocional Hub</span>
         </div>
 
-        {/* Navigation */}
         <nav className="sidebar-nav">
           <div className="sidebar-nav-section">
             <span className="sidebar-nav-label">Menu</span>
-            {navItems.map((item) => (
+            {menuItems.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`sidebar-nav-item ${pathname === item.href ? "active" : ""}`}
+                className={`sidebar-nav-item ${isActive(item.href) ? "active" : ""}`}
               >
                 {item.icon}
                 <span>{item.label}</span>
@@ -226,12 +232,28 @@ export function Sidebar({
 
           {isAdmin && (
             <div className="sidebar-nav-section">
+              <span className="sidebar-nav-label">Relatórios</span>
+              {reportItems.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`sidebar-nav-item ${isActive(item.href) ? "active" : ""}`}
+                >
+                  {item.icon}
+                  <span>{item.label}</span>
+                </Link>
+              ))}
+            </div>
+          )}
+
+          {isAdmin && (
+            <div className="sidebar-nav-section">
               <span className="sidebar-nav-label">Administração</span>
               {adminItems.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`sidebar-nav-item ${pathname.startsWith(item.href) && item.href !== "/" ? "active" : ""}`}
+                  className={`sidebar-nav-item ${isActive(item.href) ? "active" : ""}`}
                 >
                   {item.icon}
                   <span>{item.label}</span>
@@ -241,7 +263,6 @@ export function Sidebar({
           )}
         </nav>
 
-        {/* Footer */}
         <div className="sidebar-footer">
           <ThemeToggle />
 
@@ -254,11 +275,11 @@ export function Sidebar({
                   loading="lazy"
                 />
               ) : (
-                <span>{userName.charAt(0).toUpperCase()}</span>
+                <span>{userName.charAt(0).toUpperCase()}{userName.split(/\s+/)[1]?.charAt(0).toUpperCase() || ""}</span>
               )}
             </div>
             <div className="sidebar-user-info">
-              <span className="sidebar-user-name">{getFirstName(userName)}</span>
+              <span className="sidebar-user-name">{userName}</span>
               <span className="sidebar-user-email">{userEmail}</span>
             </div>
           </div>
@@ -266,7 +287,7 @@ export function Sidebar({
           <form action={signOutAction}>
             <button type="submit" className="sidebar-signout">
               <IconLogout />
-              <span>Sair</span>
+              <span>Sair da conta</span>
             </button>
           </form>
         </div>

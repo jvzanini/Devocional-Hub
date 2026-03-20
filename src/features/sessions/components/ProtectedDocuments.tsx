@@ -88,7 +88,7 @@ export default function ProtectedDocuments({ sessionId, documents, hasPassword }
 
   if (documents.length === 0) {
     return (
-      <p style={{ fontSize: 13, color: "#a8a29e", textAlign: "center", padding: "14px 0" }}>
+      <p style={{ fontSize: 13, color: "var(--text-muted)", textAlign: "center", padding: "14px 0" }}>
         Nenhum arquivo gerado ainda.
       </p>
     );
@@ -133,21 +133,21 @@ export default function ProtectedDocuments({ sessionId, documents, hasPassword }
                 <div style={{ minWidth: 0 }}>
                   <div style={{ fontSize: 14, fontWeight: 500, color: doc.color }}>
                     {doc.label}
-                    {isLocked && <span style={{ fontSize: 11, marginLeft: 6, color: "#a8a29e" }}>(protegido)</span>}
+                    {isLocked && <span style={{ fontSize: 11, marginLeft: 6, color: "var(--text-muted)" }}>(protegido)</span>}
                   </div>
-                  <div style={{ fontSize: 11, color: "#a8a29e", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  <div style={{ fontSize: 11, color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {doc.fileName}
                   </div>
                 </div>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
-                {doc.fileSize && <span style={{ fontSize: 11, color: "#a8a29e" }}>{fmtSize(doc.fileSize)}</span>}
+                {doc.fileSize && <span style={{ fontSize: 11, color: "var(--text-muted)" }}>{fmtSize(doc.fileSize)}</span>}
                 {isLocked ? (
-                  <svg style={{ width: 16, height: 16, color: "#a8a29e" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <svg style={{ width: 16, height: 16, color: "var(--text-muted)" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
                   </svg>
                 ) : (
-                  <svg style={{ width: 16, height: 16, color: "#a8a29e" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <svg style={{ width: 16, height: 16, color: "var(--text-muted)" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
                   </svg>
                 )}
@@ -171,22 +171,22 @@ export default function ProtectedDocuments({ sessionId, documents, hasPassword }
           <div
             onClick={(e) => e.stopPropagation()}
             style={{
-              backgroundColor: "white", borderRadius: 16, padding: 24,
-              maxWidth: 400, width: "100%", boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
+              backgroundColor: "var(--surface)", borderRadius: 16, padding: 24,
+              maxWidth: 400, width: "100%", boxShadow: "0 20px 60px rgba(0,0,0,0.4)",
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
               <div style={{
-                width: 40, height: 40, borderRadius: 10, backgroundColor: "#fef3c7",
+                width: 40, height: 40, borderRadius: 10, backgroundColor: "var(--warning-bg)",
                 display: "flex", alignItems: "center", justifyContent: "center",
               }}>
-                <svg style={{ width: 20, height: 20, color: "#d97706" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <svg style={{ width: 20, height: 20, color: "var(--accent)" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
                 </svg>
               </div>
               <div>
-                <div style={{ fontWeight: 700, fontSize: 16, color: "#1c1917" }}>Conteúdo Protegido</div>
-                <div style={{ fontSize: 13, color: "#78716c" }}>Digite a senha do devocional</div>
+                <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)" }}>Conteúdo Protegido</div>
+                <div style={{ fontSize: 13, color: "var(--text-muted)" }}>Digite a senha do devocional</div>
               </div>
             </div>
 
@@ -199,9 +199,9 @@ export default function ProtectedDocuments({ sessionId, documents, hasPassword }
               autoFocus
               style={{
                 width: "100%", padding: "10px 14px", borderRadius: 10,
-                border: error ? "1.5px solid #ef4444" : "1.5px solid #e7e5e4",
+                border: error ? "1.5px solid var(--error)" : "1.5px solid var(--border)",
                 fontSize: 15, outline: "none", marginBottom: 8,
-                boxSizing: "border-box",
+                boxSizing: "border-box", backgroundColor: "var(--surface-hover)", color: "var(--text)",
               }}
             />
 
@@ -212,23 +212,16 @@ export default function ProtectedDocuments({ sessionId, documents, hasPassword }
             <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
               <button
                 onClick={() => setShowModal(false)}
-                style={{
-                  flex: 1, padding: "10px 16px", borderRadius: 10,
-                  border: "1px solid #e7e5e4", backgroundColor: "white",
-                  fontSize: 14, cursor: "pointer", color: "#57534e",
-                }}
+                className="btn-ghost"
+                style={{ flex: 1, borderRadius: 10 }}
               >
                 Cancelar
               </button>
               <button
                 onClick={verifyPassword}
                 disabled={loading || !password}
-                style={{
-                  flex: 1, padding: "10px 16px", borderRadius: 10,
-                  border: "none", backgroundColor: loading ? "#a8a29e" : "#1c1917",
-                  color: "white", fontSize: 14, fontWeight: 600,
-                  cursor: loading ? "wait" : "pointer",
-                }}
+                className="btn-primary"
+                style={{ flex: 1, borderRadius: 10 }}
               >
                 {loading ? "Verificando..." : "Desbloquear"}
               </button>

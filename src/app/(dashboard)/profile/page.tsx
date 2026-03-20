@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import Link from "next/link";
 
 interface ZoomIdentifier { id: string; value: string; type: string; locked: boolean; }
 interface UserProfile {
@@ -153,150 +152,179 @@ export default function ProfilePage() {
   const hasMultipleZoom = (user.zoomIdentifiers?.length || 0) > 1;
 
   return (
-    <div style={{ maxWidth: 560 }}>
-      <h1 style={{ fontSize: 22, fontWeight: 700, color: "var(--text)", marginBottom: 24 }}>Meu Perfil</h1>
-        {/* Avatar + Upload */}
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 32 }}>
-          <div
-            onClick={() => fileRef.current?.click()}
-            style={{
-              width: 100, height: 100, borderRadius: "50%", overflow: "hidden",
-              cursor: "pointer", border: "3px solid #fde68a",
-              boxShadow: "0 8px 24px rgba(217,119,6,0.12)",
-              position: "relative", backgroundColor: "#f5f5f4",
-              display: "flex", alignItems: "center", justifyContent: "center",
-            }}
-          >
-            {uploading && (
-              <div style={{
-                position: "absolute", inset: 0, backgroundColor: "rgba(0,0,0,0.4)",
-                display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2,
-              }}>
-                <svg style={{ width: 24, height: 24, color: "#fff", animation: "spin 1s linear infinite" }} fill="none" viewBox="0 0 24 24">
-                  <circle style={{ opacity: 0.25 }} cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path style={{ opacity: 0.75 }} fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                </svg>
-              </div>
-            )}
-            {photoPreview ? (
-              <img src={photoPreview} alt="Foto" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-            ) : (
-              <span style={{ fontSize: 40, fontWeight: 700, color: "#d97706" }}>
-                {user.name.charAt(0).toUpperCase()}
-              </span>
-            )}
+    <div style={{ maxWidth: 600, margin: "0 auto" }}>
+      {/* Title */}
+      <h1 style={{ fontSize: 24, fontWeight: 700, color: "var(--text)", textAlign: "center", marginBottom: 28 }}>
+        Meu Perfil
+      </h1>
+
+      {/* Avatar + Upload */}
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 16 }}>
+        <div
+          onClick={() => fileRef.current?.click()}
+          className="avatar-lg"
+          style={{
+            cursor: "pointer",
+            position: "relative",
+            overflow: "hidden",
+            backgroundColor: "var(--surface)",
+          }}
+        >
+          {uploading && (
             <div style={{
-              position: "absolute", bottom: 0, left: 0, right: 0, height: 30,
-              backgroundColor: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center",
+              position: "absolute", inset: 0, backgroundColor: "rgba(0,0,0,0.4)",
+              display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2,
+              borderRadius: "50%",
             }}>
-              <svg style={{ width: 16, height: 16, color: "#fff" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
-                <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z" />
+              <svg style={{ width: 24, height: 24, color: "#fff", animation: "spin 1s linear infinite" }} fill="none" viewBox="0 0 24 24">
+                <circle style={{ opacity: 0.25 }} cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path style={{ opacity: 0.75 }} fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
               </svg>
             </div>
-          </div>
-          <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={handlePhotoChange} style={{ display: "none" }} />
-          <p style={{ fontSize: 12, color: "#a8a29e", marginTop: 8 }}>Clique para alterar</p>
+          )}
+          {photoPreview ? (
+            <img src={photoPreview} alt="Foto" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%" }} />
+          ) : (
+            <span style={{ fontSize: 40, fontWeight: 700, color: "var(--accent)" }}>
+              {user.name.charAt(0).toUpperCase()}
+            </span>
+          )}
+        </div>
+        <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={handlePhotoChange} style={{ display: "none" }} />
+      </div>
+
+      {/* Role badge */}
+      <div style={{ display: "flex", justifyContent: "center", marginBottom: 28 }}>
+        <span className={`badge badge-${user.role === "ADMIN" ? "warning" : "info"}`} style={{ padding: "4px 14px" }}>
+          {user.role === "ADMIN" ? "ADMIN" : "MEMBRO"}
+        </span>
+      </div>
+
+      {/* DADOS PESSOAIS section */}
+      <div className="section-card" style={{ marginBottom: 16 }}>
+        <div className="section-title">Dados pessoais</div>
+
+        {/* Nome Completo */}
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>
+            Nome Completo
+          </label>
+          <input
+            className="input-field"
+            value={name}
+            onChange={e => setName(e.target.value)}
+            placeholder="Seu nome completo"
+          />
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          {/* Nome */}
-          <div className="section-card" style={{ padding: 18 }}>
-            <label className="label">Nome</label>
-            <input className="input-field" value={name} onChange={e => setName(e.target.value)} placeholder="Seu nome" />
-          </div>
+        {/* Zoom ID / Email */}
+        <div>
+          <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>
+            Zoom ID / Email
+          </label>
 
-          {/* Zoom Identifier */}
-          <div className="section-card" style={{ padding: 18 }}>
-            <label className="label">Email ou Username do Zoom</label>
-            <p style={{ fontSize: 12, color: "#a8a29e", marginBottom: 8 }}>
-              Usado para registrar sua presença automaticamente.
-              {zoomLocked && " Para alteração, entre em contato com a equipe do Devocional Hub."}
-            </p>
-
-            {/* Show all zoom identifiers when there are multiple */}
-            {hasMultipleZoom ? (
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {user.zoomIdentifiers.map((zi, idx) => (
-                  <div key={zi.id}>
-                    <input
-                      className="input-field"
-                      value={idx === 0 ? zoomValue : zi.value}
-                      onChange={idx === 0 && !zi.locked ? e => setZoomValue(e.target.value) : undefined}
-                      readOnly={idx !== 0 || zi.locked}
-                      disabled={zi.locked}
-                      style={{ opacity: zi.locked ? 0.6 : 1 }}
-                    />
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <input
-                className="input-field"
-                value={zoomValue}
-                onChange={e => setZoomValue(e.target.value)}
-                placeholder="seu.email@zoom.com"
-                disabled={zoomLocked}
-                style={{ opacity: zoomLocked ? 0.6 : 1 }}
-              />
-            )}
-
-            {zoomLocked && (
-              <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 6, fontSize: 12, color: "#059669" }}>
-                <svg width={14} height={14} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
-                </svg>
-                Correlação confirmada
-              </div>
-            )}
-          </div>
-
-          {/* Info cards */}
-          <div className="section-card" style={{ padding: 18 }}>
-            <label className="label" style={{ marginBottom: 10 }}>Informações</label>
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              {[
-                { label: "Email", value: user.email, icon: "M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" },
-                { label: "Igreja", value: user.church || "—", icon: "M12 21v-8.25M15.75 21v-8.25M8.25 21v-8.25M3 9l9-6 9 6m-1.5 12V10.332A48.36 48.36 0 0012 9.75c-2.551 0-5.056.2-7.5.582V21M3 21h18M12 6.75h.008v.008H12V6.75z" },
-                { label: "Equipe", value: user.team || "—", icon: "M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" },
-                { label: "SubEquipe", value: user.subTeam || "—", icon: "M5.25 8.25h15m-16.5 7.5h15m-1.8-13.5l-3.9 19.5m-2.1-19.5l-3.9 19.5" },
-              ].map(item => (
-                <div key={item.label} style={{ display: "flex", alignItems: "center", gap: 12, padding: "8px 0", borderBottom: "1px solid #f5f5f4" }}>
-                  <div style={{ width: 34, height: 34, borderRadius: 8, backgroundColor: "#fafaf9", border: "1px solid #e7e5e4", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                    <svg style={{ width: 16, height: 16, color: "#78716c" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d={item.icon} />
-                    </svg>
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 13, color: "#a8a29e", fontWeight: 500 }}>{item.label}</div>
-                    <div style={{ fontSize: 15, color: "#1c1917", fontWeight: 500 }}>{item.value}</div>
-                  </div>
+          {hasMultipleZoom ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {user.zoomIdentifiers.map((zi, idx) => (
+                <div key={zi.id}>
+                  <input
+                    className="input-field"
+                    value={idx === 0 ? zoomValue : zi.value}
+                    onChange={idx === 0 && !zi.locked ? e => setZoomValue(e.target.value) : undefined}
+                    readOnly={idx !== 0 || zi.locked}
+                    disabled={zi.locked}
+                    style={{ opacity: zi.locked ? 0.6 : 1 }}
+                  />
                 </div>
               ))}
             </div>
-            <p style={{ fontSize: 12, color: "#a8a29e", marginTop: 12, textAlign: "center" }}>
-              Apenas o administrador pode alterar estes dados
-            </p>
-          </div>
+          ) : (
+            <input
+              className="input-field"
+              value={zoomValue}
+              onChange={e => setZoomValue(e.target.value)}
+              placeholder="seu.email@zoom.com"
+              disabled={zoomLocked}
+              style={{ opacity: zoomLocked ? 0.6 : 1 }}
+            />
+          )}
 
-          {/* Role badge */}
-          <div style={{ display: "flex", justifyContent: "center" }}>
-            <span className={`badge badge-${user.role === "ADMIN" ? "warning" : "info"}`} style={{ padding: "4px 14px" }}>
-              {user.role === "ADMIN" ? "Administrador" : "Membro"}
-            </span>
-          </div>
+          <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 6 }}>
+            Usado para registrar sua presença automaticamente.
+            {zoomLocked && " Para alteração, entre em contato com a equipe do Devocional Hub."}
+          </p>
 
-          {/* Save button */}
-          <button onClick={save} disabled={saving} className="btn-primary" style={{ width: "100%", padding: "12px 0", fontSize: 16, borderRadius: 12 }}>
-            {saving ? (uploading ? "Enviando foto..." : "Salvando...") : "Salvar Alterações"}
-          </button>
-
-          {msg && (
-            <div style={{ textAlign: "center" }}>
-              <span className={`badge badge-${msg.ok ? "success" : "error"}`} style={{ padding: "4px 14px" }}>{msg.text}</span>
+          {zoomLocked && (
+            <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 6, fontSize: 12, color: "var(--success)" }}>
+              <svg width={14} height={14} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+              </svg>
+              Correlação confirmada
             </div>
           )}
         </div>
       </div>
+
+      {/* INFORMAÇÕES DA IGREJA section */}
+      <div className="section-card" style={{ marginBottom: 20 }}>
+        <div className="section-title">Informações da Igreja</div>
+        <div style={{ display: "flex", flexDirection: "column" }}>
+          {[
+            { label: "Email", value: user.email, icon: "M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" },
+            { label: "Igreja", value: user.church || "—", icon: "M12 21v-8.25M15.75 21v-8.25M8.25 21v-8.25M3 9l9-6 9 6m-1.5 12V10.332A48.36 48.36 0 0012 9.75c-2.551 0-5.056.2-7.5.582V21M3 21h18M12 6.75h.008v.008H12V6.75z" },
+            { label: "Equipe", value: user.team || "—", icon: "M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" },
+            { label: "Sub Equipe", value: user.subTeam || "—", icon: "M5.25 8.25h15m-16.5 7.5h15m-1.8-13.5l-3.9 19.5m-2.1-19.5l-3.9 19.5" },
+          ].map((item, index) => (
+            <div
+              key={item.label}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                padding: "12px 0",
+                borderBottom: index < 3 ? "1px solid var(--border)" : "none",
+              }}
+            >
+              <div style={{
+                width: 34,
+                height: 34,
+                borderRadius: 8,
+                backgroundColor: "var(--surface-hover)",
+                border: "1px solid var(--border)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+              }}>
+                <svg style={{ width: 16, height: 16, color: "var(--text-muted)" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d={item.icon} />
+                </svg>
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.04em" }}>{item.label}</div>
+                <div style={{ fontSize: 15, color: "var(--text)", fontWeight: 600 }}>{item.value}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Save button */}
+      <button
+        onClick={save}
+        disabled={saving}
+        className="btn-primary"
+        style={{ width: "100%", padding: "12px 0", fontSize: 16, borderRadius: 12 }}
+      >
+        {saving ? (uploading ? "Enviando foto..." : "Salvando...") : "Salvar Alterações"}
+      </button>
+
+      {/* Success/error message */}
+      {msg && (
+        <div style={{ textAlign: "center", marginTop: 12 }}>
+          <span className={`badge badge-${msg.ok ? "success" : "error"}`} style={{ padding: "4px 14px" }}>{msg.text}</span>
+        </div>
+      )}
+    </div>
   );
 }

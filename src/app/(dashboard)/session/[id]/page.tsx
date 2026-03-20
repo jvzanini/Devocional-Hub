@@ -2,26 +2,27 @@ import { auth } from "@/features/auth/lib/auth";
 import { redirect, notFound } from "next/navigation";
 import { prisma } from "@/shared/lib/db";
 import Link from "next/link";
-import { formatDate, formatDateTime } from "@/shared/lib/utils";
-import { Badge } from "@/shared/components/ui/badge";
+import { formatDateShort, formatDateTime } from "@/shared/lib/utils";
 import { DocType, PipelineStatus } from "@prisma/client";
 import ProtectedDocuments from "@/features/sessions/components/ProtectedDocuments";
 
 const DOC_CFG: Record<DocType, { label: string; bg: string; color: string; border: string; adminOnly?: boolean; isProtected?: boolean }> = {
-  TRANSCRIPT_RAW: { label: "Transcrição Bruta", bg: "#f5f5f4", color: "#57534e", border: "#d6d3d1" },
-  TRANSCRIPT_CLEAN: { label: "Transcrição Limpa", bg: "#eff6ff", color: "#2563eb", border: "#bfdbfe" },
-  BIBLE_TEXT: { label: "Texto Bíblico (NVI)", bg: "#fffbeb", color: "#b45309", border: "#fde68a" },
-  INFOGRAPHIC: { label: "Infográfico", bg: "#fff7ed", color: "#ea580c", border: "#fed7aa", isProtected: true },
-  SLIDES: { label: "Slides", bg: "#ede9fe", color: "#7c3aed", border: "#c4b5fd", isProtected: true },
-  AUDIO_OVERVIEW: { label: "Vídeo Resumo (PT-BR)", bg: "#fdf2f8", color: "#db2777", border: "#fbcfe8", isProtected: true },
+  TRANSCRIPT_RAW: { label: "Transcrição Bruta", bg: "rgba(113,113,122,0.1)", color: "#a1a1aa", border: "rgba(113,113,122,0.2)" },
+  TRANSCRIPT_CLEAN: { label: "Transcrição Limpa", bg: "rgba(59,130,246,0.1)", color: "#3b82f6", border: "rgba(59,130,246,0.2)" },
+  BIBLE_TEXT: { label: "Texto Bíblico (NVI)", bg: "rgba(245,166,35,0.1)", color: "#f5a623", border: "rgba(245,166,35,0.2)" },
+  INFOGRAPHIC: { label: "Infográfico", bg: "rgba(234,88,12,0.1)", color: "#ea580c", border: "rgba(234,88,12,0.2)", isProtected: true },
+  SLIDES: { label: "Slides", bg: "rgba(124,58,237,0.1)", color: "#7c3aed", border: "rgba(124,58,237,0.2)", isProtected: true },
+  AUDIO_OVERVIEW: { label: "Vídeo Resumo (PT-BR)", bg: "rgba(219,39,119,0.1)", color: "#db2777", border: "rgba(219,39,119,0.2)", isProtected: true },
 };
 
-const ST: Record<PipelineStatus, { label: string; variant: "success" | "error" | "warning" | "info" }> = {
+const ST: Record<PipelineStatus, { label: string; variant: string }> = {
   COMPLETED: { label: "Concluído", variant: "success" },
   ERROR: { label: "Erro no pipeline", variant: "error" },
   RUNNING: { label: "Processando...", variant: "warning" },
   PENDING: { label: "Pendente", variant: "info" },
 };
+
+const AVATAR_COLORS = ['#f59e0b', '#ea580c', '#059669', '#7c3aed', '#6b7280', '#2563eb'];
 
 function fmtDuration(seconds: number) {
   const h = Math.floor(seconds / 3600);
@@ -30,8 +31,11 @@ function fmtDuration(seconds: number) {
   return `${m}min`;
 }
 
-function fmtTime(date: Date) {
-  return date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" });
+function fmtFileSize(bytes: number | null): string {
+  if (!bytes) return "";
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 export default async function SessionPage({ params }: { params: Promise<{ id: string }> }) {
@@ -101,66 +105,104 @@ export default async function SessionPage({ params }: { params: Promise<{ id: st
       };
     });
 
+  const formattedDate = formatDateShort(s.date);
+  const bookName = s.chapterRef ? `Livro de ${s.chapterRef.split(/\s+\d/)[0]}` : null;
+
   return (
     <div>
-      {/* Page Header */}
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20, flexWrap: "wrap" }}>
-        <Link href="/" className="btn-icon" style={{ textDecoration: "none" }}>
-          <svg width={16} height={16} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
-        </Link>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-            <h1 style={{ fontWeight: 700, fontSize: 22, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.chapterRef || "Devocional"}</h1>
-            <Badge variant={st.variant}>{st.label}</Badge>
-          </div>
-          <div style={{ fontSize: 14, color: "var(--text-muted)", marginTop: 2 }}>{formatDate(s.date)}</div>
-        </div>
+      {/* Back link */}
+      <Link
+        href="/"
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 6,
+          color: "var(--text-secondary)",
+          textDecoration: "none",
+          fontSize: 14,
+          fontWeight: 500,
+          marginBottom: 20,
+        }}
+      >
+        <svg width={16} height={16} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+        </svg>
+        Voltar para o Início
+      </Link>
+
+      {/* Title + Badge */}
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8, flexWrap: "wrap" }}>
+        <h1 style={{ fontSize: 28, fontWeight: 700, color: "var(--text)" }}>
+          {s.chapterRef || "Devocional"}
+        </h1>
+        <span className={`badge badge-${st.variant}`}>{st.label}</span>
       </div>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-        {/* Erro */}
-        {s.status === "ERROR" && s.errorMessage && (
-          <div className="alert-error">
-            <div style={{ fontWeight: 600, fontSize: 13, color: "#dc2626", marginBottom: 6 }}>Erro no pipeline</div>
-            <div style={{ fontSize: 12, color: "#b91c1c", fontFamily: "monospace", backgroundColor: "rgba(220,38,38,0.06)", padding: "8px 12px", borderRadius: 8, wordBreak: "break-all" }}>{s.errorMessage}</div>
-          </div>
+      {/* Metadata line */}
+      <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 24, fontSize: 14, color: "var(--text-muted)" }}>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+          <svg width={15} height={15} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
+          </svg>
+          {formattedDate}
+        </span>
+        {bookName && (
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+            <svg width={15} height={15} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
+            </svg>
+            {bookName}
+          </span>
         )}
+      </div>
 
-        {/* Resumo */}
-        {s.summary && (
-          <div className="section-card">
-            <div className="section-title">Resumo</div>
-            <p style={{ fontSize: 15, color: "#44403c", lineHeight: 1.7, whiteSpace: "pre-wrap" }}>{s.summary}</p>
+      {/* Erro */}
+      {s.status === "ERROR" && s.errorMessage && (
+        <div className="alert-error" style={{ marginBottom: 20 }}>
+          <div style={{ fontWeight: 600, fontSize: 13, color: "var(--error)", marginBottom: 6 }}>Erro no pipeline</div>
+          <div style={{ fontSize: 12, color: "var(--error)", fontFamily: "monospace", backgroundColor: "var(--error-bg)", padding: "8px 12px", borderRadius: 8, wordBreak: "break-all" }}>{s.errorMessage}</div>
+        </div>
+      )}
+
+      {/* Summary */}
+      {s.summary && (
+        <div className="section-card" style={{ marginBottom: 20 }}>
+          <div className="section-title" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <svg width={14} height={14} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+            </svg>
+            Resumo gerado por IA
           </div>
-        )}
+          <p style={{ fontSize: 15, color: "var(--text-secondary)", lineHeight: 1.7, whiteSpace: "pre-wrap" }}>{s.summary}</p>
+        </div>
+      )}
 
-        {/* Participantes */}
+      {/* Two-column grid */}
+      <div className="session-detail-grid" style={{ marginBottom: 20 }}>
+        {/* LEFT: Participants */}
         {s.participants.length > 0 && (
           <div className="section-card">
             <div className="section-title">Participantes ({s.participants.length})</div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {s.participants.map((p) => {
+            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              {s.participants.map((p, index) => {
                 const { displayName, isMember } = getParticipantDisplay(p.name, p.email);
+                const avatarColor = AVATAR_COLORS[index % AVATAR_COLORS.length];
                 return (
-                  <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", backgroundColor: "#fafaf9", borderRadius: 10, border: "1px solid #e7e5e4" }}>
-                    <div className="avatar-sm" style={{ width: 36, height: 36, fontSize: 14, flexShrink: 0 }}>
+                  <div key={p.id} className="participant-row" style={{ borderBottom: index < s.participants.length - 1 ? "1px solid var(--border)" : "none", paddingBottom: index < s.participants.length - 1 ? 10 : 0 }}>
+                    <div className="avatar-md" style={{ backgroundColor: avatarColor }}>
                       {displayName.charAt(0).toUpperCase()}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                        <span style={{ fontWeight: 600, fontSize: 15, color: "#1c1917" }}>{displayName}</span>
-                        <span className={`badge badge-${isMember ? "success" : "info"}`} style={{ fontSize: 10, padding: "1px 6px" }}>
-                          {isMember ? "Membro" : "Visitante"}
-                        </span>
+                      <div style={{ fontWeight: 600, fontSize: 15, color: "var(--text)" }}>{displayName}</div>
+                      <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
+                        {isMember ? "Membro" : "Visitante"}
                       </div>
                     </div>
-                    <div style={{ textAlign: "right", flexShrink: 0 }}>
-                      <div style={{ fontSize: 13, color: "#57534e" }}>
-                        {fmtTime(p.joinTime)} → {fmtTime(p.leaveTime)}
-                      </div>
-                      <div style={{ fontSize: 11, color: "#d97706", fontWeight: 600 }}>
-                        {fmtDuration(p.duration)}
-                      </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0, color: "var(--text-muted)", fontSize: 13 }}>
+                      <svg width={14} height={14} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      {fmtDuration(p.duration)}
                     </div>
                   </div>
                 );
@@ -169,32 +211,31 @@ export default async function SessionPage({ params }: { params: Promise<{ id: st
           </div>
         )}
 
-        {/* Arquivos */}
+        {/* RIGHT: Files */}
         <div className="section-card">
-          <div className="section-title">Arquivos</div>
+          <div className="section-title">Arquivos da sessão</div>
           <ProtectedDocuments
             sessionId={id}
             documents={visibleDocs}
             hasPassword={!!s.contentPassword}
           />
         </div>
+      </div>
 
-        {/* Informações */}
-        <div className="section-card">
-          <div className="section-title">Informações</div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {[
-              { label: "Reunião Zoom", value: s.zoomMeetingId },
-              { label: "UUID", value: s.zoomUuid || "—" },
-              { label: "Criado em", value: formatDateTime(s.createdAt) },
-            ].map((item) => (
-              <div key={item.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13 }}>
-                <span style={{ color: "#78716c" }}>{item.label}</span>
-                <span style={{ color: "#44403c", fontFamily: "monospace", fontSize: 12, backgroundColor: "#f5f5f4", padding: "2px 8px", borderRadius: 6 }}>{item.value}</span>
-              </div>
-            ))}
-          </div>
-        </div>
+      {/* Bottom metadata */}
+      <div style={{
+        backgroundColor: "var(--surface-hover)",
+        borderRadius: 10,
+        padding: "14px 18px",
+        display: "flex",
+        gap: 24,
+        fontSize: 12,
+        fontFamily: "monospace",
+        color: "var(--text-muted)",
+        flexWrap: "wrap",
+      }}>
+        <span>Meeting ID: {s.zoomMeetingId || "N/A"}</span>
+        <span>Processado em: {formatDateTime(s.createdAt)}</span>
       </div>
     </div>
   );

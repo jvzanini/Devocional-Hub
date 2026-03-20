@@ -28,13 +28,15 @@ src/
 │   ├── (auth)/                   # Login, Invite (sem sidebar)
 │   ├── (dashboard)/              # Páginas autenticadas (com sidebar)
 │   │   ├── layout.tsx            # Layout compartilhado: Sidebar + auth check
-│   │   ├── page.tsx              # Dashboard (home)
-│   │   ├── admin/page.tsx        # Painel admin
+│   │   ├── page.tsx              # Dashboard (home) — stats, hero, insights IA, calendário
+│   │   ├── books/page.tsx        # Livros da Bíblia (lista + grid de cards)
+│   │   ├── reports/page.tsx      # Relatórios (filtros, gráfico, tabela)
+│   │   ├── admin/page.tsx        # Painel admin (7 abas com ícones)
 │   │   ├── profile/page.tsx      # Perfil do usuário
 │   │   └── session/[id]/page.tsx # Detalhe da sessão
 │   ├── api/                      # 23 API endpoints
 │   ├── layout.tsx                # Root layout (font, theme script)
-│   └── globals.css               # Design system com CSS variables + dark mode
+│   └── globals.css               # Design system v3 com CSS variables + dark mode
 ├── features/                     # Domínios de negócio
 │   ├── auth/lib/                 # Autenticação (NextAuth config)
 │   ├── sessions/                 # Sessões e presença
@@ -43,20 +45,38 @@ src/
 │   ├── dashboard/components/     # DashboardCalendar
 │   ├── admin/components/         # PipelineButton
 │   ├── bible/                    # Textos bíblicos
-│   │   ├── components/           # BibleBooksGrid
+│   │   ├── components/           # BooksPageClient, BibleBooksGrid (legado)
 │   │   └── lib/                  # bible.ts, bible-books.ts
 │   ├── pipeline/lib/             # Orquestração: ai.ts, pipeline.ts, notebooklm.ts, reading-plan-sync.ts
 │   ├── zoom/lib/                 # Integração Zoom (OAuth, recordings, participants)
 │   └── email/lib/                # Envio de emails (Gmail SMTP)
 ├── shared/                       # Código compartilhado entre features
 │   ├── components/               # Sidebar e componentes compartilhados
-│   │   ├── Sidebar.tsx           # Sidebar com navegação, tema e logout
+│   │   ├── Sidebar.tsx           # Sidebar: Menu, Relatórios, Administração
 │   │   └── ui/                   # Badge e componentes de UI
 │   └── lib/                      # db.ts, storage.ts, utils.ts
 └── middleware.ts                 # Middleware de autenticação
 ```
-- CSS em `src/app/globals.css` — Design system com CSS custom properties (:root + [data-theme="dark"])
+
+### Rotas
+| Rota | Arquivo | Descrição |
+|------|---------|-----------|
+| `/` | `(dashboard)/page.tsx` | Dashboard com stats, hero, insights IA, calendário |
+| `/books` | `(dashboard)/books/page.tsx` | Livros da Bíblia (lista lateral + grid cards azuis) |
+| `/reports` | `(dashboard)/reports/page.tsx` | Relatórios com gráfico e tabela |
+| `/profile` | `(dashboard)/profile/page.tsx` | Perfil do usuário |
+| `/admin` | `(dashboard)/admin/page.tsx` | Painel admin (7 abas) |
+| `/session/[id]` | `(dashboard)/session/[id]/page.tsx` | Detalhe da sessão |
+| `/login` | `(auth)/login/page.tsx` | Login |
+
+### Design System v3 (`globals.css`)
+- CSS em `src/app/globals.css` — Design system v3 com CSS custom properties (:root + [data-theme="dark"])
 - ATENÇÃO: NÃO usar `@theme` inline do Tailwind v4 — apenas CSS custom properties padrão
+- Dark mode (tema principal): bg `#0c0c0e`, surface `#151518`, accent `#f5a623`
+- Light mode: bg `#f5f5f7`, surface `#ffffff`, accent `#d97706`
+- Cores SEMPRE via `var()`: `var(--text)`, `var(--accent)`, `var(--surface)`, etc.
+- NUNCA usar cores hardcoded (#hex) em componentes — sempre CSS variables
+- Classes de layout: `.dashboard-two-col`, `.books-layout`, `.reports-top-grid`, `.session-detail-grid`
 - Dark mode: `data-theme="dark"` no `<html>`, salvo em localStorage como `devhub-theme`
 - Imports: `@/features/<feature>/lib/<module>`, `@/features/<feature>/components/<Component>`, `@/shared/lib/<module>`
 

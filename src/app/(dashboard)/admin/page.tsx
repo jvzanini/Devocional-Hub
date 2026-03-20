@@ -79,8 +79,8 @@ function EditableField({ label, value, description, onSave }: {
 
   return (
     <div className="section-card" style={{ padding: 18 }}>
-      <div style={{ fontSize: 13, fontWeight: 600, color: "#78716c", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4 }}>{label}</div>
-      {description && <p style={{ fontSize: 14, color: "#a8a29e", marginBottom: 10 }}>{description}</p>}
+      <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4 }}>{label}</div>
+      {description && <p style={{ fontSize: 14, color: "var(--text-muted)", marginBottom: 10 }}>{description}</p>}
       <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
         <input
           className="input-field"
@@ -92,7 +92,7 @@ function EditableField({ label, value, description, onSave }: {
           onKeyDown={e => { if (e.key === "Enter") handleSave(); if (e.key === "Escape") { setDraft(value); setEditing(false); } }}
         />
         {editing ? (
-          <button className="btn-icon" onClick={handleSave} disabled={saving} title="Salvar" style={{ color: "#059669", borderColor: "#a7f3d0" }}>
+          <button className="btn-icon" onClick={handleSave} disabled={saving} title="Salvar" style={{ color: "var(--success)", borderColor: "var(--success-border)" }}>
             <IconCheck size={16} />
           </button>
         ) : (
@@ -478,15 +478,18 @@ export default function AdminPage() {
       <div>
         <div className="tabs-list">
           {([
-            { key: "zoom", label: "Configurações Zoom" },
-            { key: "schedule", label: "Horários" },
-            { key: "webhooks", label: "Webhooks" },
-            { key: "users", label: "Usuários" },
-            { key: "reading", label: "Leitura" },
-            { key: "attendance", label: "Presença" },
-            { key: "ia", label: "IA" },
-          ] as { key: Tab; label: string }[]).map(t => (
+            { key: "zoom", label: "Config. Zoom", icon: "M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.241-.438.613-.431.992a7.723 7.723 0 010 .255c-.007.378.138.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 010-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28zM15 12a3 3 0 11-6 0 3 3 0 016 0z" },
+            { key: "schedule", label: "Horários", icon: "M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" },
+            { key: "webhooks", label: "Webhooks", icon: "M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m9.9-3.572a4.5 4.5 0 00-6.364-6.364L4.5 8.25a4.5 4.5 0 006.364 6.364l4.5-4.5z" },
+            { key: "users", label: "Usuários", icon: "M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" },
+            { key: "reading", label: "Leitura", icon: "M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" },
+            { key: "attendance", label: "Presença", icon: "M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" },
+            { key: "ia", label: "IA", icon: "M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z" },
+          ] as { key: Tab; label: string; icon: string }[]).map(t => (
             <button key={t.key} onClick={() => setTab(t.key)} className={`tab-trigger ${tab === t.key ? "active" : ""}`}>
+              <svg width={16} height={16} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d={t.icon} />
+              </svg>
               {t.label}
             </button>
           ))}
@@ -524,7 +527,7 @@ export default function AdminPage() {
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             <div className="section-card" style={{ padding: 18 }}>
               <div className="section-title">Horários dos Devocionais</div>
-              <p style={{ fontSize: 14, color: "#a8a29e", marginBottom: 16 }}>
+              <p style={{ fontSize: 14, color: "var(--text-muted)", marginBottom: 16 }}>
                 Configure o horário de cada dia da semana. Segunda a Sexta são obrigatórios.
               </p>
               <div className="time-picker-grid">
@@ -535,7 +538,7 @@ export default function AdminPage() {
                   return (
                     <div key={day} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                       <label style={{ fontSize: 14, fontWeight: 600, color: isWeekend ? "#a8a29e" : "#44403c" }}>
-                        {labels[i]} {!isWeekend && <span style={{ color: "#d97706" }}>*</span>}
+                        {labels[i]} {!isWeekend && <span style={{ color: "var(--accent)" }}>*</span>}
                       </label>
                       <input
                         type="time"
@@ -583,14 +586,14 @@ export default function AdminPage() {
                 <button className="btn-primary" onClick={createWebhook}>Criar</button>
               </div>
               {newWebhookSlug && (
-                <div style={{ fontSize: 12, color: "#78716c", marginTop: 8, fontFamily: "monospace" }}>
+                <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 8, fontFamily: "monospace" }}>
                   Preview: {baseUrl}/api/webhook/{newWebhookSlug.toLowerCase().replace(/[^a-z0-9-]/g, "")}
                 </div>
               )}
             </div>
 
             {webhooks.length === 0 ? (
-              <p style={{ textAlign: "center", color: "#a8a29e", padding: 32 }}>Nenhum webhook cadastrado</p>
+              <p style={{ textAlign: "center", color: "var(--text-muted)", padding: 32 }}>Nenhum webhook cadastrado</p>
             ) : (
               webhooks.map(w => {
                 const webhookUrl = `${baseUrl}/api/webhook/${w.slug}`;
@@ -602,7 +605,7 @@ export default function AdminPage() {
                           {editingWebhook === w.id ? (
                             <div style={{ display: "flex", gap: 6, flex: 1 }}>
                               <input className="input-field" value={editWebhookName} onChange={e => setEditWebhookName(e.target.value)} style={{ flex: 1 }} />
-                              <button className="btn-icon" onClick={() => saveWebhookName(w.id)} style={{ color: "#059669", borderColor: "#a7f3d0" }}>
+                              <button className="btn-icon" onClick={() => saveWebhookName(w.id)} style={{ color: "var(--success)", borderColor: "var(--success-border)" }}>
                                 <IconCheck size={14} />
                               </button>
                               <button className="btn-icon" onClick={() => setEditingWebhook(null)}>
@@ -611,7 +614,7 @@ export default function AdminPage() {
                             </div>
                           ) : (
                             <>
-                              <span style={{ fontWeight: 600, fontSize: 16, color: "#1c1917" }}>{w.name}</span>
+                              <span style={{ fontWeight: 600, fontSize: 16, color: "var(--text)" }}>{w.name}</span>
                               <button className="btn-icon" onClick={() => { setEditingWebhook(w.id); setEditWebhookName(w.name); }} style={{ width: 28, height: 28 }}>
                                 <IconPencil size={12} />
                               </button>
@@ -619,7 +622,7 @@ export default function AdminPage() {
                           )}
                         </div>
                         <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
-                          <code style={{ fontSize: 14, color: "#d97706", wordBreak: "break-all", flex: 1 }}>{webhookUrl}</code>
+                          <code style={{ fontSize: 14, color: "var(--accent)", wordBreak: "break-all", flex: 1 }}>{webhookUrl}</code>
                           <button
                             className="btn-icon"
                             onClick={() => copyToClipboard(webhookUrl, w.id)}
@@ -629,7 +632,7 @@ export default function AdminPage() {
                             {copied === w.id ? <IconCheck size={14} /> : <IconCopy size={14} />}
                           </button>
                         </div>
-                        <div style={{ fontSize: 13, color: "#a8a29e" }}>
+                        <div style={{ fontSize: 13, color: "var(--text-muted)" }}>
                           Criado em {new Date(w.createdAt).toLocaleDateString("pt-BR")}
                         </div>
                       </div>
@@ -662,7 +665,7 @@ export default function AdminPage() {
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             {/* Search */}
             <div style={{ position: "relative" }}>
-              <div style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#a8a29e" }}>
+              <div style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }}>
                 <IconSearch size={16} />
               </div>
               <input
@@ -701,10 +704,10 @@ export default function AdminPage() {
                       <input className="input-field" value={editUserData.team ?? u.team} onChange={e => setEditUserData(p => ({ ...p, team: e.target.value }))} placeholder="Equipe" />
                       <input className="input-field" value={editUserData.subTeam ?? u.subTeam} onChange={e => setEditUserData(p => ({ ...p, subTeam: e.target.value }))} placeholder="SubEquipe" />
                     </div>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: "#78716c", textTransform: "uppercase" }}>Identificadores Zoom</div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase" }}>Identificadores Zoom</div>
                     {u.zoomIdentifiers.map(zi => (
                       <div key={zi.id} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                        <code style={{ fontSize: 13, color: "#44403c", flex: 1 }}>{zi.value}</code>
+                        <code style={{ fontSize: 13, color: "var(--text-secondary)", flex: 1 }}>{zi.value}</code>
                         <button className="btn-icon" onClick={() => removeZoomIdentifier(u.id, zi.id)} style={{ width: 28, height: 28 }}>
                           <IconX size={12} />
                         </button>
@@ -712,7 +715,7 @@ export default function AdminPage() {
                     ))}
                     <div style={{ display: "flex", gap: 6 }}>
                       <input className="input-field" value={newZoomId} onChange={e => setNewZoomId(e.target.value)} placeholder="Adicionar email/username do Zoom" style={{ flex: 1 }} />
-                      <button className="btn-icon" onClick={() => addZoomIdentifier(u.id)} style={{ color: "#059669", borderColor: "#a7f3d0" }}>
+                      <button className="btn-icon" onClick={() => addZoomIdentifier(u.id)} style={{ color: "var(--success)", borderColor: "var(--success-border)" }}>
                         <IconPlus size={14} />
                       </button>
                     </div>
@@ -728,21 +731,21 @@ export default function AdminPage() {
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-                        <span style={{ fontWeight: 600, fontSize: 16, color: "#1c1917" }}>{u.name}</span>
+                        <span style={{ fontWeight: 600, fontSize: 16, color: "var(--text)" }}>{u.name}</span>
                         <span className={`badge badge-${u.role === "ADMIN" ? "warning" : "info"}`}>
                           {u.role === "ADMIN" ? "Admin" : "Usuário"}
                         </span>
-                        {u.inviteToken && <span className="badge" style={{ backgroundColor: "#fef3c7", color: "#92400e", borderColor: "#fde68a" }}>Pendente</span>}
+                        {u.inviteToken && <span className="badge" style={{ backgroundColor: "var(--warning-bg)", color: "var(--warning)", borderColor: "var(--warning-border)" }}>Pendente</span>}
                         {!u.active && <span className="badge badge-error">Inativo</span>}
                       </div>
-                      <div style={{ fontSize: 14, color: "#78716c" }}>{u.email}</div>
+                      <div style={{ fontSize: 14, color: "var(--text-muted)" }}>{u.email}</div>
                       {(u.church || u.team) && (
-                        <div style={{ fontSize: 12, color: "#a8a29e", marginTop: 2 }}>
+                        <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2 }}>
                           {[u.church, u.team, u.subTeam].filter(Boolean).join(" · ")}
                         </div>
                       )}
                       {u.zoomIdentifiers.length > 0 && (
-                        <div style={{ fontSize: 12, color: "#d97706", marginTop: 2 }}>
+                        <div style={{ fontSize: 12, color: "var(--accent)", marginTop: 2 }}>
                           Zoom: {u.zoomIdentifiers.map(z => z.value).join(", ")}
                         </div>
                       )}
@@ -831,9 +834,9 @@ export default function AdminPage() {
                         </button>
                       ))}
                     </div>
-                    <div style={{ fontSize: 13, color: "#a8a29e", marginTop: 6 }}>
+                    <div style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 6 }}>
                       {selectedBookData?.chapters} capítulos ÷ {chaptersPerDay}/dia = <strong>{neededDays} dias</strong> necessários
-                      {selectedDates.length > 0 && <> · <span style={{ color: "#d97706" }}>{selectedDates.length} selecionados</span></>}
+                      {selectedDates.length > 0 && <> · <span style={{ color: "var(--accent)" }}>{selectedDates.length} selecionados</span></>}
                     </div>
                   </div>
                 )}
@@ -844,7 +847,7 @@ export default function AdminPage() {
                       <button className="btn-icon" onClick={() => { if (planMonth === 0) { setPlanMonth(11); setPlanYear(y => y - 1); } else setPlanMonth(m => m - 1); }}>
                         <svg width={16} height={16} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7"/></svg>
                       </button>
-                      <span style={{ fontWeight: 700, fontSize: 15, color: "#1c1917" }}>{MONTHS[planMonth]} {planYear}</span>
+                      <span style={{ fontWeight: 700, fontSize: 15, color: "var(--text)" }}>{MONTHS[planMonth]} {planYear}</span>
                       <button className="btn-icon" onClick={() => { if (planMonth === 11) { setPlanMonth(0); setPlanYear(y => y + 1); } else setPlanMonth(m => m + 1); }}>
                         <svg width={16} height={16} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/></svg>
                       </button>
@@ -852,7 +855,7 @@ export default function AdminPage() {
 
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4, marginBottom: 4 }}>
                       {DAYS_NAMES.map(d => (
-                        <div key={d} style={{ textAlign: "center", fontSize: 12, fontWeight: 600, color: "#a8a29e", padding: 4 }}>{d}</div>
+                        <div key={d} style={{ textAlign: "center", fontSize: 12, fontWeight: 600, color: "var(--text-muted)", padding: 4 }}>{d}</div>
                       ))}
                     </div>
 
@@ -942,8 +945,8 @@ export default function AdminPage() {
                         {book?.abbr || "?"}
                       </div>
                       <div>
-                        <div style={{ fontWeight: 700, fontSize: 16, color: "#1c1917" }}>{plan.bookName}</div>
-                        <div style={{ fontSize: 13, color: "#78716c" }}>
+                        <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)" }}>{plan.bookName}</div>
+                        <div style={{ fontSize: 13, color: "var(--text-muted)" }}>
                           {plan.chaptersPerDay} cap/dia · {new Date(plan.startDate).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })} → {new Date(plan.endDate).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}
                         </div>
                       </div>
@@ -997,18 +1000,18 @@ export default function AdminPage() {
             {/* Stats topo */}
             <div className="attendance-stats">
               <div className="stat-card">
-                <div style={{ fontSize: 24, fontWeight: 700, color: "#1c1917" }}>{totalAttendances}</div>
-                <div style={{ fontSize: 13, color: "#78716c" }}>Total de Presenças</div>
+                <div style={{ fontSize: 24, fontWeight: 700, color: "var(--text)" }}>{totalAttendances}</div>
+                <div style={{ fontSize: 13, color: "var(--text-muted)" }}>Total de Presenças</div>
               </div>
               <div className="stat-card">
-                <div style={{ fontSize: 24, fontWeight: 700, color: "#1c1917" }}>{totalUniqueAttendees}</div>
-                <div style={{ fontSize: 13, color: "#78716c" }}>Membros Presentes</div>
+                <div style={{ fontSize: 24, fontWeight: 700, color: "var(--text)" }}>{totalUniqueAttendees}</div>
+                <div style={{ fontSize: 13, color: "var(--text-muted)" }}>Membros Presentes</div>
               </div>
               <div className="stat-card">
-                <div style={{ fontSize: 24, fontWeight: 700, color: "#d97706" }}>
+                <div style={{ fontSize: 24, fontWeight: 700, color: "var(--accent)" }}>
                   {users.length > 0 ? Math.round((totalUniqueAttendees / users.filter(u => u.role !== "ADMIN").length) * 100) : 0}%
                 </div>
-                <div style={{ fontSize: 13, color: "#78716c" }}>Participação</div>
+                <div style={{ fontSize: 13, color: "var(--text-muted)" }}>Participação</div>
               </div>
             </div>
 
@@ -1017,25 +1020,25 @@ export default function AdminPage() {
               <div className="section-title">Filtros</div>
               <div className="admin-grid-2">
                 <div>
-                  <label style={{ fontSize: 13, fontWeight: 500, color: "#44403c", marginBottom: 4, display: "block" }}>Mês</label>
+                  <label style={{ fontSize: 13, fontWeight: 500, color: "var(--text-secondary)", marginBottom: 4, display: "block" }}>Mês</label>
                   <input type="month" className="input-field" value={attendanceMonth} onChange={e => setAttendanceMonth(e.target.value)} />
                 </div>
                 <div>
-                  <label style={{ fontSize: 13, fontWeight: 500, color: "#44403c", marginBottom: 4, display: "block" }}>Igreja</label>
+                  <label style={{ fontSize: 13, fontWeight: 500, color: "var(--text-secondary)", marginBottom: 4, display: "block" }}>Igreja</label>
                   <select className="input-field" value={attendanceChurch} onChange={e => setAttendanceChurch(e.target.value)} style={{ cursor: "pointer" }}>
                     <option value="">Todas</option>
                     {uniqueChurches.map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label style={{ fontSize: 13, fontWeight: 500, color: "#44403c", marginBottom: 4, display: "block" }}>Equipe</label>
+                  <label style={{ fontSize: 13, fontWeight: 500, color: "var(--text-secondary)", marginBottom: 4, display: "block" }}>Equipe</label>
                   <select className="input-field" value={attendanceTeam} onChange={e => setAttendanceTeam(e.target.value)} style={{ cursor: "pointer" }}>
                     <option value="">Todas</option>
                     {uniqueTeams.map(t => <option key={t} value={t}>{t}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label style={{ fontSize: 13, fontWeight: 500, color: "#44403c", marginBottom: 4, display: "block" }}>SubEquipe</label>
+                  <label style={{ fontSize: 13, fontWeight: 500, color: "var(--text-secondary)", marginBottom: 4, display: "block" }}>SubEquipe</label>
                   <select className="input-field" value={attendanceSubTeam} onChange={e => setAttendanceSubTeam(e.target.value)} style={{ cursor: "pointer" }}>
                     <option value="">Todas</option>
                     {uniqueSubTeams.map(st => <option key={st} value={st}>{st}</option>)}
@@ -1044,7 +1047,7 @@ export default function AdminPage() {
               </div>
               {/* Search by name */}
               <div style={{ position: "relative", marginTop: 12 }}>
-                <div style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#a8a29e" }}>
+                <div style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }}>
                   <IconSearch size={16} />
                 </div>
                 <input
@@ -1060,7 +1063,7 @@ export default function AdminPage() {
             <div className="section-card" style={{ padding: 18 }}>
               <div className="section-title">Presença por Semana</div>
               {attendanceLoading ? (
-                <div style={{ height: 200, display: "flex", alignItems: "center", justifyContent: "center", color: "#78716c" }}>
+                <div style={{ height: 200, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-muted)" }}>
                   Carregando...
                 </div>
               ) : (
@@ -1084,7 +1087,7 @@ export default function AdminPage() {
             {/* Users attendance cards */}
             <div className="section-title">Presença por Usuário ({filteredAttendanceUsers.length})</div>
             {filteredAttendanceUsers.length === 0 ? (
-              <p style={{ textAlign: "center", color: "#a8a29e", padding: 32 }}>Nenhuma presença registrada no período</p>
+              <p style={{ textAlign: "center", color: "var(--text-muted)", padding: 32 }}>Nenhuma presença registrada no período</p>
             ) : (
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 12 }}>
                 {filteredAttendanceUsers.map(([userId, data]) => (
@@ -1094,16 +1097,16 @@ export default function AdminPage() {
                         {data.name.charAt(0).toUpperCase()}
                       </div>
                       <div>
-                        <div style={{ fontWeight: 600, fontSize: 15, color: "#1c1917" }}>{data.name}</div>
-                        <div style={{ fontSize: 12, color: "#a8a29e" }}>{data.church}</div>
+                        <div style={{ fontWeight: 600, fontSize: 15, color: "var(--text)" }}>{data.name}</div>
+                        <div style={{ fontSize: 12, color: "var(--text-muted)" }}>{data.church}</div>
                       </div>
                     </div>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                       <div>
-                        <span style={{ fontSize: 20, fontWeight: 700, color: "#d97706" }}>{data.count}</span>
-                        <span style={{ fontSize: 13, color: "#78716c", marginLeft: 4 }}>presenças</span>
+                        <span style={{ fontSize: 20, fontWeight: 700, color: "var(--accent)" }}>{data.count}</span>
+                        <span style={{ fontSize: 13, color: "var(--text-muted)", marginLeft: 4 }}>presenças</span>
                       </div>
-                      <div style={{ fontSize: 12, color: "#a8a29e" }}>
+                      <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
                         Última: {new Date(data.lastDate).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}
                       </div>
                     </div>
@@ -1118,7 +1121,7 @@ export default function AdminPage() {
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             <div className="section-card" style={{ padding: 18 }}>
               <div className="section-title">Modelo de IA</div>
-              <p style={{ fontSize: 14, color: "#a8a29e", marginBottom: 16 }}>
+              <p style={{ fontSize: 14, color: "var(--text-muted)", marginBottom: 16 }}>
                 Selecione o modelo OpenAI para processamento de transcrições, pesquisa teológica e extração de senha.
                 Os modelos gratuitos do OpenRouter são usados como fallback automático.
               </p>
@@ -1158,7 +1161,7 @@ export default function AdminPage() {
 
               <div style={{ padding: 14, background: "#1c1917", borderRadius: 8, border: "1px solid #44403c" }}>
                 <div style={{ fontSize: 13, fontWeight: 600, color: "#d6d3d1", marginBottom: 8 }}>Cascata de Fallback</div>
-                <div style={{ fontSize: 13, color: "#a8a29e", lineHeight: 1.8 }}>
+                <div style={{ fontSize: 13, color: "var(--text-muted)", lineHeight: 1.8 }}>
                   <div>1. <span style={{ color: "#10b981" }}>OpenAI</span> — <strong>{settings.aiModel || "gpt-4.1-mini"}</strong> (primário)</div>
                   <div>2. <span style={{ color: "#f59e0b" }}>OpenRouter</span> — Nemotron 120B, Step 3.5, Nemotron 30B (gratuito)</div>
                   <div>3. <span style={{ color: "#3b82f6" }}>Gemini</span> — 2.5 Flash (gratuito)</div>
