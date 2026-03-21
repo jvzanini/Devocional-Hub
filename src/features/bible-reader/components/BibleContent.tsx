@@ -38,8 +38,8 @@ function normalizeForSearch(text: string): string {
 }
 
 /**
- * Filtrar HTML mostrando apenas parágrafos que contêm o texto buscado
- * e destacar os trechos encontrados
+ * Filtrar versículos: ocultar os que não contêm o texto e destacar os que contêm
+ * Trabalha com spans data-verse dentro de parágrafos
  */
 function filterAndHighlight(html: string, query: string): string {
   if (!query || query.length < 2) return html;
@@ -47,37 +47,35 @@ function filterAndHighlight(html: string, query: string): string {
   const normalizedQuery = normalizeForSearch(query);
   if (!normalizedQuery) return html;
 
-  // Separar em parágrafos
-  const paragraphs = html.split(/<\/p>/i);
+  const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const highlightRegex = new RegExp(`(${escaped})`, "gi");
 
-  const filtered = paragraphs
-    .map((p) => {
-      // Extrair texto puro do parágrafo para comparação
-      const plainText = p.replace(/<[^>]+>/g, "");
-      const normalizedPlain = normalizeForSearch(plainText);
+  // Processar cada span data-verse individualmente
+  const processed = html.replace(/<span data-verse="(\d+)">([\s\S]*?)<\/span>/g, (match, verseNum, content) => {
+    const plainText = content.replace(/<[^>]+>/g, "");
+    const normalizedPlain = normalizeForSearch(plainText);
 
-      if (!normalizedPlain.includes(normalizedQuery)) {
-        return null; // ocultar parágrafo que não contém a busca
-      }
+    if (!normalizedPlain.includes(normalizedQuery)) {
+      // Ocultar versículo
+      return `<span data-verse="${verseNum}" style="display:none">${content}</span>`;
+    }
 
-      // Destacar no HTML original (case-insensitive, ignora acentos)
-      const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      const regex = new RegExp(`(${escaped})`, "gi");
+    // Destacar texto encontrado
+    const highlighted = content.replace(/>([^<]+)</g, (_m: string, text: string) => {
+      const h = text.replace(highlightRegex, '<mark style="background:var(--accent);color:#000;border-radius:2px;padding:0 2px">$1</mark>');
+      return `>${h}<`;
+    });
 
-      const highlighted = p.replace(/>([^<]+)</g, (match, text) => {
-        const h = text.replace(regex, '<mark style="background:var(--accent);color:#000;border-radius:2px;padding:0 2px">$1</mark>');
-        return `>${h}<`;
-      });
+    return `<span data-verse="${verseNum}">${highlighted}</span>`;
+  });
 
-      return highlighted + "</p>";
-    })
-    .filter(Boolean);
-
-  if (filtered.length === 0) {
+  // Se todos ocultos
+  const visibleCount = (processed.match(/data-verse="(\d+)"(?![\s\S]*?display:none)/g) || []).length;
+  if (visibleCount === 0) {
     return '<p style="color:var(--text-secondary);text-align:center;padding:20px 0">Nenhum versículo encontrado.</p>';
   }
 
-  return filtered.join("\n");
+  return processed;
 }
 
 export function BibleContent({

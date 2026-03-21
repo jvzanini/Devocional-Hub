@@ -410,9 +410,9 @@ export function BibleModal({
         </div>
 
         <div className="bible-modal-footer">
-          {/* ── PLAYER EXPANDIDO ── */}
-          {!isPlayerCollapsed && audioAvailable && (
-            <>
+          {/* ── PLAYER EXPANDIDO (sempre montado, oculto via CSS para não dar reload) ── */}
+          {audioAvailable && (
+            <div style={{ display: isPlayerCollapsed ? "none" : "block" }}>
               <BibleNavigation
                 currentBookCode={bookCode}
                 currentChapter={chapter}
@@ -427,18 +427,25 @@ export function BibleModal({
                 pendingSeekTime={pendingSeekTime}
                 onSeekHandled={() => setPendingSeekTime(null)}
               />
-              {/* Seta recolher — sutil */}
+              {/* Seta recolher */}
               <div className="bible-player-toggle" onClick={() => setIsPlayerCollapsed(true)}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
                 </svg>
               </div>
-            </>
+            </div>
           )}
 
-          {/* ── PLAYER COLAPSADO — compacto ── */}
+          {/* ── PLAYER COLAPSADO — compacto com abreviações ── */}
           {isPlayerCollapsed && audioAvailable && (
             <div className="bible-player-collapsed">
+              {/* Seta expandir — esquerda */}
+              <div className="bible-player-toggle bible-player-toggle--inline" onClick={() => setIsPlayerCollapsed(false)}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" />
+                </svg>
+              </div>
+
               <button
                 className="bible-player-collapsed-nav"
                 onClick={handlePreviousChapter}
@@ -447,7 +454,7 @@ export function BibleModal({
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
                 </svg>
-                <span>{prevLabel}</span>
+                <span>{prevLabel ? `${currentBook?.abbr || bookName} ${chapter > 1 ? chapter - 1 : ""}` : ""}</span>
               </button>
 
               <button
@@ -471,18 +478,20 @@ export function BibleModal({
                 onClick={handleNextChapter}
                 disabled={isLast}
               >
-                <span>{nextLabel}</span>
+                <span>{nextLabel ? `${currentBook && chapter < currentBook.chapters ? currentBook.abbr : (BIBLE_BOOKS[currentBookIndex + 1]?.abbr || "")} ${currentBook && chapter < currentBook.chapters ? chapter + 1 : 1}` : ""}</span>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                 </svg>
               </button>
 
-              {/* Seta expandir — sutil */}
-              <div className="bible-player-toggle bible-player-toggle--up" onClick={() => setIsPlayerCollapsed(false)}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" />
-                </svg>
-              </div>
+              {/* Velocidade — direita */}
+              <button
+                className="bible-speed-btn"
+                onClick={() => getAudioManager().cycleSpeed()}
+                aria-label="Alterar velocidade"
+              >
+                {getAudioManager().getState().speed}x
+              </button>
             </div>
           )}
 

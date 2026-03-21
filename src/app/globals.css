@@ -1738,7 +1738,7 @@ select.input-field {
   margin-right: 2px;
 }
 .bible-content-text p {
-  margin: 0 0 4px;
+  margin: 0 0 12px;
 }
 .bible-content-text .s, .bible-content-text .s1 {
   display: block;
@@ -1856,7 +1856,7 @@ select.input-field {
 .bible-player-progress-row {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
 .bible-player-time {
   font-size: 12px;
@@ -1928,22 +1928,20 @@ select.input-field {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 2px 0 6px;
+  padding: 6px 0 14px;
   cursor: pointer;
   color: var(--text-secondary);
-  opacity: 0.5;
+  opacity: 0.4;
   transition: opacity 0.15s;
   user-select: none;
 }
 .bible-player-toggle:hover {
   opacity: 1;
 }
-.bible-player-toggle--up {
-  position: absolute;
-  right: 12px;
-  top: 50%;
-  transform: translateY(-50%);
+.bible-player-toggle--inline {
   padding: 4px;
+  opacity: 0.5;
+  flex-shrink: 0;
 }
 
 /* Player colapsado — compacto */

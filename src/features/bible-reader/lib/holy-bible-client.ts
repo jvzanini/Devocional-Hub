@@ -88,13 +88,24 @@ export async function getChapterContentHtml(
 
 /**
  * Converter array de versículos em HTML formatado
- * Cada versículo em seu próprio <p> para permitir filtragem individual na busca
+ * Cada versículo em um <span> com data-verse para filtragem na busca
+ * Agrupados em parágrafos para fluxo contínuo de leitura
  */
 function versesToHtml(verses: HolyBibleVerse[]): string {
   const paragraphs: string[] = [];
+  let current: string[] = [];
 
   for (const verse of verses) {
-    paragraphs.push(`<p><span class="v">${verse.verse}</span>\u00A0${escapeHtml(verse.text)}</p>`);
+    current.push(`<span data-verse="${verse.verse}"><span class="v">${verse.verse}</span>\u00A0${escapeHtml(verse.text)} </span>`);
+
+    if (current.length >= 5) {
+      paragraphs.push(`<p>${current.join("")}</p>`);
+      current = [];
+    }
+  }
+
+  if (current.length > 0) {
+    paragraphs.push(`<p>${current.join("")}</p>`);
   }
 
   return paragraphs.join("\n");
