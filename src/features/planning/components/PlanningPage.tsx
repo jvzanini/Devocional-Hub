@@ -29,6 +29,16 @@ export function PlanningPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [expandedChapters, setExpandedChapters] = useState<Set<string>>(new Set());
+
+  function toggleChapter(key: string) {
+    setExpandedChapters(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
 
   useEffect(() => {
     loadPlan();
@@ -132,7 +142,7 @@ export function PlanningPage() {
   return (
     <div className="planning-page">
       <div className="planning-header">
-        <h1>Planejamento — {plan.bookName}</h1>
+        <h1>Planejamento</h1>
         <p>
           {hasCards
             ? `${cards.length} card(s) de planejamento gerados`
@@ -176,7 +186,7 @@ export function PlanningPage() {
               </>
             ) : (
               <>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
                 </svg>
                 Gerar Cards via IA
@@ -186,44 +196,76 @@ export function PlanningPage() {
         </div>
       )}
 
-      {hasCards && (
-        <>
-          {/* Cards agrupados por tema */}
-          {Array.from(grouped.entries()).map(([theme, themeCards]) => (
-            <ThemeGroup key={theme} theme={theme}>
-              <div className="planning-cards">
-                {themeCards.map((card) => (
-                  <PlanningCard
-                    key={card.id}
-                    bookName={card.bookName}
-                    chapter={card.chapter}
-                    analysis={card.analysis}
-                    references={card.references}
-                    studyLinks={card.studyLinks}
-                    imageUrls={card.imageUrls}
-                    themeGroup={card.themeGroup}
-                  />
-                ))}
-              </div>
-            </ThemeGroup>
-          ))}
+      {hasCards && (() => {
+        // Agrupar por livro → capítulo
+        const byBook = new Map<string, PlanningCardData[]>();
+        for (const card of cards) {
+          const book = card.bookName;
+          if (!byBook.has(book)) byBook.set(book, []);
+          byBook.get(book)!.push(card);
+        }
 
-          {/* Cards sem agrupamento */}
-          <div className="planning-cards">
-            {ungrouped.map((card) => (
-              <PlanningCard
-                key={card.id}
-                bookName={card.bookName}
-                chapter={card.chapter}
-                analysis={card.analysis}
-                references={card.references}
-                studyLinks={card.studyLinks}
-                imageUrls={card.imageUrls}
-              />
-            ))}
-          </div>
-        </>
-      )}
+        return Array.from(byBook.entries()).map(([bookName, bookCards]) => {
+          const sortedCards = bookCards.sort((a, b) => a.chapter - b.chapter);
+          return (
+            <div key={bookName} style={{ marginBottom: 24 }}>
+              <div style={{
+                display: "flex", alignItems: "center", gap: 10,
+                padding: "12px 16px", borderRadius: 10,
+                backgroundColor: "var(--surface-hover)",
+                marginBottom: 8,
+              }}>
+                <svg width={20} height={20} fill="none" viewBox="0 0 24 24" stroke="var(--accent)" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
+                </svg>
+                <h2 style={{ fontSize: 18, fontWeight: 700, color: "var(--text)", margin: 0 }}>{bookName}</h2>
+                <span style={{ fontSize: 13, color: "var(--text-muted)" }}>({sortedCards.length} capítulo{sortedCards.length !== 1 ? "s" : ""})</span>
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                {sortedCards.map((card) => {
+                  const key = `${bookName}-${card.chapter}`;
+                  const isExpanded = expandedChapters.has(key);
+                  return (
+                    <div key={card.id}>
+                      <button
+                        onClick={() => toggleChapter(key)}
+                        style={{
+                          width: "100%", display: "flex", alignItems: "center", gap: 10,
+                          padding: "10px 14px", borderRadius: 8,
+                          border: "1px solid var(--border, rgba(128,128,128,0.15))",
+                          background: isExpanded ? "var(--accent-light, rgba(218,165,32,0.1))" : "transparent",
+                          cursor: "pointer", textAlign: "left",
+                          color: "var(--text)", fontSize: 15, fontWeight: 600,
+                        }}
+                      >
+                        <svg width={14} height={14} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+                          style={{ transform: isExpanded ? "rotate(180deg)" : "none", transition: "transform 0.2s", flexShrink: 0 }}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                        </svg>
+                        Capítulo {card.chapter}
+                      </button>
+                      {isExpanded && (
+                        <div style={{ marginTop: 4, marginBottom: 8 }}>
+                          <PlanningCard
+                            bookName={card.bookName}
+                            chapter={card.chapter}
+                            analysis={card.analysis}
+                            references={card.references}
+                            studyLinks={card.studyLinks}
+                            imageUrls={card.imageUrls}
+                            themeGroup={card.themeGroup}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        });
+      })()}
     </div>
   );
 }

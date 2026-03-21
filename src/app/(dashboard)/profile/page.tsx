@@ -404,10 +404,33 @@ export default function ProfilePage() {
         {saving ? (uploading ? "Enviando foto..." : "Salvando...") : "Salvar Alterações"}
       </button>
 
-      {/* Success/error message */}
+      {/* Toast notification */}
       {msg && (
-        <div style={{ textAlign: "center", marginTop: 12 }}>
-          <span className={`badge badge-${msg.ok ? "success" : "error"}`} style={{ padding: "4px 14px" }}>{msg.text}</span>
+        <div style={{
+          position: "fixed",
+          top: 24,
+          right: 24,
+          zIndex: 200,
+          padding: "12px 20px",
+          borderRadius: 10,
+          backgroundColor: msg.ok ? "rgba(16,185,129,0.95)" : "rgba(239,68,68,0.95)",
+          color: "#fff",
+          fontSize: 14,
+          fontWeight: 600,
+          boxShadow: "0 4px 16px rgba(0,0,0,0.2)",
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          animation: "slideInRight 0.3s ease-out",
+        }}>
+          <svg width={16} height={16} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            {msg.ok ? (
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            ) : (
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+            )}
+          </svg>
+          {msg.text}
         </div>
       )}
 

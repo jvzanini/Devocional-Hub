@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { StudyResources } from "./StudyResources";
 
 interface AnalysisData {
@@ -22,6 +23,29 @@ interface PlanningCardProps {
   studyLinks: string[];
   imageUrls: string[];
   themeGroup?: string | null;
+}
+
+/** Renderiza markdown básico: **bold**, \n → <br/>, parágrafos */
+function renderMarkdown(text: string): React.ReactNode {
+  if (!text) return <></>;
+  const parts = text.split(/(\*\*[^*]+\*\*)/g);
+  return (
+    <>
+      {parts.map((part, i) => {
+        if (part.startsWith("**") && part.endsWith("**")) {
+          return <strong key={i}>{part.slice(2, -2)}</strong>;
+        }
+        // Separar por \n para line breaks
+        const lines = part.split("\n");
+        return lines.map((line, j) => (
+          <span key={`${i}-${j}`}>
+            {line}
+            {j < lines.length - 1 && <br />}
+          </span>
+        ));
+      })}
+    </>
+  );
 }
 
 function ImagePlaceholder({ bookName, chapter }: { bookName: string; chapter: number }) {
@@ -83,7 +107,7 @@ export function PlanningCard({
         {analysisData.abordagem && (
           <div className="planning-card-section">
             <h4>Como Abordar</h4>
-            <p>{analysisData.abordagem}</p>
+            <p>{renderMarkdown(analysisData.abordagem)}</p>
           </div>
         )}
 
@@ -95,7 +119,7 @@ export function PlanningCard({
                 <p style={{ fontWeight: 600, color: "var(--accent)", marginBottom: "4px" }}>
                   {tema.titulo} {tema.versiculos && <span style={{ fontWeight: 400, fontSize: "13px", color: "var(--text-secondary)" }}>(v. {tema.versiculos})</span>}
                 </p>
-                <p>{tema.descricao}</p>
+                <p>{renderMarkdown(tema.descricao)}</p>
               </div>
             ))}
           </div>
@@ -104,14 +128,14 @@ export function PlanningCard({
         {analysisData.contexto_historico && (
           <div className="planning-card-section">
             <h4>Contexto Histórico</h4>
-            <p>{analysisData.contexto_historico}</p>
+            <p>{renderMarkdown(analysisData.contexto_historico)}</p>
           </div>
         )}
 
         {analysisData.aplicacoes && (
           <div className="planning-card-section">
             <h4>Aplicações Práticas</h4>
-            <p>{analysisData.aplicacoes}</p>
+            <p>{renderMarkdown(analysisData.aplicacoes)}</p>
           </div>
         )}
 

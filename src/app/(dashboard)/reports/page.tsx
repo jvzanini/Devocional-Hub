@@ -383,188 +383,71 @@ export default function ReportsPage() {
   return (
     <div style={{ maxWidth: 1100, margin: "0 auto" }}>
       {/* Top bar */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 28, flexWrap: "wrap", gap: 12 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
         <h1 style={{ fontSize: 28, fontWeight: 700, color: "var(--text)", margin: 0, letterSpacing: "-0.02em" }}>Relatórios</h1>
-        <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-          <select
-            className="input-field"
-            value={year}
-            onChange={e => setYear(Number(e.target.value))}
-            style={{ width: 110 }}
-          >
-            {yearOptions.map(y => (
-              <option key={y} value={y}>{y}</option>
-            ))}
-          </select>
-          <select
-            className="input-field"
-            value={month}
-            onChange={e => setMonth(Number(e.target.value))}
-            style={{ width: 150 }}
-          >
-            {MONTH_NAMES.map((name, i) => (
-              <option key={i} value={i + 1}>{name}</option>
-            ))}
-          </select>
-          <button
-            className="btn-outline"
-            onClick={handleExport}
-            style={{ borderColor: "var(--accent)", color: "var(--accent)" }}
-          >
-            <IconDownload size={16} />
-            Exportar
-          </button>
-        </div>
       </div>
 
-      {/* Top grid: Filters + Stats */}
-      <div className="reports-top-grid">
-        {/* Filters card */}
-        <div className="section-card">
-          <div className="section-title" style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <IconFilter size={14} />
-            Filtros
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            <div>
-              <label style={{ fontSize: 12, fontWeight: 500, color: "var(--text-muted)", marginBottom: 4, display: "block" }}>Usuário Específico</label>
-              <select
-                className="input-field"
-                value={filterUser}
-                onChange={e => setFilterUser(e.target.value)}
-                style={{ width: "100%", fontSize: 14 }}
-              >
-                <option value="">Todos os usuários</option>
-                {users.map(u => (
-                  <option key={u.id} value={u.id}>{u.name}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label style={{ fontSize: 12, fontWeight: 500, color: "var(--text-muted)", marginBottom: 4, display: "block" }}>Igreja</label>
-              <select
-                className="input-field"
-                value={filterChurch}
-                onChange={e => setFilterChurch(e.target.value)}
-                style={{ width: "100%", fontSize: 14 }}
-              >
-                <option value="">Todas</option>
-                {churches.map(c => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label style={{ fontSize: 12, fontWeight: 500, color: "var(--text-muted)", marginBottom: 4, display: "block" }}>Equipe</label>
-              <select
-                className="input-field"
-                value={filterTeam}
-                onChange={e => setFilterTeam(e.target.value)}
-                style={{ width: "100%", fontSize: 14 }}
-              >
-                <option value="">Todas</option>
-                {teams.map(t => (
-                  <option key={t} value={t}>{t}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label style={{ fontSize: 12, fontWeight: 500, color: "var(--text-muted)", marginBottom: 4, display: "block" }}>SubEquipe</label>
-              <select
-                className="input-field"
-                value={filterSubTeam}
-                onChange={e => setFilterSubTeam(e.target.value)}
-                style={{ width: "100%", fontSize: 14, backgroundColor: "var(--surface)", color: "var(--text)", border: "1px solid var(--border)", borderRadius: 8, padding: "8px 12px" }}
-              >
-                <option value="">Todas</option>
-                {subTeams.map(st => (
-                  <option key={st} value={st}>{st}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label style={{ fontSize: 12, fontWeight: 500, color: "var(--text-muted)", marginBottom: 4, display: "block" }}>Livro</label>
-              <select
-                className="input-field"
-                value={filterBook}
-                onChange={e => setFilterBook(e.target.value)}
-                style={{ width: "100%", fontSize: 14, backgroundColor: "var(--surface)", color: "var(--text)", border: "1px solid var(--border)", borderRadius: 8, padding: "8px 12px" }}
-              >
-                <option value="">Todos</option>
-                {books.map(b => (
-                  <option key={b} value={b}>{b}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-        </div>
-
-        {/* Stats row */}
-        <div className="reports-stats-row">
-          <div className="reports-stat-card">
-            <div style={{ color: "var(--success)", marginBottom: 10 }}>
-              <IconCheck size={28} />
-            </div>
-            <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>
-              Total Presenças
-            </div>
-            <div style={{ fontSize: 36, fontWeight: 700, color: "var(--text)", lineHeight: 1 }}>
-              {loading ? "..." : totalAttendances}
-            </div>
-          </div>
-
-          <div className="reports-stat-card">
-            <div style={{ color: "var(--text-secondary)", marginBottom: 10 }}>
-              <IconPeople size={28} />
-            </div>
-            <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>
-              Membros Únicos
-            </div>
-            <div style={{ fontSize: 36, fontWeight: 700, color: "var(--text)", lineHeight: 1 }}>
-              {loading ? "..." : uniqueMembers}
-            </div>
-          </div>
-
-          <div className="reports-stat-card">
-            <div style={{ color: "var(--accent)", marginBottom: 10 }}>
-              <IconChart size={28} />
-            </div>
-            <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>
-              Freq. Média
-            </div>
-            <div style={{ fontSize: 36, fontWeight: 700, color: "var(--accent)", lineHeight: 1 }}>
-              {loading ? "..." : `${avgFrequency}%`}
-            </div>
-          </div>
-        </div>
+      {/* Filtros em linha horizontal */}
+      <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginBottom: 24 }}>
+        <select className="input-field" value={year} onChange={e => setYear(Number(e.target.value))} style={{ width: 100, fontSize: 13 }}>
+          {yearOptions.map(y => <option key={y} value={y}>{y}</option>)}
+        </select>
+        <select className="input-field" value={month} onChange={e => setMonth(Number(e.target.value))} style={{ width: 130, fontSize: 13 }}>
+          {MONTH_NAMES.map((name, i) => <option key={i} value={i + 1}>{name}</option>)}
+        </select>
+        <select className="input-field" value={filterBook} onChange={e => setFilterBook(e.target.value)} style={{ width: 130, fontSize: 13 }}>
+          <option value="">Livro: Todos</option>
+          {books.map(b => <option key={b} value={b}>{b}</option>)}
+        </select>
+        <select className="input-field" value={filterUser} onChange={e => setFilterUser(e.target.value)} style={{ width: 160, fontSize: 13 }}>
+          <option value="">Usuário: Todos</option>
+          {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+        </select>
+        <select className="input-field" value={filterChurch} onChange={e => setFilterChurch(e.target.value)} style={{ width: 130, fontSize: 13 }}>
+          <option value="">Igreja: Todas</option>
+          {churches.map(c => <option key={c} value={c}>{c}</option>)}
+        </select>
+        <select className="input-field" value={filterTeam} onChange={e => setFilterTeam(e.target.value)} style={{ width: 130, fontSize: 13 }}>
+          <option value="">Equipe: Todas</option>
+          {teams.map(t => <option key={t} value={t}>{t}</option>)}
+        </select>
+        <select className="input-field" value={filterSubTeam} onChange={e => setFilterSubTeam(e.target.value)} style={{ width: 130, fontSize: 13 }}>
+          <option value="">SubEquipe: Todas</option>
+          {subTeams.map(st => <option key={st} value={st}>{st}</option>)}
+        </select>
+        <button className="btn-outline" onClick={handleExport} style={{ borderColor: "var(--accent)", color: "var(--accent)", fontSize: 13 }}>
+          <IconDownload size={14} />
+          Exportar
+        </button>
       </div>
 
-      {/* Summary insights row */}
-      {!loading && userStatsList.length > 0 && (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 14, marginBottom: 24 }}>
-          <div className="section-card" style={{ padding: "16px 18px" }}>
-            <div style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 500, marginBottom: 4 }}>Sessões no mês</div>
-            <div style={{ fontSize: 22, fontWeight: 700, color: "var(--text)" }}>{uniqueSessions}</div>
-          </div>
-          {topMember && (
-            <div className="section-card" style={{ padding: "16px 18px" }}>
-              <div style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 500, marginBottom: 4 }}>Membro mais presente</div>
-              <div style={{ fontSize: 15, fontWeight: 600, color: "var(--text)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{topMember.name}</div>
-              <div style={{ fontSize: 13, color: "var(--accent)", fontWeight: 600 }}>{topMember.attendances} presenças</div>
-            </div>
-          )}
-          {avgDuration > 0 && (
-            <div className="section-card" style={{ padding: "16px 18px" }}>
-              <div style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 500, marginBottom: 4 }}>Duração média</div>
-              <div style={{ fontSize: 22, fontWeight: 700, color: "var(--text)" }}>{avgDuration}min</div>
-            </div>
-          )}
-          <div className="section-card" style={{ padding: "16px 18px" }}>
-            <div style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 500, marginBottom: 4 }}>Período</div>
-            <div style={{ fontSize: 15, fontWeight: 600, color: "var(--text)" }}>{MONTH_NAMES[month - 1]} {year}</div>
-          </div>
+      {/* Stats cards (4 cards) */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 16, marginBottom: 24 }}>
+        <div className="reports-stat-card">
+          <div style={{ color: "var(--success)", marginBottom: 10 }}><IconCheck size={28} /></div>
+          <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>Total Presenças</div>
+          <div style={{ fontSize: 36, fontWeight: 700, color: "var(--text)", lineHeight: 1 }}>{loading ? "..." : totalAttendances}</div>
         </div>
-      )}
+        <div className="reports-stat-card">
+          <div style={{ color: "var(--text-secondary)", marginBottom: 10 }}><IconPeople size={28} /></div>
+          <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>Membros Únicos</div>
+          <div style={{ fontSize: 36, fontWeight: 700, color: "var(--text)", lineHeight: 1 }}>{loading ? "..." : uniqueMembers}</div>
+        </div>
+        <div className="reports-stat-card">
+          <div style={{ color: "var(--accent)", marginBottom: 10 }}><IconChart size={28} /></div>
+          <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>Freq. Média</div>
+          <div style={{ fontSize: 36, fontWeight: 700, color: "var(--accent)", lineHeight: 1 }}>{loading ? "..." : `${avgFrequency}%`}</div>
+        </div>
+        <div className="reports-stat-card">
+          <div style={{ color: "var(--text-secondary)", marginBottom: 10 }}>
+            <svg width={28} height={28} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>Duração Média</div>
+          <div style={{ fontSize: 36, fontWeight: 700, color: "var(--text)", lineHeight: 1 }}>{loading ? "..." : `${avgDuration}min`}</div>
+        </div>
+      </div>
 
       {/* Chart section */}
       <div className="reports-chart-card">
