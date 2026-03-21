@@ -17,7 +17,7 @@ export interface DevocionalContext {
 }
 
 // Versão NVI padrão
-const DEFAULT_BIBLE_VERSION_ID = "a556c5305ee15c3f-01";
+const DEFAULT_BIBLE_VERSION_ID = "35b94e98b2e3a01a-01";
 
 // Fallback: Gênesis 1
 const FALLBACK_CONTEXT: DevocionalContext = {

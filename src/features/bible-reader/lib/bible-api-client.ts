@@ -1,11 +1,11 @@
 /**
  * Cliente HTTP para API.Bible — proxy server-side
  *
- * Base: https://api.scripture.api.bible/v1
+ * Base: https://rest.api.bible/v1
  * Headers: api-key (env var) + fums-version: 3
  */
 
-const BIBLE_API_BASE = "https://api.scripture.api.bible/v1";
+const BIBLE_API_BASE = "https://rest.api.bible/v1";
 
 function getHeaders(): HeadersInit {
   const apiKey = process.env.BIBLE_API_KEY;
@@ -46,6 +46,7 @@ async function apiFetch<T>(path: string): Promise<T> {
 export interface BibleVersion {
   id: string;
   abbreviation: string;
+  abbreviationLocal: string;
   name: string;
   nameLocal: string;
   description: string;

@@ -234,11 +234,11 @@ async function getChapterFromScriptureApi(bookId: string, chapter: number): Prom
     throw new Error("BIBLE_API_KEY não configurada no .env");
   }
 
-  const bibleId = BIBLE_NVI_ID || "a556c5305ee15c3f-01";
+  const bibleId = BIBLE_NVI_ID || "35b94e98b2e3a01a-01";
   const chapterId = `${bookId}.${chapter}`;
 
   const response = await fetch(
-    `https://api.scripture.api.bible/v1/bibles/${bibleId}/chapters/${chapterId}?content-type=text&include-notes=false&include-titles=true&include-chapter-numbers=false&include-verse-numbers=true`,
+    `https://rest.api.bible/v1/bibles/${bibleId}/chapters/${chapterId}?content-type=text&include-notes=false&include-titles=true&include-chapter-numbers=false&include-verse-numbers=true`,
     {
       headers: {
         "api-key": BIBLE_API_KEY,

@@ -28,7 +28,7 @@ services:
 
       # ── Bíblia NVI ───────────────────────────────────────────
       - BIBLE_API_KEY=${BIBLE_API_KEY}
-      - BIBLE_NVI_ID=a556c5305ee15c3f-01
+      - BIBLE_NVI_ID=35b94e98b2e3a01a-01
 
       # ── Storage local ────────────────────────────────────────
       - STORAGE_PATH=/app/data

@@ -22,7 +22,7 @@ export interface DiscoveredVersion {
 // Allowlist de versões conhecidas em PT-BR (fallback se API falhar)
 const PORTUGUESE_VERSIONS_ALLOWLIST: DiscoveredVersion[] = [
   {
-    id: "a556c5305ee15c3f-01",
+    id: "35b94e98b2e3a01a-01",
     abbreviation: "NVI",
     name: "Nova Versão Internacional",
     nameLocal: "Nova Versão Internacional",
@@ -31,19 +31,19 @@ const PORTUGUESE_VERSIONS_ALLOWLIST: DiscoveredVersion[] = [
     audioBibleId: null,
   },
   {
-    id: "b32b9d1b64b4ef29-01",
-    abbreviation: "NAA",
-    name: "Nova Almeida Atualizada",
-    nameLocal: "Nova Almeida Atualizada",
+    id: "d63894c8d9a7a503-01",
+    abbreviation: "BLT",
+    name: "Biblia Livre Para Todos",
+    nameLocal: "Biblia Livre Para Todos",
     language: "por",
     audioAvailable: false,
     audioBibleId: null,
   },
   {
-    id: "531e4dc9c1f32cfd-01",
-    abbreviation: "A21",
-    name: "Almeida Século 21",
-    nameLocal: "Almeida Século 21",
+    id: "aee9474b4a88eefb-01",
+    abbreviation: "OL",
+    name: "O Livro",
+    nameLocal: "O Livro",
     language: "por",
     audioAvailable: false,
     audioBibleId: null,
@@ -91,9 +91,12 @@ export async function discoverPortugueseVersions(): Promise<DiscoveredVersion[]>
         const hasAudioBibles = bible.audioBibles && bible.audioBibles.length > 0;
         const audioBibleId = hasAudioBibles ? bible.audioBibles[0].id : null;
 
+        // Preferir abbreviationLocal (ex: "NVI") sobre abbreviation (ex: "PtNVI")
+        const abbr = bible.abbreviationLocal || bible.abbreviation || bible.name.substring(0, 5);
+
         return {
           id: bible.id,
-          abbreviation: bible.abbreviation || bible.name.substring(0, 5),
+          abbreviation: abbr,
           name: bible.name,
           nameLocal: bible.nameLocal || bible.name,
           language: bible.language?.id || "por",
