@@ -12,6 +12,7 @@ import { BibleNavigation } from "./BibleNavigation";
 import { AudioPlayer } from "./AudioPlayer";
 
 const CACHE_KEY = "devhub-bible-position";
+const SPEED_KEY = "devhub-bible-speed";
 const CACHE_TTL = 24 * 60 * 60 * 1000; // 24h
 
 interface CachedPosition {
@@ -42,6 +43,17 @@ function loadPosition(): CachedPosition | null {
   } catch {
     return null;
   }
+}
+
+function saveSpeed(speed: number) {
+  try { localStorage.setItem(SPEED_KEY, String(speed)); } catch {}
+}
+
+function loadSpeed(): number {
+  try {
+    const val = localStorage.getItem(SPEED_KEY);
+    return val ? parseFloat(val) : 1;
+  } catch { return 1; }
 }
 
 interface BibleModalProps {
@@ -131,22 +143,34 @@ export function BibleModal({
     loadVersions();
   }, [isOpen, initialVersionId]);
 
-  // Carregar conteúdo do capítulo
+  // Carregar conteúdo + áudio em paralelo (mostra tudo junto)
   useEffect(() => {
     if (!isOpen || !selectedVersion) return;
 
-    async function loadContent() {
+    async function loadAll() {
       setIsLoading(true);
       setError(null);
       setHtmlContent(null);
+      setAudioUrl(null);
+      setAudioAvailable(false);
 
       const chapterId = `${bookCode}.${chapter}`;
+
       try {
-        const res = await fetch(`/api/bible/content/${selectedVersion!.id}/${chapterId}`);
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || `Erro ${res.status}`);
-        setHtmlContent(data.content?.content || "");
-        setCopyright(data.content?.copyright || "");
+        // Carregar texto e áudio em paralelo
+        const [contentRes, audioRes] = await Promise.all([
+          fetch(`/api/bible/content/${selectedVersion!.id}/${chapterId}`).then(r => r.json()),
+          fetch(`/api/bible/audio/${selectedVersion!.id}/${chapterId}`).then(r => r.json()).catch(() => ({ audioUrl: null, available: false })),
+        ]);
+
+        // Texto
+        if (contentRes.error) throw new Error(contentRes.error);
+        setHtmlContent(contentRes.content?.content || "");
+        setCopyright(contentRes.content?.copyright || "");
+
+        // Áudio
+        setAudioUrl(audioRes.audioUrl || null);
+        setAudioAvailable(audioRes.available || false);
       } catch (err) {
         const msg = err instanceof Error ? err.message : "Erro desconhecido";
         setError(msg);
@@ -155,33 +179,12 @@ export function BibleModal({
       }
     }
 
-    loadContent();
+    loadAll();
     contentRef.current?.scrollTo({ top: 0, behavior: "smooth" });
 
-    // T9: salvar posição ao navegar
     if (selectedVersion) {
       savePosition({ bookCode, chapter, versionId: selectedVersion.id, audioTime: 0 });
     }
-  }, [isOpen, selectedVersion, bookCode, chapter]);
-
-  // Carregar áudio (sem autoplay — T5)
-  useEffect(() => {
-    if (!isOpen || !selectedVersion) return;
-
-    async function loadAudio() {
-      const chapterId = `${bookCode}.${chapter}`;
-      try {
-        const res = await fetch(`/api/bible/audio/${selectedVersion!.id}/${chapterId}`);
-        const data = await res.json();
-        setAudioUrl(data.audioUrl || null);
-        setAudioAvailable(data.available || false);
-      } catch {
-        setAudioUrl(null);
-        setAudioAvailable(false);
-      }
-    }
-
-    loadAudio();
   }, [isOpen, selectedVersion, bookCode, chapter]);
 
   // Monitorar estado do áudio

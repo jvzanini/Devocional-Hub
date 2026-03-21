@@ -35,6 +35,16 @@ export class AudioManager {
     if (typeof window !== "undefined") {
       this.audio = new Audio();
       this.setupEventListeners();
+      // Restaurar velocidade salva
+      try {
+        const saved = localStorage.getItem("devhub-bible-speed");
+        if (saved) {
+          const speed = parseFloat(saved) as PlaybackSpeed;
+          if ([1, 1.25, 1.5, 1.75, 2].includes(speed)) {
+            this.currentSpeed = speed;
+          }
+        }
+      } catch {}
     }
   }
 
@@ -109,7 +119,10 @@ export class AudioManager {
   }
 
   play(): void {
-    this.audio?.play().catch(console.warn);
+    if (this.audio) {
+      this.audio.playbackRate = this.currentSpeed; // garantir velocidade salva
+      this.audio.play().catch(console.warn);
+    }
     this.updateMediaSession();
   }
 
@@ -137,6 +150,8 @@ export class AudioManager {
     if (this.audio) {
       this.audio.playbackRate = speed;
     }
+    // Persistir velocidade
+    try { localStorage.setItem("devhub-bible-speed", String(speed)); } catch {}
     this.notifyListeners();
   }
 
