@@ -1,14 +1,14 @@
 {
   "active": [
     {
-      "slug": "bible-bubble-holy-bible-api",
-      "path": "plans/bible-bubble-holy-bible-api.md",
-      "title": "Migrar Bible Bubble para Holy Bible API + Word Project Audio",
-      "summary": "Substituir completamente a API.Bible (requer API key, sem áudio PT) pela Holy Bible API (gratuita, sem key, 14 versões PT) + Word Project (áudio MP3 PT-BR, Bíblia completa). Zero mudanças no frontend — toda a UI (BibleModal, AudioPlayer, seletores) permanece intacta.",
-      "linkedAt": "2026-03-21T17:07:01.780Z",
+      "slug": "bible-bubble-v4-complete",
+      "path": "plans/bible-bubble-v4-complete.md",
+      "title": "Bible Bubble v4 — Bible.is Audio + UX Overhaul Completo",
+      "summary": "Migrar áudio para Bible.is (4 versões PT com áudio versão-específico), redesenhar UX completa do modal/bubble/player com controles colapsáveis e drag-to-seek, adicionar busca no capítulo, melhorar formatação do texto, e limpar código obsoleto.",
+      "linkedAt": "2026-03-21T18:17:19.868Z",
       "status": "active"
     }
   ],
   "completed": [],
-  "primary": "bible-bubble-holy-bible-api"
+  "primary": "bible-bubble-v4-complete"
 }

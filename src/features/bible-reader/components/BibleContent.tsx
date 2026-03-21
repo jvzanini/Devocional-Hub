@@ -1,10 +1,13 @@
 "use client";
 
+import { useMemo } from "react";
+
 interface BibleContentProps {
   reference: string;
   htmlContent: string | null;
   isLoading: boolean;
   error: string | null;
+  searchQuery?: string;
 }
 
 function LoadingSkeleton() {
@@ -21,12 +24,35 @@ function LoadingSkeleton() {
   );
 }
 
+/** Highlight de busca no HTML (client-side) */
+function highlightSearch(html: string, query: string): string {
+  if (!query || query.length < 2) return html;
+
+  const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const regex = new RegExp(`(${escaped})`, "gi");
+
+  // Evitar substituir dentro de tags HTML
+  return html.replace(/>([^<]+)</g, (match, text) => {
+    const highlighted = text.replace(regex, '<mark style="background:var(--accent);color:#000;border-radius:2px;padding:0 2px">$1</mark>');
+    return `>${highlighted}<`;
+  });
+}
+
 export function BibleContent({
   reference,
   htmlContent,
   isLoading,
   error,
+  searchQuery,
 }: BibleContentProps) {
+  const processedHtml = useMemo(() => {
+    if (!htmlContent) return null;
+    if (searchQuery && searchQuery.length >= 2) {
+      return highlightSearch(htmlContent, searchQuery);
+    }
+    return htmlContent;
+  }, [htmlContent, searchQuery]);
+
   if (isLoading) {
     return (
       <div className="bible-content">
@@ -51,7 +77,7 @@ export function BibleContent({
     );
   }
 
-  if (!htmlContent) {
+  if (!processedHtml) {
     return (
       <div className="bible-content">
         <p style={{ color: "var(--text-secondary)", textAlign: "center", padding: "40px 0" }}>
@@ -66,7 +92,7 @@ export function BibleContent({
       <h2 className="bible-content-title">{reference}</h2>
       <div
         className="bible-content-text"
-        dangerouslySetInnerHTML={{ __html: htmlContent }}
+        dangerouslySetInnerHTML={{ __html: processedHtml }}
       />
     </div>
   );

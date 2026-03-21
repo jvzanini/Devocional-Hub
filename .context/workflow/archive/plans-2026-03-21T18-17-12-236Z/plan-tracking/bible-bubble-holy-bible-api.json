@@ -1,0 +1,20 @@
+{
+  "planSlug": "bible-bubble-holy-bible-api",
+  "progress": 100,
+  "phases": {
+    "phase-1": {
+      "status": "completed",
+      "updatedAt": "2026-03-21T17:22:03.592Z"
+    },
+    "phase-2": {
+      "status": "completed",
+      "updatedAt": "2026-03-21T17:22:22.663Z"
+    },
+    "phase-3": {
+      "status": "completed",
+      "updatedAt": "2026-03-21T17:22:27.280Z"
+    }
+  },
+  "decisions": [],
+  "lastUpdated": "2026-03-21T17:07:37.113Z"
+}

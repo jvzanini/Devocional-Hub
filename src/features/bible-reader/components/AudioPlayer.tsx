@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { SpeedControl } from "./SpeedControl";
 import type { AudioState, PlaybackSpeed } from "../lib/audio-manager";
 import { getAudioManager } from "../lib/audio-manager";
@@ -11,6 +11,7 @@ interface AudioPlayerProps {
   copyright?: string;
   onPrevious: () => void;
   onNext: () => void;
+  onCollapse?: () => void;
 }
 
 function formatTime(seconds: number): string {
@@ -26,6 +27,7 @@ export function AudioPlayer({
   copyright,
   onPrevious,
   onNext,
+  onCollapse,
 }: AudioPlayerProps) {
   const [state, setState] = useState<AudioState>({
     isPlaying: false,
@@ -36,6 +38,7 @@ export function AudioPlayer({
     isLoading: false,
     error: null,
   });
+  const [isDragging, setIsDragging] = useState(false);
   const progressRef = useRef<HTMLDivElement>(null);
   const managerRef = useRef(getAudioManager());
 
@@ -55,11 +58,56 @@ export function AudioPlayer({
     }
   }, [audioUrl]);
 
-  function handleSeek(e: React.MouseEvent<HTMLDivElement>) {
+  // ─── Drag-to-seek (mouse + touch) ──────────────────────────────────────
+
+  const seekFromEvent = useCallback((clientX: number) => {
     if (!progressRef.current || !state.duration) return;
     const rect = progressRef.current.getBoundingClientRect();
-    const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    const pct = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
     managerRef.current.seek(pct * state.duration);
+  }, [state.duration]);
+
+  function handleProgressClick(e: React.MouseEvent<HTMLDivElement>) {
+    seekFromEvent(e.clientX);
+  }
+
+  function handleMouseDown(e: React.MouseEvent) {
+    e.preventDefault();
+    setIsDragging(true);
+    seekFromEvent(e.clientX);
+  }
+
+  useEffect(() => {
+    if (!isDragging) return;
+
+    function handleMouseMove(e: MouseEvent) {
+      seekFromEvent(e.clientX);
+    }
+    function handleMouseUp() {
+      setIsDragging(false);
+    }
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [isDragging, seekFromEvent]);
+
+  function handleTouchStart(e: React.TouchEvent) {
+    setIsDragging(true);
+    seekFromEvent(e.touches[0].clientX);
+  }
+
+  function handleTouchMove(e: React.TouchEvent) {
+    if (isDragging) {
+      seekFromEvent(e.touches[0].clientX);
+    }
+  }
+
+  function handleTouchEnd() {
+    setIsDragging(false);
   }
 
   function handleCycleSpeed() {
@@ -128,8 +176,12 @@ export function AudioPlayer({
         <span className="bible-player-time">{formatTime(state.currentTime)}</span>
         <div
           ref={progressRef}
-          className="bible-player-progress"
-          onClick={handleSeek}
+          className={`bible-player-progress ${isDragging ? "bible-player-progress--dragging" : ""}`}
+          onClick={handleProgressClick}
+          onMouseDown={handleMouseDown}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
           role="slider"
           aria-label="Progresso do áudio"
           aria-valuenow={Math.round(progress)}
@@ -137,15 +189,28 @@ export function AudioPlayer({
           aria-valuemax={100}
         >
           <div className="bible-player-progress-fill" style={{ width: `${progress}%` }} />
-          <div className="bible-player-progress-thumb" style={{ left: `${progress}%` }} />
+          <div
+            className="bible-player-progress-thumb"
+            style={{ left: `${progress}%` }}
+          />
         </div>
         <span className="bible-player-time">{formatTime(state.duration)}</span>
       </div>
 
       <div className="bible-player-extras">
         <SpeedControl speed={state.speed as PlaybackSpeed} onCycleSpeed={handleCycleSpeed} />
-        {copyright && (
-          <span className="bible-player-copyright">{copyright}</span>
+
+        {onCollapse && (
+          <button
+            className="bible-player-collapse-btn"
+            onClick={onCollapse}
+            aria-label="Recolher controles de áudio"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+            <span>Esconder Controles</span>
+          </button>
         )}
       </div>
     </div>

@@ -1,10 +1,12 @@
 /**
  * Versões da Bíblia em português disponíveis na Holy Bible API
  *
- * Fonte: https://holy-bible-api.com/bibles?language=portuguese
- * IDs numéricos, sem autenticação
- * Áudio PT-BR via Word Project (narração única para todas as versões)
+ * Fonte texto: https://holy-bible-api.com/bibles?language=portuguese
+ * Fonte áudio: Bible.is (live.bible.is) — 4 versões com áudio versão-específico
+ * Fallback áudio: Word Project (narração genérica PT-BR)
  */
+
+import { hasVersionSpecificAudio } from "./bible-is-audio";
 
 export interface DiscoveredVersion {
   id: string;
@@ -19,6 +21,8 @@ export interface DiscoveredVersion {
 /**
  * Versões portuguesas disponíveis (Holy Bible API IDs)
  * Apenas versões com Bíblia completa (66 livros) e texto funcional
+ *
+ * audioAvailable = true apenas para versões com áudio versão-específico (Bible.is)
  */
 const PORTUGUESE_VERSIONS: DiscoveredVersion[] = [
   {
@@ -49,15 +53,6 @@ const PORTUGUESE_VERSIONS: DiscoveredVersion[] = [
     audioBibleId: null,
   },
   {
-    id: "637",
-    abbreviation: "ARC",
-    name: "Almeida Revista e Corrigida",
-    nameLocal: "Almeida Revista e Corrigida",
-    language: "por",
-    audioAvailable: true,
-    audioBibleId: null,
-  },
-  {
     id: "643",
     abbreviation: "NTLH",
     name: "Nova Tradução na Linguagem de Hoje",
@@ -67,12 +62,21 @@ const PORTUGUESE_VERSIONS: DiscoveredVersion[] = [
     audioBibleId: null,
   },
   {
+    id: "637",
+    abbreviation: "ARC",
+    name: "Almeida Revista e Corrigida",
+    nameLocal: "Almeida Revista e Corrigida",
+    language: "por",
+    audioAvailable: false,
+    audioBibleId: null,
+  },
+  {
     id: "636",
     abbreviation: "ALMEIDA",
     name: "Almeida Clássica",
     nameLocal: "Almeida Clássica",
     language: "por",
-    audioAvailable: true,
+    audioAvailable: false,
     audioBibleId: null,
   },
   {
@@ -81,7 +85,7 @@ const PORTUGUESE_VERSIONS: DiscoveredVersion[] = [
     name: "Almeida Revista e Atualizada",
     nameLocal: "Almeida Revista e Atualizada",
     language: "por",
-    audioAvailable: true,
+    audioAvailable: false,
     audioBibleId: null,
   },
   {
@@ -90,7 +94,7 @@ const PORTUGUESE_VERSIONS: DiscoveredVersion[] = [
     name: "Nova Bíblia Viva",
     nameLocal: "Nova Bíblia Viva",
     language: "por",
-    audioAvailable: true,
+    audioAvailable: false,
     audioBibleId: null,
   },
   {
@@ -99,7 +103,7 @@ const PORTUGUESE_VERSIONS: DiscoveredVersion[] = [
     name: "O Livro",
     nameLocal: "O Livro",
     language: "por",
-    audioAvailable: true,
+    audioAvailable: false,
     audioBibleId: null,
   },
   {
@@ -108,7 +112,7 @@ const PORTUGUESE_VERSIONS: DiscoveredVersion[] = [
     name: "Tradução Brasileira",
     nameLocal: "Tradução Brasileira",
     language: "por",
-    audioAvailable: true,
+    audioAvailable: false,
     audioBibleId: null,
   },
   {
@@ -117,7 +121,7 @@ const PORTUGUESE_VERSIONS: DiscoveredVersion[] = [
     name: "Bíblia Católica Pastoral",
     nameLocal: "Bíblia Católica Pastoral",
     language: "por",
-    audioAvailable: true,
+    audioAvailable: false,
     audioBibleId: null,
   },
   {
@@ -126,7 +130,7 @@ const PORTUGUESE_VERSIONS: DiscoveredVersion[] = [
     name: "Bíblia para Todos",
     nameLocal: "Bíblia para Todos",
     language: "por",
-    audioAvailable: true,
+    audioAvailable: false,
     audioBibleId: null,
   },
 ];

@@ -1,0 +1,14 @@
+{
+  "active": [
+    {
+      "slug": "bible-bubble-holy-bible-api",
+      "path": "plans/bible-bubble-holy-bible-api.md",
+      "title": "Migrar Bible Bubble para Holy Bible API + Word Project Audio",
+      "summary": "Substituir completamente a API.Bible (requer API key, sem áudio PT) pela Holy Bible API (gratuita, sem key, 14 versões PT) + Word Project (áudio MP3 PT-BR, Bíblia completa). Zero mudanças no frontend — toda a UI (BibleModal, AudioPlayer, seletores) permanece intacta.",
+      "linkedAt": "2026-03-21T17:07:01.780Z",
+      "status": "active"
+    }
+  ],
+  "completed": [],
+  "primary": "bible-bubble-holy-bible-api"
+}

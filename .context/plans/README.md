@@ -4,8 +4,9 @@ This directory contains plans for coordinating work across documentation and pla
 
 ## Plan Queue
 1. [Bible Bubble Holy Bible Api](./bible-bubble-holy-bible-api.md)
-2. [Devocional Hub Master Update V2](./devocional-hub-master-update-v2.md)
-3. [Devocional Hub V2 Hotfix](./devocional-hub-v2-hotfix.md)
+2. [Bible Bubble V4 Complete](./bible-bubble-v4-complete.md)
+3. [Devocional Hub Master Update V2](./devocional-hub-master-update-v2.md)
+4. [Devocional Hub V2 Hotfix](./devocional-hub-v2-hotfix.md)
 
 ## How To Create Or Update Plans
 - Run "ai-context plan <name>" to scaffold a new plan template.
