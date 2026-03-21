@@ -1,29 +1,44 @@
 # Devocional Hub — Diretrizes do Projeto
 
-## Bible Bubble v3 — Migração Holy Bible API + Áudio PT-BR (CONCLUÍDO — 2026-03-21)
+## Bible Bubble v4 — Bible.is Audio Versão-Específico + UX Overhaul (CONCLUÍDO — 2026-03-21)
 
-Migrou a Bíblia interativa (bubble) de API.Bible para Holy Bible API + Word Project Audio:
+Áudio versão-específico via Bible.is (FCBH) + overhaul completo de UX:
 - **Texto:** Holy Bible API (holy-bible-api.com) — 12 versões PT, gratuita, sem API key
-- **Áudio:** Word Project (wordproaudio.org) — MP3 PT-BR, Bíblia completa, CORS habilitado
-- **Removidos:** bible-api-client.ts, rotas /books e /chapters, FUMS tracking, BIBLE_API_KEY, BIBLE_NVI_ID
-- **Criados:** holy-bible-client.ts, word-project-audio.ts
-- **Frontend:** Zero mudanças — AudioPlayer, BibleModal, seletores permanecem intactos
+- **Áudio principal:** Bible.is (live.bible.is) — 4 versões com áudio próprio: NVI, NAA, NTLH, NVT
+- **Áudio fallback:** Word Project (wordproaudio.org) — narração genérica PT-BR
+- **Criados:** bible-is-audio.ts (mapeamento de filesets Bible.is)
+- **UX:** Bubble com label, scroll lock, player colapsável, drag-to-seek, busca no capítulo
 
-### Arquitetura da Bíblia (v3)
+### Arquitetura da Bíblia (v4)
 ```
-Frontend → /api/bible/versions → version-discovery.ts → lista estática 12 versões PT
+Frontend → /api/bible/versions → version-discovery.ts → 12 versões PT (4 com áudio versão-específico)
 Frontend → /api/bible/content  → holy-bible-client.ts → holy-bible-api.com (texto)
-Frontend → /api/bible/audio    → word-project-audio.ts → wordproaudio.org (MP3 PT-BR)
+Frontend → /api/bible/audio    → bible-is-audio.ts → live.bible.is (NVI/NAA/NTLH/NVT)
+                                 → word-project-audio.ts → wordproaudio.org (fallback)
 Frontend → /api/bible/context  → devocional-context.ts → Prisma (plano de leitura ativo)
 ```
 
-### Versões PT disponíveis
-NVI (644), NAA (641), NVT (645), ARC (637), NTLH (643), Almeida (636), ARA (635), NBV (642), OL (646), TB (647), CAP (640), BPT (639)
+### Versões PT com áudio versão-específico (Bible.is)
+| Versão | ID | NT Fileset | OT Fileset |
+|--------|----|-----------|-----------|
+| NVI | 644 | PORNVIN1DA | PORNVIO1DA |
+| NAA | 641 | PORBBSN1DA | PORBBSO1DA |
+| NTLH | 643 | PO1NLHN1DA | PO1NLHO1DA |
+| NVT | 645 | PORTHFN1DA | PORTHFO1DA |
+
+### Versões PT (texto apenas)
+ARC (637), Almeida (636), ARA (635), NBV (642), OL (646), TB (647), CAP (640), BPT (639)
 
 ### URLs de APIs externas
 - Texto: `https://holy-bible-api.com/bibles/{id}/books/{book}/chapters/{ch}/verses`
-- Áudio: `https://www.wordproaudio.org/bibles/app/audio/2_BR/{book}/{ch}.mp3`
-- book = 1-66 (order em BIBLE_BOOKS), ch = número do capítulo
+- Áudio Bible.is: `https://live.bible.is/api/bibles/filesets/{FILESET}/{BOOK_CODE}/{CH}?v=4`
+- Áudio Word Project (fallback): `https://www.wordproaudio.org/bibles/app/audio/2_BR/{book}/{ch}.mp3`
+
+### Features UX v4
+- Bubble: 15% maior, label "Abrir Bíblia", esconde quando modal aberto
+- Player: colapsável, drag-to-seek (mouse+touch), prev/next flutuantes
+- Busca: lupa no header, busca client-side no capítulo com highlight
+- Modal: scroll lock total no mobile, bordas nos seletores
 
 ## Hotfix v2.1 — Correções pós-deploy (CONCLUÍDO — 2026-03-21)
 
@@ -161,7 +176,7 @@ src/
 │   │   └── lib/                  # bible.ts, bible-books.ts, bible-abbreviations.ts
 │   ├── bible-reader/             # Bíblia interativa (bubble + player) — NOVO
 │   │   ├── components/           # BibleBubble, BibleModal, AudioPlayer, Seletores
-│   │   └── lib/                  # holy-bible-client, word-project-audio, audio-manager, version-discovery
+│   │   └── lib/                  # holy-bible-client, bible-is-audio, word-project-audio, audio-manager, version-discovery
 │   ├── permissions/lib/          # Sistema de permissões multi-nível — NOVO
 │   ├── planning/                 # Módulo de planejamento teológico — NOVO
 │   │   ├── components/           # PlanningPage, PlanningCard, ThemeGroup
