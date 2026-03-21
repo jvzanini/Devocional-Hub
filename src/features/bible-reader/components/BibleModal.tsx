@@ -174,9 +174,18 @@ export function BibleModal({
     }
   }, [isOpen, selectedVersion, bookCode, chapter]);
 
-  // Carregar áudio (em background, não bloqueia texto)
+  // audioAvailable baseado APENAS na versão selecionada (nunca muda durante navegação)
   useEffect(() => {
-    if (!isOpen || !selectedVersion) return;
+    if (selectedVersion) {
+      setAudioAvailable(selectedVersion.audioAvailable);
+    }
+  }, [selectedVersion]);
+
+  // Carregar URL do áudio (em background, não bloqueia texto nem afeta audioAvailable)
+  useEffect(() => {
+    if (!isOpen || !selectedVersion || !selectedVersion.audioAvailable) return;
+
+    setAudioUrl(null); // limpar URL anterior enquanto carrega nova
 
     async function loadAudio() {
       const chapterId = `${bookCode}.${chapter}`;
@@ -184,15 +193,11 @@ export function BibleModal({
         const res = await fetch(`/api/bible/audio/${selectedVersion!.id}/${chapterId}`);
         const data = await res.json();
         setAudioUrl(data.audioUrl || null);
-        setAudioAvailable(data.available || false);
       } catch {
         setAudioUrl(null);
-        setAudioAvailable(false);
       }
     }
 
-    // Mostrar player imediatamente se versão tem áudio (baseado em audioAvailable da versão)
-    setAudioAvailable(selectedVersion.audioAvailable);
     loadAudio();
   }, [isOpen, selectedVersion, bookCode, chapter]);
 
