@@ -50,7 +50,11 @@ export default async function DashboardPage() {
   const greetingName = getGreetingName(userName);
   const userId = (session.user as { id?: string })?.id;
 
-  const recentCompleted = sessions.find(s => s.status === "COMPLETED");
+  const recentCompleted = sessions.find(s =>
+    s.status === "COMPLETED" &&
+    s.chapterRef &&
+    s.chapterRef !== "Não identificado"
+  );
   const totalCompleted = sessions.filter(s => s.status === "COMPLETED").length;
 
   // Calendar data

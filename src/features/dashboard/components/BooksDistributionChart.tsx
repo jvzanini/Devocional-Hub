@@ -74,9 +74,9 @@ export function BooksDistributionChart({ data }: BooksDistributionChartProps) {
   }));
 
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 24, flexWrap: "wrap" }}>
-      {/* Gráfico */}
-      <div style={{ width: 220, height: 220, flexShrink: 0 }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 32, flexWrap: "wrap" }}>
+      {/* Gráfico com total no centro */}
+      <div style={{ width: 180, height: 180, flexShrink: 0, position: "relative" }}>
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
@@ -85,8 +85,8 @@ export function BooksDistributionChart({ data }: BooksDistributionChartProps) {
               nameKey="name"
               cx="50%"
               cy="50%"
-              outerRadius={90}
-              innerRadius={45}
+              outerRadius={80}
+              innerRadius={50}
               paddingAngle={2}
               strokeWidth={0}
             >
@@ -101,38 +101,34 @@ export function BooksDistributionChart({ data }: BooksDistributionChartProps) {
             <Tooltip content={<CustomTooltip />} />
           </PieChart>
         </ResponsiveContainer>
+        <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", textAlign: "center" }}>
+          <div style={{ fontSize: 24, fontWeight: 700, color: "var(--text)", lineHeight: 1 }}>{total}</div>
+          <div style={{ fontSize: 11, color: "var(--text-muted)" }}>sessões</div>
+        </div>
       </div>
 
-      {/* Legenda */}
+      {/* Legenda integrada com barras de proporção */}
       <div style={{ flex: 1, minWidth: 160 }}>
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {chartData.map((entry, index) => (
-            <div
-              key={entry.name}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-                fontSize: 14,
-              }}
-            >
-              <div
-                style={{
-                  width: 12,
-                  height: 12,
-                  borderRadius: 3,
-                  backgroundColor: COLORS[index % COLORS.length],
-                  flexShrink: 0,
-                }}
-              />
-              <span style={{ color: "var(--text)", fontWeight: 500, flex: 1 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          {chartData.slice(0, 10).map((entry, index) => (
+            <div key={entry.name} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div style={{ width: 10, height: 10, borderRadius: 2, backgroundColor: COLORS[index % COLORS.length], flexShrink: 0 }} />
+              <span style={{ color: "var(--text)", fontWeight: 500, fontSize: 14, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                 {entry.name}
               </span>
-              <span style={{ color: "var(--text-muted)", fontSize: 13 }}>
-                {entry.sessions} ({entry.percent.toFixed(0)}%)
+              <span style={{ color: "var(--text-muted)", fontSize: 13, fontWeight: 600, flexShrink: 0 }}>
+                {entry.sessions}
+              </span>
+              <span style={{ color: "var(--text-muted)", fontSize: 12, flexShrink: 0, width: 38, textAlign: "right" }}>
+                {entry.percent.toFixed(0)}%
               </span>
             </div>
           ))}
+          {chartData.length > 10 && (
+            <div style={{ fontSize: 12, color: "var(--text-muted)", paddingTop: 4 }}>
+              +{chartData.length - 10} outro{chartData.length - 10 !== 1 ? "s" : ""}
+            </div>
+          )}
         </div>
       </div>
     </div>

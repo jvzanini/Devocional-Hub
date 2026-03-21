@@ -64,15 +64,15 @@ export default async function SessionPage({ params }: { params: Promise<{ id: st
   const userRole = ((session.user as { role?: string })?.role || "MEMBER") as UserRoleType;
   const userIsAdmin = checkIsAdmin(userRole);
 
-  // Buscar sessões adjacentes para navegação
+  // Buscar sessões adjacentes para navegação (pular sessões com erro)
   const [prevSession, nextSession] = await Promise.all([
     prisma.session.findFirst({
-      where: { date: { lt: s.date } },
+      where: { date: { lt: s.date }, status: { not: "ERROR" } },
       orderBy: { date: "desc" },
       select: { id: true, chapterRef: true },
     }),
     prisma.session.findFirst({
-      where: { date: { gt: s.date } },
+      where: { date: { gt: s.date }, status: { not: "ERROR" } },
       orderBy: { date: "asc" },
       select: { id: true, chapterRef: true },
     }),
@@ -207,7 +207,7 @@ export default async function SessionPage({ params }: { params: Promise<{ id: st
       {/* Navegação anterior/próximo + Voltar */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
         <Link
-          href="/"
+          href="/books"
           style={{
             display: "inline-flex",
             alignItems: "center",

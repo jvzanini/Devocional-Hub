@@ -87,7 +87,9 @@ export function BooksPageClient({ books }: BooksPageClientProps) {
   const [selectedBookCode, setSelectedBookCode] = useState<string>(booksWithSessions[0]?.code || books[0]?.code || "");
   const [search, setSearch] = useState("");
   const [globalSearch, setGlobalSearch] = useState("");
+  const [bookFilter, setBookFilter] = useState("");
   const [showRoadmap, setShowRoadmap] = useState(false);
+  const [roadmapExpanded, setRoadmapExpanded] = useState(false);
 
   const { results: globalResults, isSearching } = useGlobalSearch(globalSearch);
 
@@ -106,12 +108,6 @@ export function BooksPageClient({ books }: BooksPageClientProps) {
   }, [selectedBook, search]);
 
   const studiedCount = booksWithSessions.length;
-
-  const handleOpenBible = useCallback(() => {
-    // Disparar evento para abrir a BibleBubble com contexto do livro
-    const bubble = document.querySelector(".bible-bubble") as HTMLButtonElement;
-    if (bubble) bubble.click();
-  }, []);
 
   if (!selectedBook) {
     return (
@@ -188,9 +184,34 @@ export function BooksPageClient({ books }: BooksPageClientProps) {
           </div>
         )}
 
+        {/* Filtro de livros */}
+        <div style={{ position: "relative", marginBottom: 10 }}>
+          <svg style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", width: 14, height: 14, color: "var(--text-muted)", pointerEvents: "none" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+          </svg>
+          <input
+            type="text"
+            placeholder="Filtrar livros..."
+            value={bookFilter}
+            onChange={(e) => setBookFilter(e.target.value)}
+            style={{
+              width: "100%",
+              padding: "7px 10px 7px 30px",
+              borderRadius: 8,
+              border: "1px solid var(--border, rgba(128,128,128,0.2))",
+              background: "var(--surface)",
+              color: "var(--text)",
+              fontSize: 13,
+              outline: "none",
+            }}
+          />
+        </div>
+
         {/* Lista de livros */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 2, overflowY: "auto", maxHeight: "calc(100vh - 340px)" }}>
-          {booksWithSessions.map((book) => (
+        <div style={{ display: "flex", flexDirection: "column", gap: 3, overflowY: "auto", maxHeight: "calc(100vh - 380px)" }}>
+          {booksWithSessions
+            .filter((book) => !bookFilter || book.name.toLowerCase().includes(bookFilter.toLowerCase()))
+            .map((book) => (
             <div
               key={book.code}
               className={`book-list-item${book.code === selectedBookCode ? " active" : ""}`}
@@ -198,12 +219,13 @@ export function BooksPageClient({ books }: BooksPageClientProps) {
                 setSelectedBookCode(book.code);
                 setSearch("");
                 setGlobalSearch("");
+                setBookFilter("");
               }}
-              style={{ padding: "10px 12px" }}
+              style={{ padding: "12px 14px" }}
             >
               <div style={{ minWidth: 0, flex: 1 }}>
                 <div style={{
-                  fontSize: 15,
+                  fontSize: 16,
                   fontWeight: book.code === selectedBookCode ? 700 : 500,
                   color: book.code === selectedBookCode ? "var(--text)" : "var(--text-secondary)",
                   whiteSpace: "nowrap",
@@ -212,17 +234,17 @@ export function BooksPageClient({ books }: BooksPageClientProps) {
                 }}>
                   {book.name}
                 </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 3 }}>
-                  <span style={{ fontSize: 12, color: "var(--text-muted)" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
+                  <span style={{ fontSize: 13, color: "var(--text-muted)" }}>
                     {book.sessionCount} sessão{book.sessionCount !== 1 ? "ões" : ""}
                   </span>
-                  <span style={{ fontSize: 12, color: "var(--text-muted)" }}>·</span>
-                  <span style={{ fontSize: 12, color: "var(--accent)", fontWeight: 600 }}>
+                  <span style={{ fontSize: 13, color: "var(--text-muted)" }}>·</span>
+                  <span style={{ fontSize: 13, color: "var(--accent)", fontWeight: 600 }}>
                     {book.progress}%
                   </span>
                 </div>
               </div>
-              <ProgressCircle progress={book.progress} size={32} />
+              <ProgressCircle progress={book.progress} size={40} />
             </div>
           ))}
         </div>
@@ -250,30 +272,6 @@ export function BooksPageClient({ books }: BooksPageClientProps) {
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            {/* Botão Abrir Bíblia */}
-            <button
-              onClick={handleOpenBible}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 6,
-                padding: "8px 16px",
-                borderRadius: 8,
-                border: "1px solid var(--accent)",
-                background: "transparent",
-                color: "var(--accent)",
-                fontSize: 13,
-                fontWeight: 600,
-                cursor: "pointer",
-                transition: "background 0.15s",
-              }}
-            >
-              <svg width={16} height={16} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
-              </svg>
-              Abrir Bíblia
-            </button>
-
             {/* Botão roadmap toggle */}
             <button
               onClick={() => setShowRoadmap(!showRoadmap)}
@@ -314,17 +312,22 @@ export function BooksPageClient({ books }: BooksPageClientProps) {
         </div>
 
         {/* Roadmap / Trilha Visual */}
-        {showRoadmap && selectedBook.sessions.length > 0 && (
-          <div className="section-card" style={{ marginBottom: 24, padding: 20 }}>
-            <div className="section-title" style={{ marginBottom: 16 }}>Trilha de Devocionais</div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 0, position: "relative", paddingLeft: 20 }}>
-              {/* Linha vertical */}
-              <div style={{ position: "absolute", left: 7, top: 4, bottom: 4, width: 2, background: "var(--border, rgba(128,128,128,0.15))", borderRadius: 1 }} />
-              {selectedBook.sessions
-                .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-                .map((s, idx) => {
+        {showRoadmap && selectedBook.sessions.length > 0 && (() => {
+          const sortedSessions = selectedBook.sessions
+            .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+          const PREVIEW_COUNT = 4;
+          const hasMore = sortedSessions.length > PREVIEW_COUNT;
+          const visibleSessions = roadmapExpanded ? sortedSessions : sortedSessions.slice(0, PREVIEW_COUNT);
+
+          return (
+            <div className="section-card" style={{ marginBottom: 24, padding: 20 }}>
+              <div className="section-title" style={{ marginBottom: 16 }}>Trilha de Devocionais</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 0, position: "relative", paddingLeft: 20 }}>
+                {/* Linha vertical */}
+                <div style={{ position: "absolute", left: 7, top: 4, bottom: 4, width: 2, background: "var(--border, rgba(128,128,128,0.15))", borderRadius: 1 }} />
+                {visibleSessions.map((s, idx) => {
                   const isCompleted = s.status === "COMPLETED";
-                  const isLast = idx === selectedBook.sessions.length - 1;
+                  const isLast = idx === visibleSessions.length - 1 && !hasMore;
                   return (
                     <Link
                       key={s.id}
@@ -355,20 +358,52 @@ export function BooksPageClient({ books }: BooksPageClientProps) {
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: 15, fontWeight: 600, color: "var(--text)" }}>{s.chapterRef}</div>
                         <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2 }}>
-                          {new Date(s.date).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "2-digit" })}
+                          {new Date(s.date).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })}
                           {" · "}
                           {s.participantsCount} participante{s.participantsCount !== 1 ? "s" : ""}
                         </div>
                       </div>
-                      <span className={`badge badge-${isCompleted ? "success" : s.status === "RUNNING" ? "warning" : "info"}`} style={{ fontSize: 11, flexShrink: 0 }}>
-                        {isCompleted ? "Concluído" : s.status === "RUNNING" ? "Processando" : "Pendente"}
-                      </span>
+                      {isCompleted ? (
+                        <div style={{ width: 20, height: 20, borderRadius: "50%", backgroundColor: "rgba(16,185,129,0.15)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                          <svg width={12} height={12} fill="none" viewBox="0 0 24 24" stroke="#10b981" strokeWidth={2.5}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                          </svg>
+                        </div>
+                      ) : (
+                        <span className={`badge badge-${s.status === "RUNNING" ? "warning" : "info"}`} style={{ fontSize: 11, flexShrink: 0 }}>
+                          {s.status === "RUNNING" ? "Processando" : "Pendente"}
+                        </span>
+                      )}
                     </Link>
                   );
                 })}
+              </div>
+              {hasMore && (
+                <button
+                  onClick={() => setRoadmapExpanded(!roadmapExpanded)}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                    margin: "12px auto 0",
+                    padding: "6px 16px",
+                    borderRadius: 8,
+                    border: "1px solid var(--border, rgba(128,128,128,0.2))",
+                    background: "transparent",
+                    color: "var(--text-secondary)",
+                    fontSize: 13,
+                    cursor: "pointer",
+                  }}
+                >
+                  {roadmapExpanded ? "Ver menos" : `Ver mais ${sortedSessions.length - PREVIEW_COUNT} sessões`}
+                  <svg width={12} height={12} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} style={{ transform: roadmapExpanded ? "rotate(180deg)" : "none", transition: "transform 0.2s" }}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+              )}
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* Barra de busca local */}
         <div style={{ position: "relative", marginBottom: 24 }}>
@@ -400,7 +435,13 @@ export function BooksPageClient({ books }: BooksPageClientProps) {
               <Link key={s.id} href={`/session/${s.id}`} className="book-card">
                 <div className="book-card-header">
                   <span style={{ fontSize: 16, fontWeight: 700, lineHeight: 1.3 }}>{s.chapterRef || "Devocional"}</span>
-                  {s.status === "COMPLETED" && <span className="badge badge-success" style={{ fontSize: 11 }}>Concluído</span>}
+                  {s.status === "COMPLETED" && (
+                    <div style={{ width: 22, height: 22, borderRadius: "50%", backgroundColor: "rgba(16,185,129,0.15)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <svg width={14} height={14} fill="none" viewBox="0 0 24 24" stroke="#10b981" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                  )}
                   {s.status === "RUNNING" && <span className="badge badge-warning" style={{ fontSize: 11 }}>Processando</span>}
                 </div>
                 <div className="book-card-body">
@@ -414,7 +455,7 @@ export function BooksPageClient({ books }: BooksPageClientProps) {
                       <svg style={{ width: 13, height: 13 }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
                       </svg>
-                      {new Date(s.date).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "2-digit" })}
+                      {new Date(s.date).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })}
                     </span>
                     <span style={{ fontSize: 12, color: "var(--text-muted)", display: "flex", alignItems: "center", gap: 4 }}>
                       <svg style={{ width: 13, height: 13 }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

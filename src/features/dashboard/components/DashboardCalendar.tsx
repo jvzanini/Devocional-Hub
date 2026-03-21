@@ -167,12 +167,6 @@ export function DashboardCalendar({ datesWithDevotional, dateToSessionId, planDa
           // Determinar classe do cell
           const classes = [
             "calendar-cell",
-            isToday ? "calendar-today" : "",
-            hasDev && past ? "has-devotional-past" : "",
-            hasDev && future ? "has-devotional-future" : "",
-            hasDev && isToday ? "has-devotional-today" : "",
-            !hasDev && planDay && future ? "has-plan-future" : "",
-            !hasDev && planDay && past ? "has-plan-past" : "",
             (hasDev || planDay) ? "clickable" : "",
           ].filter(Boolean).join(" ");
 
@@ -183,21 +177,81 @@ export function DashboardCalendar({ datesWithDevotional, dateToSessionId, planDa
             label = formatChapterLabel(bookName, planDay.chapters);
           }
 
+          // Inline styles baseados no estado
+          const cellStyle: React.CSSProperties = {};
+          if (hasDev && past) {
+            // Realizado (passado) = fundo escuro âmbar
+            cellStyle.fontWeight = 600;
+            cellStyle.color = "#fff";
+            cellStyle.backgroundColor = "rgba(180,120,20,0.85)";
+            cellStyle.borderColor = "transparent";
+            cellStyle.cursor = "pointer";
+          } else if (hasDev && future) {
+            // Agendado (futuro) = amarelo vibrante
+            cellStyle.fontWeight = 700;
+            cellStyle.color = "#1a1a1a";
+            cellStyle.backgroundColor = "var(--accent)";
+            cellStyle.borderColor = "transparent";
+            cellStyle.cursor = "pointer";
+            cellStyle.boxShadow = "0 2px 8px rgba(245,166,35,0.25)";
+          } else if (hasDev && isToday) {
+            cellStyle.fontWeight = 700;
+            cellStyle.color = "#1a1a1a";
+            cellStyle.backgroundColor = "var(--accent)";
+            cellStyle.borderColor = "transparent";
+            cellStyle.cursor = "pointer";
+            cellStyle.boxShadow = "0 2px 8px rgba(245,166,35,0.3)";
+          } else if (!hasDev && planDay && future) {
+            cellStyle.backgroundColor = "var(--accent-subtle)";
+          } else if (!hasDev && planDay && past) {
+            cellStyle.opacity = 0.7;
+          }
+          if (isToday && !hasDev) {
+            cellStyle.fontWeight = 700;
+            cellStyle.color = "var(--accent)";
+          }
+
           const cellContent = (
             <div
               className={classes}
+              style={cellStyle}
               onClick={!hasDev && planDay ? () => handleDayClick(key) : undefined}
             >
               <span className="calendar-day-number">{day}</span>
-              {label && (
+              {/* Bolinha branca para hoje */}
+              {isToday && (
+                <div style={{
+                  width: 5,
+                  height: 5,
+                  borderRadius: "50%",
+                  backgroundColor: hasDev ? "#fff" : "var(--accent)",
+                  margin: "2px auto 0",
+                }} />
+              )}
+              {label && !isToday && (
                 <div className="calendar-cell-label" style={{
                   color: hasDev
-                    ? (past ? "var(--text-muted)" : "#fff")
+                    ? (past ? "rgba(255,255,255,0.8)" : "#1a1a1a")
                     : (planDay?.completed ? "var(--success)" : "var(--text-muted)"),
                   fontSize: 9,
                   fontWeight: 600,
                   lineHeight: 1,
                   marginTop: 2,
+                  letterSpacing: "0.02em",
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  maxWidth: "100%",
+                }}>
+                  {label}
+                </div>
+              )}
+              {label && isToday && (
+                <div className="calendar-cell-label" style={{
+                  color: hasDev ? "#fff" : "var(--accent)",
+                  fontSize: 9,
+                  fontWeight: 600,
+                  lineHeight: 1,
                   letterSpacing: "0.02em",
                   whiteSpace: "nowrap",
                   overflow: "hidden",
@@ -225,15 +279,17 @@ export function DashboardCalendar({ datesWithDevotional, dateToSessionId, planDa
       {/* Legend */}
       <div style={{ display: "flex", gap: 20, marginTop: 16, paddingTop: 14, borderTop: "1px solid var(--border-light)", flexWrap: "wrap" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "var(--text-muted)" }}>
-          <div style={{ width: 12, height: 12, borderRadius: 3, background: "linear-gradient(135deg, var(--accent), var(--accent-hover))" }} />
-          Futuro (agendado)
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "var(--text-muted)" }}>
-          <div style={{ width: 12, height: 12, borderRadius: 3, border: "2px solid var(--accent)", backgroundColor: "transparent" }} />
+          <div style={{ width: 12, height: 12, borderRadius: 3, backgroundColor: "rgba(180,120,20,0.85)" }} />
           Realizado
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "var(--text-muted)" }}>
-          <div style={{ width: 12, height: 12, borderRadius: 3, border: "3px solid var(--success)", backgroundColor: "var(--accent-light)" }} />
+          <div style={{ width: 12, height: 12, borderRadius: 3, backgroundColor: "var(--accent)" }} />
+          Agendado
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "var(--text-muted)" }}>
+          <div style={{ width: 12, height: 12, borderRadius: 3, backgroundColor: "var(--accent-light)", position: "relative", display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+            <div style={{ width: 4, height: 4, borderRadius: "50%", backgroundColor: "var(--accent)", marginBottom: 1 }} />
+          </div>
           Hoje
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "var(--text-muted)" }}>
