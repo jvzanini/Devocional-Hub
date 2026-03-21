@@ -1814,7 +1814,7 @@ select.input-field {
 
 /* ─── Audio Player ───────────────────────────────── */
 .bible-player {
-  padding: 10px 16px 20px;
+  padding: 10px 16px 8px;
 }
 .bible-player--disabled {
   padding: 10px 16px;
@@ -1923,35 +1923,44 @@ select.input-field {
   color: var(--text);
 }
 
-/* Toggle expandir/recolher — seta sutil */
-.bible-player-toggle {
-  display: flex;
+/* Botão pill — contorno arredondado (expandir/recolher/velocidade) */
+.bible-player-pill-btn {
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 6px 0 14px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  border: 1px solid var(--border, rgba(128,128,128,0.3));
+  background: transparent;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
   cursor: pointer;
-  color: var(--text-secondary);
-  opacity: 0.4;
-  transition: opacity 0.15s;
-  user-select: none;
-}
-.bible-player-toggle:hover {
-  opacity: 1;
-}
-.bible-player-toggle--inline {
-  padding: 4px;
-  opacity: 0.5;
+  transition: background 0.15s, border-color 0.15s;
   flex-shrink: 0;
+  min-width: 32px;
+  height: 28px;
+}
+.bible-player-pill-btn:hover {
+  background: var(--surface-hover);
+  border-color: var(--text-secondary);
+}
+
+/* Barra inferior do player expandido */
+.bible-player-footer-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 4px 16px 10px;
 }
 
 /* Player colapsado — compacto */
 .bible-player-collapsed {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
   gap: 6px;
-  padding: 8px 16px 12px;
-  position: relative;
+  padding: 8px 12px 12px;
 }
 .bible-player-collapsed-nav {
   display: inline-flex;
