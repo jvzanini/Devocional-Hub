@@ -14,7 +14,7 @@ export async function GET(request: Request) {
   const subTeam = searchParams.get("subTeam");
 
   const user = await prisma.user.findUnique({ where: { id: (session.user as { id: string }).id } });
-  const isAdmin = user?.role === "ADMIN";
+  const isAdmin = user?.role === "ADMIN" || user?.role === "SUPER_ADMIN";
 
   // Non-admin can only see their own attendance
   const targetUserId = isAdmin && userId ? userId : (session.user as { id: string }).id;

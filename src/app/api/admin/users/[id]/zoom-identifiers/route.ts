@@ -7,7 +7,7 @@ async function isAdmin() {
   const session = await auth();
   if (!session?.user) return false;
   const user = await prisma.user.findUnique({ where: { id: (session.user as { id: string }).id } });
-  return user?.role === "ADMIN";
+  return user?.role === "ADMIN" || user?.role === "SUPER_ADMIN";
 }
 
 export async function POST(

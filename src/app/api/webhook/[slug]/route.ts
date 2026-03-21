@@ -64,6 +64,16 @@ export async function POST(
 
     console.log(`[Webhook] meeting.ended recebido: ID=${meetingId}, UUID=${meetingUuid}, Topic="${topic}"`);
 
+    // Filtrar pelo meeting ID configurado no admin (ZOOM_RECURRING_MEETING_ID ou AppSetting)
+    const configuredMeetingId = process.env.ZOOM_RECURRING_MEETING_ID
+      || (await prisma.appSetting.findUnique({ where: { key: "zoomMeetingId" } }))?.value
+      || "";
+
+    if (configuredMeetingId && meetingId !== configuredMeetingId) {
+      console.log(`[Webhook] Meeting ID ${meetingId} não corresponde ao configurado (${configuredMeetingId}). Ignorando.`);
+      return NextResponse.json({ skipped: true, reason: "Meeting ID não corresponde ao configurado" });
+    }
+
     // Verificar se já processamos este UUID
     const existing = await prisma.session.findFirst({
       where: { zoomUuid: meetingUuid },
