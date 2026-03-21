@@ -39,7 +39,7 @@ function normalizeForSearch(text: string): string {
 
 /**
  * Filtrar versículos: ocultar os que não contêm o texto e destacar os que contêm
- * Trabalha com spans data-verse dentro de parágrafos
+ * Trabalha com span.bible-verse[data-verse] individuais
  */
 function filterAndHighlight(html: string, query: string): string {
   if (!query || query.length < 2) return html;
@@ -50,28 +50,31 @@ function filterAndHighlight(html: string, query: string): string {
   const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const highlightRegex = new RegExp(`(${escaped})`, "gi");
 
-  // Processar cada span data-verse individualmente
-  const processed = html.replace(/<span data-verse="(\d+)">([\s\S]*?)<\/span>/g, (match, verseNum, content) => {
-    const plainText = content.replace(/<[^>]+>/g, "");
+  // Separar os spans de versículos usando split/rejoin
+  // Cada versículo: <span class="bible-verse" data-verse="N">...</span>
+  const verseRegex = /<span class="bible-verse" data-verse="(\d+)">((?:(?!<span class="bible-verse")[\s\S])*?)<\/span>/g;
+  let hasVisible = false;
+
+  const processed = html.replace(verseRegex, (match, verseNum, innerContent) => {
+    // Extrair texto puro do versículo
+    const plainText = innerContent.replace(/<[^>]+>/g, "").replace(/\u00A0/g, " ");
     const normalizedPlain = normalizeForSearch(plainText);
 
     if (!normalizedPlain.includes(normalizedQuery)) {
-      // Ocultar versículo
-      return `<span data-verse="${verseNum}" style="display:none">${content}</span>`;
+      return `<span class="bible-verse" data-verse="${verseNum}" style="display:none">${innerContent}</span>`;
     }
 
-    // Destacar texto encontrado
-    const highlighted = content.replace(/>([^<]+)</g, (_m: string, text: string) => {
+    hasVisible = true;
+    // Destacar — aplicar apenas no texto fora de tags HTML
+    const highlighted = innerContent.replace(/>([^<]+)/g, (_m: string, text: string) => {
       const h = text.replace(highlightRegex, '<mark style="background:var(--accent);color:#000;border-radius:2px;padding:0 2px">$1</mark>');
-      return `>${h}<`;
+      return `>${h}`;
     });
 
-    return `<span data-verse="${verseNum}">${highlighted}</span>`;
+    return `<span class="bible-verse" data-verse="${verseNum}">${highlighted}</span>`;
   });
 
-  // Se todos ocultos
-  const visibleCount = (processed.match(/data-verse="(\d+)"(?![\s\S]*?display:none)/g) || []).length;
-  if (visibleCount === 0) {
+  if (!hasVisible) {
     return '<p style="color:var(--text-secondary);text-align:center;padding:20px 0">Nenhum versículo encontrado.</p>';
   }
 

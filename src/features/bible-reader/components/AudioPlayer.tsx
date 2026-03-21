@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback } from "react";
-import { SpeedControl } from "./SpeedControl";
 import type { AudioState, PlaybackSpeed } from "../lib/audio-manager";
 import { getAudioManager } from "../lib/audio-manager";
 
@@ -11,6 +10,7 @@ interface AudioPlayerProps {
   copyright?: string;
   onPrevious: () => void;
   onNext: () => void;
+  onCollapse?: () => void;
   pendingSeekTime?: number | null;
   onSeekHandled?: () => void;
 }
@@ -27,6 +27,7 @@ export function AudioPlayer({
   audioAvailable,
   onPrevious,
   onNext,
+  onCollapse,
   pendingSeekTime,
   onSeekHandled,
 }: AudioPlayerProps) {
@@ -46,7 +47,7 @@ export function AudioPlayer({
     return () => { unsub(); unsubEnd(); };
   }, [onNext]);
 
-  // Carregar áudio SEM autoplay, só quando URL muda de fato
+  // Carregar áudio SEM autoplay
   useEffect(() => {
     if (!audioUrl || audioUrl === loadedUrlRef.current) return;
     loadedUrlRef.current = audioUrl;
@@ -95,11 +96,19 @@ export function AudioPlayer({
 
   return (
     <div className="bible-player">
-      {/* Controles: prev, play, next */}
+      {/* Opção A: recolher — play — velocidade */}
       <div className="bible-player-controls">
-        <button className="bible-player-btn" onClick={onPrevious} aria-label="Capítulo anterior">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z" /></svg>
-        </button>
+        {onCollapse && (
+          <button
+            className="bible-player-pill-btn bible-player-pill-btn--side"
+            onClick={onCollapse}
+            aria-label="Recolher controles"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+        )}
 
         <button
           className="bible-player-btn bible-player-btn--main"
@@ -119,12 +128,16 @@ export function AudioPlayer({
           )}
         </button>
 
-        <button className="bible-player-btn" onClick={onNext} aria-label="Próximo capítulo">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" /></svg>
+        <button
+          className="bible-player-pill-btn bible-player-pill-btn--side"
+          onClick={() => managerRef.current.cycleSpeed()}
+          aria-label="Alterar velocidade"
+        >
+          {state.speed}x
         </button>
       </div>
 
-      {/* Barra de progresso + tempo + velocidade */}
+      {/* Barra de progresso + tempo */}
       <div className="bible-player-progress-row">
         <span className="bible-player-time">{formatTime(state.currentTime)}</span>
         <div
@@ -136,7 +149,6 @@ export function AudioPlayer({
           onTouchMove={(e) => { if (isDragging) seekFromEvent(e.touches[0].clientX); }}
           onTouchEnd={() => setIsDragging(false)}
           role="slider"
-          aria-label="Progresso do áudio"
           aria-valuenow={Math.round(progress)}
           aria-valuemin={0}
           aria-valuemax={100}
@@ -145,7 +157,6 @@ export function AudioPlayer({
           <div className="bible-player-progress-thumb" style={{ left: `${progress}%` }} />
         </div>
         <span className="bible-player-time">{formatTime(state.duration)}</span>
-        <SpeedControl speed={state.speed as PlaybackSpeed} onCycleSpeed={() => managerRef.current.cycleSpeed()} />
       </div>
     </div>
   );

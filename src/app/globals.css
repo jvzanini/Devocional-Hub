@@ -1740,6 +1740,9 @@ select.input-field {
 .bible-content-text p {
   margin: 0 0 12px;
 }
+.bible-content-text .bible-verse {
+  display: inline;
+}
 .bible-content-text .s, .bible-content-text .s1 {
   display: block;
   font-weight: 700;
@@ -1945,22 +1948,19 @@ select.input-field {
   background: var(--surface-hover);
   border-color: var(--text-secondary);
 }
-
-/* Barra inferior do player expandido */
-.bible-player-footer-bar {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  padding: 4px 16px 10px;
+.bible-player-pill-btn--side {
+  margin: 0 12px;
 }
 
 /* Player colapsado — compacto */
 .bible-player-collapsed {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 6px;
-  padding: 8px 12px 12px;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 24px 14px;
+  max-width: 480px;
+  margin: 0 auto;
 }
 .bible-player-collapsed-nav {
   display: inline-flex;

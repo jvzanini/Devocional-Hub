@@ -143,48 +143,57 @@ export function BibleModal({
     loadVersions();
   }, [isOpen, initialVersionId]);
 
-  // Carregar conteúdo + áudio em paralelo (mostra tudo junto)
+  // Carregar texto (rápido)
   useEffect(() => {
     if (!isOpen || !selectedVersion) return;
 
-    async function loadAll() {
+    async function loadContent() {
       setIsLoading(true);
       setError(null);
       setHtmlContent(null);
-      setAudioUrl(null);
-      setAudioAvailable(false);
 
       const chapterId = `${bookCode}.${chapter}`;
-
       try {
-        // Carregar texto e áudio em paralelo
-        const [contentRes, audioRes] = await Promise.all([
-          fetch(`/api/bible/content/${selectedVersion!.id}/${chapterId}`).then(r => r.json()),
-          fetch(`/api/bible/audio/${selectedVersion!.id}/${chapterId}`).then(r => r.json()).catch(() => ({ audioUrl: null, available: false })),
-        ]);
-
-        // Texto
-        if (contentRes.error) throw new Error(contentRes.error);
-        setHtmlContent(contentRes.content?.content || "");
-        setCopyright(contentRes.content?.copyright || "");
-
-        // Áudio
-        setAudioUrl(audioRes.audioUrl || null);
-        setAudioAvailable(audioRes.available || false);
+        const res = await fetch(`/api/bible/content/${selectedVersion!.id}/${chapterId}`);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || `Erro ${res.status}`);
+        setHtmlContent(data.content?.content || "");
+        setCopyright(data.content?.copyright || "");
       } catch (err) {
-        const msg = err instanceof Error ? err.message : "Erro desconhecido";
-        setError(msg);
+        setError(err instanceof Error ? err.message : "Erro desconhecido");
       } finally {
         setIsLoading(false);
       }
     }
 
-    loadAll();
+    loadContent();
     contentRef.current?.scrollTo({ top: 0, behavior: "smooth" });
 
     if (selectedVersion) {
       savePosition({ bookCode, chapter, versionId: selectedVersion.id, audioTime: 0 });
     }
+  }, [isOpen, selectedVersion, bookCode, chapter]);
+
+  // Carregar áudio (em background, não bloqueia texto)
+  useEffect(() => {
+    if (!isOpen || !selectedVersion) return;
+
+    async function loadAudio() {
+      const chapterId = `${bookCode}.${chapter}`;
+      try {
+        const res = await fetch(`/api/bible/audio/${selectedVersion!.id}/${chapterId}`);
+        const data = await res.json();
+        setAudioUrl(data.audioUrl || null);
+        setAudioAvailable(data.available || false);
+      } catch {
+        setAudioUrl(null);
+        setAudioAvailable(false);
+      }
+    }
+
+    // Mostrar player imediatamente se versão tem áudio (baseado em audioAvailable da versão)
+    setAudioAvailable(selectedVersion.audioAvailable);
+    loadAudio();
   }, [isOpen, selectedVersion, bookCode, chapter]);
 
   // Monitorar estado do áudio (playing + speed)
@@ -429,21 +438,10 @@ export function BibleModal({
                 copyright={copyright}
                 onPrevious={handlePreviousChapter}
                 onNext={handleNextChapter}
+                onCollapse={() => setIsPlayerCollapsed(true)}
                 pendingSeekTime={pendingSeekTime}
                 onSeekHandled={() => setPendingSeekTime(null)}
               />
-              {/* Rodapé expandido: recolher (esquerda) + velocidade (direita) */}
-              <div className="bible-player-footer-bar">
-                <button
-                  className="bible-player-pill-btn"
-                  onClick={() => setIsPlayerCollapsed(true)}
-                  aria-label="Recolher controles"
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-              </div>
             </div>
           )}
 
