@@ -95,7 +95,7 @@ function versesToHtml(verses: HolyBibleVerse[]): string {
   const parts: string[] = [];
 
   for (const verse of verses) {
-    parts.push(`<span class="bible-verse" data-verse="${verse.verse}"><span class="v">${verse.verse}</span>\u00A0${escapeHtml(verse.text)} </span>`);
+    parts.push(`<span class="bible-verse" data-verse="${verse.verse}"><sup class="v">${verse.verse}</sup>\u00A0${escapeHtml(verse.text)} </span>`);
   }
 
   return `<p>${parts.join("")}</p>`;

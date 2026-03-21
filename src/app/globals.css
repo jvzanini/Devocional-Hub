@@ -1817,7 +1817,7 @@ select.input-field {
 
 /* ─── Audio Player ───────────────────────────────── */
 .bible-player {
-  padding: 10px 16px 8px;
+  padding: 10px 16px 16px;
 }
 .bible-player--disabled {
   padding: 10px 16px;
@@ -1949,7 +1949,7 @@ select.input-field {
   border-color: var(--text-secondary);
 }
 .bible-player-pill-btn--side {
-  margin: 0 12px;
+  margin: 0 20px;
 }
 
 /* Player colapsado — compacto */
@@ -1957,9 +1957,9 @@ select.input-field {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 8px 24px 14px;
-  max-width: 480px;
+  gap: 10px;
+  padding: 8px 20px 14px;
+  max-width: 500px;
   margin: 0 auto;
 }
 .bible-player-collapsed-nav {
