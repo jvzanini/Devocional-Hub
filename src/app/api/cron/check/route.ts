@@ -13,7 +13,10 @@ export async function GET(request: Request) {
   // Verificar token de segurança (opcional, protege o endpoint)
   const url = new URL(request.url);
   const token = url.searchParams.get("token");
-  const expectedToken = process.env.CRON_SECRET || "devocional-cron-2024";
+  const expectedToken = process.env.CRON_SECRET;
+  if (!expectedToken) {
+    return NextResponse.json({ error: "CRON_SECRET não configurado" }, { status: 500 });
+  }
   if (token !== expectedToken) {
     return NextResponse.json({ error: "Token inválido" }, { status: 401 });
   }

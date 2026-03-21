@@ -2,6 +2,12 @@ import { auth, signOut } from "@/features/auth/lib/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/shared/lib/db";
 import { Sidebar } from "@/shared/components/Sidebar";
+import dynamic from "next/dynamic";
+
+const BibleBubble = dynamic(
+  () => import("@/features/bible-reader/components/BibleBubble").then(m => m.BibleBubble),
+  { ssr: false }
+);
 
 export default async function DashboardLayout({
   children,
@@ -43,6 +49,7 @@ export default async function DashboardLayout({
           {children}
         </div>
       </main>
+      <BibleBubble />
     </div>
   );
 }

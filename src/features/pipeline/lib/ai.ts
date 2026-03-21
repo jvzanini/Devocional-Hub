@@ -122,7 +122,6 @@ export const OPENAI_MODELS = [
   { id: "o4-mini", name: "o4-mini", description: "Raciocínio avançado, compacto" },
   { id: "o3", name: "o3", description: "Raciocínio avançado" },
   { id: "o3-mini", name: "o3-mini", description: "Raciocínio avançado, econômico" },
-  { id: "gpt-3.5-turbo", name: "GPT-3.5 Turbo", description: "Legado, mais barato" },
 ];
 
 const OPENROUTER_MODELS = [
@@ -233,7 +232,7 @@ async function getAISettings(): Promise<{ model: string }> {
   }
 }
 
-async function callAI(prompt: string, maxTokens = 16384): Promise<string> {
+export async function callAI(prompt: string, maxTokens = 16384): Promise<string> {
   const errors: string[] = [];
   const aiSettings = await getAISettings();
 
@@ -468,13 +467,24 @@ export function buildNotebookKnowledgeBase(
   cleanTranscript: string,
   bibleText: string,
   theologicalResearch: string,
-  chapterRef: string
+  chapterRef: string,
+  triagedSynthesis?: string
 ): string {
+  // Usar síntese triada se disponível, senão usar transcrição limpa
+  const devocionalContent = triagedSynthesis || cleanTranscript;
+
   return `═══════════════════════════════════════════════════════════════
 BASE DE CONHECIMENTO — DEVOCIONAL: ${chapterRef}
 ═══════════════════════════════════════════════════════════════
 
 Este documento contém todo o material necessário para gerar conteúdos visuais e narrativos sobre o devocional de ${chapterRef}. Use TODAS as seções abaixo como fonte de informação.
+
+PRIORIDADE DE FONTES (do mais ao menos importante):
+  1o — Síntese do Devocional (transcrição do Zoom = norte principal)
+  2o — Texto Bíblico NVI (base escriturística)
+  3o — Pesquisa Teológica (contexto e aprofundamento)
+
+O RESUMO DO DEVOCIONAL deve ter EVIDÊNCIA e DESTAQUE em todos os materiais gerados (slides, infográfico, vídeo).
 
 ───────────────────────────────────────────────────────────────
 SEÇÃO 1: TEXTO BÍBLICO (NVI) — ${chapterRef}
@@ -483,39 +493,44 @@ SEÇÃO 1: TEXTO BÍBLICO (NVI) — ${chapterRef}
 ${bibleText.substring(0, 30000)}
 
 ───────────────────────────────────────────────────────────────
-SEÇÃO 2: TRANSCRIÇÃO DO DEVOCIONAL
-───────────────────────────────────────────────────────────────
-
-O pastor explicou ${chapterRef} durante o devocional diário. Os pontos principais da explanação foram:
-
-${cleanTranscript.substring(0, 30000)}
-
-───────────────────────────────────────────────────────────────
-SEÇÃO 3: PESQUISA TEOLÓGICA E CONTEXTUAL
+SEÇÃO 2: PESQUISA TEOLÓGICA E CONTEXTUAL
 ───────────────────────────────────────────────────────────────
 
 ${theologicalResearch.substring(0, 30000)}
 
 ───────────────────────────────────────────────────────────────
+SEÇÃO 3: SÍNTESE DO DEVOCIONAL (Transcrição Triada)
+───────────────────────────────────────────────────────────────
+
+O pastor explicou ${chapterRef} durante o devocional diário. Abaixo está a síntese organizada do que foi discutido, já validada teologicamente:
+
+${devocionalContent.substring(0, 30000)}
+
+───────────────────────────────────────────────────────────────
 INSTRUÇÕES PARA GERAÇÃO DE CONTEÚDO
 ───────────────────────────────────────────────────────────────
 
+IMPORTANTE: Dê EVIDÊNCIA ao resumo/síntese do devocional em TODOS os materiais.
+O que foi discutido no devocional é o FOCO PRINCIPAL dos conteúdos gerados.
+
 Ao gerar SLIDES (Apresentação):
 - Organize em tópicos claros com títulos impactantes
+- PRIORIZE os pontos discutidos no devocional
 - Inclua versículos-chave como citações destacadas
 - Use pontos concisos e diretos por slide
 - Inclua significados de palavras no original (hebraico/grego)
-- Finalize com aplicação prática
+- Finalize com aplicação prática mencionada no devocional
 
-Ao gerar INFOGRÁFICO:
-- Crie fluxos visuais e comparações
+Ao gerar INFOGRÁFICO (Mapa Mental):
+- Crie fluxos visuais baseados nos tópicos do devocional
 - Use timeline quando aplicável (contexto histórico)
 - Destaque dados: números de versículos, palavras no original
-- Organize visualmente os tópicos principais
+- Organize visualmente os pontos principais da discussão
 - Inclua curiosidades históricas como blocos visuais
 
 Ao gerar VÍDEO RESUMO (Audio Overview):
 - Use narrativa conversacional e envolvente
+- FOQUE no que foi discutido no devocional
 - Conte a história por trás do texto bíblico
 - Intercale explicação com aplicação prática
 - Tom pastoral, como uma conversa entre amigos sobre a Bíblia

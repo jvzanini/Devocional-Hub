@@ -134,7 +134,9 @@ body {
    ═══════════════════════════════════════ */
 
 .app-sidebar {
-  width: 220px;
+  width: 270px;
+  min-width: 270px;
+  max-width: 270px;
   flex-shrink: 0;
   background-color: var(--sidebar-bg);
   border-right: 1px solid var(--sidebar-border);
@@ -153,13 +155,13 @@ body {
 .sidebar-logo {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 20px 16px 16px;
+  gap: 12px;
+  padding: 24px 20px 20px;
 }
 
 .sidebar-logo-icon {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   background: linear-gradient(135deg, var(--accent), var(--accent-hover));
   border-radius: var(--radius);
   display: flex;
@@ -168,13 +170,13 @@ body {
   flex-shrink: 0;
 }
 .sidebar-logo-icon svg {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   color: #fff;
 }
 
 .sidebar-logo-text {
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 700;
   color: var(--text);
   letter-spacing: -0.01em;
@@ -182,32 +184,32 @@ body {
 
 .sidebar-nav {
   flex: 1;
-  padding: 4px 10px;
+  padding: 6px 14px;
   display: flex;
   flex-direction: column;
 }
 
 .sidebar-nav-section {
-  margin-bottom: 2px;
+  margin-bottom: 4px;
 }
 
 .sidebar-nav-label {
   display: block;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  padding: 18px 10px 6px;
+  padding: 20px 12px 8px;
 }
 
 .sidebar-nav-item {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 9px 12px;
+  gap: 12px;
+  padding: 12px 14px;
   border-radius: var(--radius);
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 500;
   color: var(--text-secondary);
   text-decoration: none;
@@ -224,26 +226,26 @@ body {
   font-weight: 600;
 }
 .sidebar-nav-item svg {
-  width: 18px;
-  height: 18px;
+  width: 22px;
+  height: 22px;
   flex-shrink: 0;
 }
 
 .sidebar-footer {
-  padding: 10px 10px;
+  padding: 12px 14px;
   border-top: 1px solid var(--border-light);
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
 }
 
 .sidebar-theme-toggle {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
+  gap: 10px;
+  padding: 10px 12px;
   border-radius: var(--radius);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   color: var(--text-secondary);
   background: none;
@@ -257,23 +259,31 @@ body {
   background-color: var(--sidebar-hover);
 }
 .sidebar-theme-toggle svg {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   flex-shrink: 0;
 }
 
 .sidebar-user {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
+  gap: 10px;
+  padding: 10px 12px;
   border-radius: var(--radius);
   overflow: hidden;
 }
 
+.sidebar-user-clickable {
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+.sidebar-user-clickable:hover {
+  background-color: var(--sidebar-hover);
+}
+
 .sidebar-user-avatar {
-  width: 30px;
-  height: 30px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   background: linear-gradient(135deg, #fbbf24, #d97706);
   display: flex;
@@ -281,7 +291,7 @@ body {
   justify-content: center;
   flex-shrink: 0;
   overflow: hidden;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 700;
   color: #fff;
 }
@@ -297,7 +307,7 @@ body {
   min-width: 0;
 }
 .sidebar-user-name {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--text);
   white-space: nowrap;
@@ -305,7 +315,7 @@ body {
   text-overflow: ellipsis;
 }
 .sidebar-user-email {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--text-muted);
   white-space: nowrap;
   overflow: hidden;
@@ -315,10 +325,10 @@ body {
 .sidebar-signout {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
+  gap: 10px;
+  padding: 10px 12px;
   border-radius: var(--radius);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   color: var(--error);
   background: none;
@@ -332,8 +342,8 @@ body {
   background-color: var(--error-bg);
 }
 .sidebar-signout svg {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   flex-shrink: 0;
 }
 
@@ -880,7 +890,7 @@ select.input-field {
   font-weight: 500;
   color: var(--text-secondary);
   cursor: default;
-  min-height: 52px;
+  min-height: 58px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -889,36 +899,82 @@ select.input-field {
   border: 2px solid transparent;
   position: relative;
 }
+.calendar-day-number {
+  font-size: 16px;
+  line-height: 1.2;
+}
+.calendar-cell-label {
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1;
+  margin-top: 2px;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
 .calendar-cell.clickable {
   cursor: pointer;
 }
 .calendar-cell.clickable:hover {
   background-color: var(--surface-hover);
 }
-.calendar-cell.today {
+
+/* Hoje — destaque especial: borda grossa + cor distinta */
+.calendar-cell.calendar-today {
   font-weight: 700;
   color: var(--accent);
   background-color: var(--accent-light);
-  border-color: var(--accent);
+  border-color: var(--success);
+  border-width: 3px;
 }
-.calendar-cell.has-devotional {
+
+/* Devocional FUTURO — destaque amarelo/âmbar (preenchido) */
+.calendar-cell.has-devotional-future {
   font-weight: 700;
   color: #1a1a1a;
   background-color: var(--accent);
   border-color: transparent;
-  border-radius: var(--radius);
   cursor: pointer;
   box-shadow: 0 2px 8px rgba(245,166,35,0.25);
 }
-.calendar-cell.has-devotional:hover {
+.calendar-cell.has-devotional-future:hover {
   opacity: 0.9;
   box-shadow: 0 2px 12px rgba(245,166,35,0.35);
 }
-.calendar-cell-plan {
-  font-size: 9px;
+
+/* Devocional REALIZADO (passado) — apenas bordas, sem preenchimento forte */
+.calendar-cell.has-devotional-past {
   font-weight: 600;
-  margin-top: 2px;
-  line-height: 1;
+  color: var(--text);
+  background-color: transparent;
+  border-color: var(--accent);
+  cursor: pointer;
+}
+.calendar-cell.has-devotional-past:hover {
+  background-color: var(--accent-subtle);
+}
+
+/* Devocional HOJE — combina destaque de hoje + devocional */
+.calendar-cell.has-devotional-today {
+  font-weight: 700;
+  color: #1a1a1a;
+  background-color: var(--accent);
+  border-color: var(--success);
+  border-width: 3px;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(245,166,35,0.3);
+}
+
+/* Plano futuro */
+.calendar-cell.has-plan-future {
+  background-color: var(--accent-subtle);
+}
+
+/* Plano passado (não realizado) */
+.calendar-cell.has-plan-past {
+  opacity: 0.7;
 }
 
 /* ═══════════════════════════════════════
@@ -1259,7 +1315,9 @@ select.input-field {
     left: 0;
     top: 0;
     transform: translateX(-100%);
-    width: 280px;
+    width: 300px;
+    min-width: 300px;
+    max-width: 300px;
     box-shadow: var(--shadow-lg);
   }
   .app-sidebar.open {
@@ -1340,12 +1398,15 @@ select.input-field {
     font-size: 18px;
   }
   .calendar-cell {
-    min-height: 40px;
+    min-height: 44px;
     font-size: 13px;
     padding: 4px 2px;
   }
-  .calendar-cell-plan {
-    font-size: 8px;
+  .calendar-day-number {
+    font-size: 14px;
+  }
+  .calendar-cell-label {
+    font-size: 7px;
   }
   .calendar-weekday {
     font-size: 10px;
@@ -1424,7 +1485,9 @@ select.input-field {
     left: 0;
     top: 0;
     transform: translateX(-100%);
-    width: 280px;
+    width: 300px;
+    min-width: 300px;
+    max-width: 300px;
     box-shadow: var(--shadow-lg);
   }
   .app-sidebar.open {
@@ -1487,4 +1550,1199 @@ select.input-field {
   .app-main {
     padding: 36px 48px 60px;
   }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   BÍBLIA INTERATIVA — Bubble + Modal + Seletores + Player
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ─── Bubble Flutuante ───────────────────────────── */
+.bible-bubble {
+  position: fixed;
+  bottom: 28px;
+  right: 28px;
+  z-index: 50;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.bible-bubble:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 24px rgba(0,0,0,0.35);
+}
+.bible-bubble:active {
+  transform: scale(0.95);
+}
+
+/* ─── Modal Overlay ──────────────────────────────── */
+.bible-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(4px);
+  animation: bibleFadeIn 0.2s ease;
+}
+@keyframes bibleFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* ─── Modal Container ────────────────────────────── */
+.bible-modal {
+  width: 80vw;
+  max-width: 900px;
+  height: 85vh;
+  max-height: 85vh;
+  background: var(--surface);
+  border-radius: var(--radius-xl);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+  animation: bibleSlideUp 0.25s ease;
+  position: relative;
+}
+@keyframes bibleSlideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.bible-modal--fullscreen {
+  width: 100vw;
+  height: 100vh;
+  max-width: 100vw;
+  max-height: 100vh;
+  border-radius: 0;
+}
+
+/* ─── Header ─────────────────────────────────────── */
+.bible-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border, rgba(128,128,128,0.15));
+  flex-shrink: 0;
+  gap: 8px;
+}
+.bible-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.bible-header-right {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.bible-header-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border, rgba(128,128,128,0.2));
+  background: transparent;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+.bible-header-btn:hover {
+  background: var(--surface-hover);
+}
+.bible-header-btn svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+.bible-header-icon-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius);
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, color 0.15s;
+}
+.bible-header-icon-btn:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+.bible-header-icon-btn--active {
+  color: var(--accent);
+}
+
+/* ─── Modal Body (scrollable) ────────────────────── */
+.bible-modal-body {
+  flex: 1;
+  overflow-y: auto;
+  scroll-behavior: smooth;
+}
+
+/* ─── Content ────────────────────────────────────── */
+.bible-content {
+  padding: 24px 28px;
+  min-height: 200px;
+}
+.bible-content-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--accent);
+  margin: 0 0 20px;
+}
+.bible-content-text {
+  font-size: 17px;
+  line-height: 1.8;
+  color: var(--text);
+}
+.bible-content-text .v {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent);
+  vertical-align: super;
+  margin-right: 2px;
+}
+.bible-content-text p {
+  margin: 0 0 12px;
+}
+.bible-content-text .s, .bible-content-text .s1 {
+  display: block;
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--text-secondary);
+  margin: 20px 0 8px;
+}
+
+/* Skeleton */
+.bible-content-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 24px 0;
+}
+.bible-skeleton-line {
+  height: 16px;
+  border-radius: 4px;
+  background: var(--surface-hover);
+  animation: biblePulse 1.2s ease-in-out infinite;
+}
+@keyframes biblePulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+}
+
+/* Error */
+.bible-content-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 48px 0;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+/* ─── Navigation ─────────────────────────────────── */
+.bible-navigation {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 16px;
+  border-top: 1px solid var(--border, rgba(128,128,128,0.15));
+}
+.bible-nav-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: var(--radius);
+  border: none;
+  background: transparent;
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.bible-nav-btn:hover:not(:disabled) {
+  background: var(--surface-hover);
+}
+.bible-nav-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* ─── Modal Footer ───────────────────────────────── */
+.bible-modal-footer {
+  flex-shrink: 0;
+  border-top: 1px solid var(--border, rgba(128,128,128,0.15));
+}
+
+/* ─── Audio Player ───────────────────────────────── */
+.bible-player {
+  padding: 10px 16px 14px;
+}
+.bible-player--disabled {
+  padding: 10px 16px;
+  text-align: center;
+}
+.bible-player-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+.bible-player-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+.bible-player-btn:hover {
+  background: var(--surface-hover);
+}
+.bible-player-btn--main {
+  width: 44px;
+  height: 44px;
+  background: var(--accent);
+  color: #fff;
+}
+.bible-player-btn--main:hover {
+  background: var(--accent-hover);
+}
+
+.bible-player-progress-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.bible-player-time {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+  min-width: 36px;
+  text-align: center;
+}
+.bible-player-progress {
+  flex: 1;
+  height: 4px;
+  background: var(--surface-hover);
+  border-radius: 2px;
+  cursor: pointer;
+  position: relative;
+}
+.bible-player-progress-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 2px;
+  transition: width 0.1s linear;
+}
+.bible-player-progress-thumb {
+  position: absolute;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--accent);
+  transform: translate(-50%, -50%);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.bible-player-progress:hover .bible-player-progress-thumb {
+  opacity: 1;
+}
+
+.bible-player-extras {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 6px;
+}
+.bible-speed-btn {
+  padding: 3px 10px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border, rgba(128,128,128,0.2));
+  background: transparent;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.bible-speed-btn:hover {
+  background: var(--surface-hover);
+}
+.bible-player-copyright {
+  font-size: 11px;
+  color: var(--text-secondary);
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ─── Selector Overlay ───────────────────────────── */
+.bible-selector-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+}
+.bible-selector-overlay--mobile {
+  align-items: flex-end;
+}
+.bible-selector-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.3);
+}
+.bible-selector {
+  position: relative;
+  z-index: 11;
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  max-height: 80%;
+}
+.bible-selector--dropdown {
+  margin-top: 56px;
+  border-radius: var(--radius-lg);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+  width: 360px;
+  max-height: calc(85vh - 120px);
+}
+.bible-selector--sheet {
+  width: 100%;
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  max-height: 80vh;
+}
+.bible-selector--books.bible-selector--dropdown {
+  width: 420px;
+}
+.bible-selector-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border, rgba(128,128,128,0.15));
+  flex-shrink: 0;
+}
+.bible-selector-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+}
+.bible-selector-close {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius);
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.bible-selector-close:hover {
+  background: var(--surface-hover);
+}
+.bible-selector-list {
+  overflow-y: auto;
+  flex: 1;
+  padding: 8px;
+}
+.bible-selector-list--books {
+  padding: 8px 12px;
+}
+
+/* ─── Version Item ───────────────────────────────── */
+.bible-version-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s;
+  color: var(--text);
+}
+.bible-version-item:hover {
+  background: var(--surface-hover);
+}
+.bible-version-item--selected {
+  background: var(--surface-hover);
+}
+.bible-version-abbr {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--accent);
+  min-width: 44px;
+}
+.bible-version-details {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+.bible-version-name {
+  font-size: 14px;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bible-version-audio-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  color: var(--success);
+  font-weight: 500;
+}
+.bible-version-check {
+  flex-shrink: 0;
+}
+
+/* ─── Book Selector ──────────────────────────────── */
+.bible-book-section {
+  margin-bottom: 16px;
+}
+.bible-book-section-title {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+  margin: 0 0 8px;
+  padding: 0 4px;
+}
+.bible-book-group {
+  margin-bottom: 2px;
+}
+.bible-book-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s;
+  color: var(--text);
+  font-size: 14px;
+}
+.bible-book-item:hover {
+  background: var(--surface-hover);
+}
+.bible-book-item--selected {
+  font-weight: 700;
+  color: var(--accent);
+}
+.bible-book-name {
+  flex: 1;
+}
+.bible-book-chapters-count {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.bible-book-chevron {
+  transition: transform 0.2s;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+.bible-book-chevron--open {
+  transform: rotate(180deg);
+}
+.bible-book-chapters {
+  padding: 8px 8px 8px 16px;
+}
+
+/* ─── Chapter Grid ───────────────────────────────── */
+.bible-chapter-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+}
+.bible-chapter-item {
+  width: 100%;
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius);
+  border: 1px solid var(--border, rgba(128,128,128,0.15));
+  background: transparent;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.bible-chapter-item:hover {
+  background: var(--surface-hover);
+  border-color: var(--accent);
+}
+.bible-chapter-item--selected {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+  font-weight: 700;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   MÓDULO PLANEJAMENTO — Cards + Layout
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.planning-page {
+  padding: 0;
+}
+.planning-header {
+  margin-bottom: 24px;
+}
+.planning-header h1 {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0 0 4px;
+}
+.planning-header p {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin: 0;
+}
+.planning-empty {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-secondary);
+}
+.planning-empty svg {
+  margin-bottom: 16px;
+  color: var(--accent);
+}
+.planning-empty h3 {
+  font-size: 18px;
+  color: var(--text);
+  margin: 0 0 8px;
+}
+.planning-empty p {
+  font-size: 14px;
+  margin: 0;
+}
+.planning-generate-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 20px;
+  padding: 10px 24px;
+  border-radius: var(--radius);
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.planning-generate-btn:hover {
+  background: var(--accent-hover);
+}
+.planning-generate-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ─── Cards Grid ─────────────────────────────────── */
+.planning-cards {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+}
+.planning-card {
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border, rgba(128,128,128,0.1));
+  overflow: hidden;
+}
+.planning-card-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border, rgba(128,128,128,0.1));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.planning-card-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--accent);
+  margin: 0;
+}
+.planning-card-badge {
+  font-size: 12px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+}
+/* ─── Card Images ────────────────────────────── */
+.planning-card-images {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0;
+}
+.planning-image-wrapper {
+  overflow: hidden;
+  aspect-ratio: 16/9;
+}
+.planning-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.planning-image-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 32px 16px;
+  background: var(--surface-hover);
+  color: var(--text-secondary);
+}
+.planning-image-placeholder svg {
+  opacity: 0.4;
+}
+.planning-image-placeholder span {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.planning-card-body {
+  padding: 20px;
+}
+.planning-card-section {
+  margin-bottom: 20px;
+}
+.planning-card-section:last-child {
+  margin-bottom: 0;
+}
+.planning-card-section h4 {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0 0 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.planning-card-section p {
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--text);
+  margin: 0;
+}
+
+/* ─── Referências ────────────────────────────────── */
+.planning-references {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.planning-reference {
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  background: var(--surface-hover);
+  border-left: 3px solid var(--accent);
+}
+.planning-reference-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent);
+  margin-bottom: 4px;
+}
+.planning-reference-text {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text);
+  font-style: italic;
+}
+
+/* ─── Links de Estudo ────────────────────────────── */
+.planning-links {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.planning-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  color: var(--accent);
+  text-decoration: none;
+  transition: opacity 0.15s;
+}
+.planning-link:hover {
+  opacity: 0.8;
+  text-decoration: underline;
+}
+
+/* ─── Theme Group ────────────────────────────────── */
+.planning-theme-group {
+  margin-bottom: 32px;
+}
+.planning-theme-group-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 10px 16px;
+  background: var(--surface-hover);
+  border-radius: var(--radius);
+  border-left: 4px solid var(--accent);
+}
+.planning-theme-group-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0;
+}
+
+/* ─── Mobile Responsivo ──────────────────────────── */
+@media (max-width: 767px) {
+  .bible-bubble {
+    bottom: 20px;
+    right: 20px;
+    width: 50px;
+    height: 50px;
+  }
+  .bible-bubble svg {
+    width: 24px;
+    height: 24px;
+  }
+  .bible-content {
+    padding: 16px 18px;
+  }
+  .bible-content-title {
+    font-size: 18px;
+  }
+  .bible-content-text {
+    font-size: 16px;
+    line-height: 1.75;
+  }
+  .bible-header-btn {
+    font-size: 13px;
+    padding: 5px 10px;
+  }
+  .bible-chapter-grid {
+    grid-template-columns: repeat(5, 1fr);
+  }
+  .bible-selector--dropdown {
+    width: 100%;
+  }
+  .bible-selector--books.bible-selector--dropdown {
+    width: 100%;
+  }
+  .planning-card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   RESPONSIVENESS — Mobile (375px - 767px)
+   Polimento completo de todas as páginas para dispositivos móveis
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 767px) {
+
+  /* --- 1. Session Detail Page --- */
+  .session-detail-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .participant-row {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .participant-chip {
+    font-size: 13px;
+    padding: 5px 10px;
+  }
+
+  /* --- 2. Books / Devocional Page --- */
+  .books-layout {
+    grid-template-columns: 1fr;
+  }
+  .books-sidebar {
+    max-height: 200px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    margin-bottom: 16px;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    padding-right: 0;
+    padding-bottom: 12px;
+  }
+  .books-content {
+    padding-left: 0;
+  }
+
+  /* --- 3. Reports Page --- */
+  .reports-top-grid {
+    grid-template-columns: 1fr;
+  }
+  .reports-stat-card {
+    width: 100%;
+  }
+  .reports-table-card {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 16px 12px;
+  }
+  .reports-table {
+    min-width: 500px;
+  }
+
+  /* --- 4. Admin Page --- */
+  .admin-grid-2 {
+    grid-template-columns: 1fr;
+  }
+  .tabs-list {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    white-space: nowrap;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    flex-wrap: nowrap;
+  }
+  .tabs-list::-webkit-scrollbar {
+    display: none;
+  }
+  .tab-trigger {
+    flex-shrink: 0;
+  }
+  .calendar-cell {
+    font-size: 13px;
+  }
+  .calendar-day-number {
+    font-size: 13px;
+  }
+
+  /* --- 5. Planning Page --- */
+  .planning-cards {
+    grid-template-columns: 1fr;
+  }
+  .planning-card-images {
+    grid-template-columns: 1fr;
+  }
+  .planning-card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .planning-card-body {
+    padding: 16px;
+  }
+  .planning-card-section h4 {
+    font-size: 13px;
+  }
+  .planning-theme-group-header {
+    padding: 8px 12px;
+  }
+  .planning-theme-group-title {
+    font-size: 14px;
+  }
+
+  /* --- 6. Profile Page --- */
+  .avatar-lg {
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  /* --- 7. Modals — fullscreen em mobile --- */
+  .bible-modal-overlay {
+    z-index: 100;
+  }
+  .bible-modal {
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    max-width: 100vw;
+    max-height: 100vh;
+    max-height: 100dvh;
+    border-radius: 0;
+  }
+  .bible-modal-body {
+    -webkit-overflow-scrolling: touch;
+  }
+  .day-summary-popover {
+    z-index: 60;
+  }
+
+  /* --- 8. General Mobile Fixes --- */
+  h1 {
+    font-size: 22px !important;
+    max-font-size: 22px;
+  }
+  .section-title {
+    font-size: 14px;
+  }
+  .badge {
+    font-size: 11px;
+    padding: 2px 8px;
+  }
+  body {
+    overflow-x: hidden;
+  }
+  .app-main {
+    overflow-x: hidden;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   RESPONSIVENESS — Tablet (768px - 1023px)
+   Ajustes adicionais para tablets
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@media (min-width: 768px) and (max-width: 1023px) {
+
+  /* Reports — tabelas com scroll horizontal */
+  .reports-table-card {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .reports-table {
+    min-width: 500px;
+  }
+
+  /* Planning — ajustar cards */
+  .planning-card-images {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* Admin — tabs scrollable */
+  .tabs-list {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    flex-wrap: nowrap;
+    scrollbar-width: none;
+  }
+  .tabs-list::-webkit-scrollbar {
+    display: none;
+  }
+  .tab-trigger {
+    flex-shrink: 0;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   DARK MODE POLISH
+   Correções para componentes com cores hardcoded
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* --- 1. ChapterChecklist — checkbox borders e backgrounds --- */
+[data-theme="dark"] [role="checkbox"] {
+  border-color: var(--border) !important;
+}
+[data-theme="dark"] [role="checkbox"][aria-checked="true"] {
+  border-color: var(--success) !important;
+}
+
+/* --- 2. Reading plan calendar/buttons — fix hardcoded #fff/#f5f5f4 --- */
+[data-theme="dark"] .calendar-cell.has-devotional-future {
+  color: #1a1a1a;
+}
+[data-theme="dark"] .calendar-cell.has-devotional-today {
+  color: #1a1a1a;
+}
+
+/* --- 3. Participant Log — dashed borders visíveis no dark mode --- */
+[data-theme="dark"] .participant-chip {
+  background-color: var(--surface-hover);
+  border-color: var(--border);
+  color: var(--text-secondary);
+}
+
+/* --- 4. Session Navigation — botões visíveis no dark mode --- */
+[data-theme="dark"] .btn-outline {
+  border-color: var(--border);
+  color: var(--text);
+}
+[data-theme="dark"] .btn-outline:hover {
+  background-color: var(--surface-hover);
+  border-color: var(--text-muted);
+}
+[data-theme="dark"] .btn-ghost {
+  border-color: var(--border);
+  color: var(--text-secondary);
+}
+[data-theme="dark"] .btn-ghost:hover {
+  background-color: var(--surface-hover);
+  color: var(--text);
+}
+
+/* --- 5. Admin Page — fix cores hardcoded na seção de plano de leitura --- */
+/* Cartesian grid do gráfico (recharts) */
+[data-theme="dark"] .recharts-cartesian-grid line {
+  stroke: var(--border) !important;
+}
+[data-theme="dark"] .recharts-cartesian-grid-horizontal line,
+[data-theme="dark"] .recharts-cartesian-grid-vertical line {
+  stroke: var(--border) !important;
+}
+
+/* Tooltip do gráfico (recharts) */
+[data-theme="dark"] .recharts-default-tooltip {
+  background-color: var(--surface) !important;
+  border-color: var(--border) !important;
+  color: var(--text) !important;
+}
+
+/* XAxis/YAxis tick text */
+[data-theme="dark"] .recharts-xAxis .recharts-cartesian-axis-tick text,
+[data-theme="dark"] .recharts-yAxis .recharts-cartesian-axis-tick text {
+  fill: var(--text-secondary) !important;
+}
+
+/* Toggle switch knob — manter branco em dark mode */
+[data-theme="dark"] .toggle-switch::after {
+  background-color: #ffffff;
+}
+
+/* Book card header — gradiente permanece azul, ok em ambos os temas */
+
+/* File row hover em dark mode */
+[data-theme="dark"] .file-row:hover {
+  background-color: var(--surface-hover);
+}
+
+/* Dot indicators — manter visíveis */
+[data-theme="dark"] .dot {
+  opacity: 1;
+}
+
+/* Calendar legend / labels */
+[data-theme="dark"] .calendar-cell-label {
+  color: inherit;
+}
+
+/* Hero panel — glow ajustado para dark */
+[data-theme="dark"] .hero-panel {
+  box-shadow: 0 0 20px rgba(245,166,35,0.12);
+}
+
+/* Section card borders — mais visíveis em dark */
+[data-theme="dark"] .section-card {
+  border-color: var(--border);
+}
+
+/* Reports chart card — background correto */
+[data-theme="dark"] .reports-chart-card {
+  background-color: var(--surface);
+  border-color: var(--border);
+}
+
+/* Stat card hover — borda visível */
+[data-theme="dark"] .stat-card:hover {
+  border-color: var(--accent);
+}
+
+/* Progress bar background */
+[data-theme="dark"] .progress-bar {
+  background-color: var(--surface-hover);
+}
+
+/* Alert error em dark */
+[data-theme="dark"] .alert-error {
+  background-color: var(--error-bg);
+  border-color: var(--error-border);
+}
+
+/* Input placeholder em dark */
+[data-theme="dark"] .input-field::placeholder,
+[data-theme="dark"] .search-input::placeholder {
+  color: var(--text-muted);
+}
+
+/* Skeleton em dark mode — mais sutil */
+[data-theme="dark"] .skeleton {
+  background: linear-gradient(90deg, var(--surface-hover) 25%, var(--border) 50%, var(--surface-hover) 75%);
+  background-size: 200% 100%;
+}
+
+/* Login card border — dashed visível em dark */
+[data-theme="dark"] .login-card {
+  border-color: var(--border);
+}
+
+/* Planning reference — borda esquerda accent visível */
+[data-theme="dark"] .planning-reference {
+  background: var(--surface-hover);
+  border-left-color: var(--accent);
+}
+
+/* Planning theme group header */
+[data-theme="dark"] .planning-theme-group-header {
+  background: var(--surface-hover);
+  border-left-color: var(--accent);
+}
+
+/* Bible selector backdrop em dark */
+[data-theme="dark"] .bible-selector-backdrop {
+  background: rgba(0,0,0,0.5);
+}
+
+/* Bible chapter item borders */
+[data-theme="dark"] .bible-chapter-item {
+  border-color: var(--border);
+}
+[data-theme="dark"] .bible-chapter-item:hover {
+  border-color: var(--accent);
+}
+[data-theme="dark"] .bible-chapter-item--selected {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
 }

@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { ALL_ROLES, type UserRoleType } from "@/features/permissions/lib/role-hierarchy";
 
 interface ZoomIdentifier { id: string; value: string; type: string; locked: boolean; }
 interface UserProfile {
   id: string; name: string; email: string; church: string; team: string;
-  subTeam: string; photoUrl: string | null; role: string;
+  subTeam: string; photoUrl: string | null; role: string; whatsapp: string | null;
   zoomIdentifiers: ZoomIdentifier[];
 }
 
@@ -38,17 +39,38 @@ function compressImage(file: File, maxWidth: number = 800): Promise<Blob> {
   });
 }
 
+function formatWhatsApp(value: string): string {
+  const digits = value.replace(/\D/g, "").slice(0, 11);
+  if (digits.length <= 2) return digits;
+  if (digits.length <= 7) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+}
+
 export default function ProfilePage() {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
   const [name, setName] = useState("");
+  const [whatsapp, setWhatsapp] = useState("");
   const [zoomValue, setZoomValue] = useState("");
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+
+  // Password modal
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordSaving, setPasswordSaving] = useState(false);
+
+  // Delete account modal
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteStep, setDeleteStep] = useState(1);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     fetch("/api/profile")
@@ -57,6 +79,7 @@ export default function ProfilePage() {
         if (data) {
           setUser(data);
           setName(data.name);
+          setWhatsapp(data.whatsapp ? formatWhatsApp(data.whatsapp) : "");
           if (data.photoUrl) setPhotoPreview(data.photoUrl);
           if (data.zoomIdentifiers?.length > 0) setZoomValue(data.zoomIdentifiers[0].value);
         }
@@ -65,18 +88,21 @@ export default function ProfilePage() {
       .finally(() => setLoading(false));
   }, []);
 
+  function showMessage(text: string, ok: boolean) {
+    setMsg({ text, ok });
+    setTimeout(() => setMsg(null), 3000);
+  }
+
   async function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
     const validTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
     if (!validTypes.includes(file.type)) {
-      setMsg({ text: "Use JPEG, PNG, WebP ou GIF", ok: false });
-      setTimeout(() => setMsg(null), 3000);
+      showMessage("Use JPEG, PNG, WebP ou GIF", false);
       return;
     }
     if (file.size > 5 * 1024 * 1024) {
-      setMsg({ text: "A foto deve ter no máximo 5MB", ok: false });
-      setTimeout(() => setMsg(null), 3000);
+      showMessage("A foto deve ter no máximo 5MB", false);
       return;
     }
     setSelectedFile(file);
@@ -85,12 +111,21 @@ export default function ProfilePage() {
 
   async function save() {
     if (!user) return;
+    if (!whatsapp.replace(/\D/g, "")) {
+      showMessage("WhatsApp é obrigatório", false);
+      return;
+    }
     setSaving(true);
     setUploading(!!selectedFile);
     setMsg(null);
 
     const formData = new FormData();
     if (name.trim() && name.trim() !== user.name) formData.append("name", name.trim());
+
+    const whatsappDigits = whatsapp.replace(/\D/g, "");
+    if (whatsappDigits && whatsappDigits !== (user.whatsapp || "")) {
+      formData.append("whatsapp", whatsappDigits);
+    }
 
     if (selectedFile) {
       try {
@@ -108,10 +143,9 @@ export default function ProfilePage() {
     }
 
     if ([...formData.entries()].length === 0) {
-      setMsg({ text: "Nenhuma alteração para salvar", ok: false });
+      showMessage("Nenhuma alteração para salvar", false);
       setSaving(false);
       setUploading(false);
-      setTimeout(() => setMsg(null), 3000);
       return;
     }
 
@@ -124,17 +158,67 @@ export default function ProfilePage() {
         setSelectedFile(null);
         if (updated.photoUrl) setPhotoPreview(updated.photoUrl + "?t=" + Date.now());
         if (updated.zoomIdentifiers?.length > 0) setZoomValue(updated.zoomIdentifiers[0].value);
-        setMsg({ text: "Perfil atualizado!", ok: true });
+        if (updated.whatsapp) setWhatsapp(formatWhatsApp(updated.whatsapp));
+        showMessage("Perfil atualizado!", true);
       } else {
         const d = await res.json();
-        setMsg({ text: d.error || "Erro ao salvar", ok: false });
+        showMessage(d.error || "Erro ao salvar", false);
       }
     } catch {
-      setMsg({ text: "Erro de conexão. Verifique sua internet e tente novamente.", ok: false });
+      showMessage("Erro de conexão. Verifique sua internet e tente novamente.", false);
     } finally {
       setSaving(false);
       setUploading(false);
-      setTimeout(() => setMsg(null), 3000);
+    }
+  }
+
+  async function handlePasswordChange() {
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      showMessage("Preencha todos os campos de senha", false);
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      showMessage("As senhas não coincidem", false);
+      return;
+    }
+    setPasswordSaving(true);
+    try {
+      const res = await fetch("/api/profile/password", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+      if (res.ok) {
+        showMessage("Senha atualizada com sucesso!", true);
+        setShowPasswordModal(false);
+        setCurrentPassword(""); setNewPassword(""); setConfirmPassword("");
+      } else {
+        const d = await res.json();
+        showMessage(d.error || "Erro ao alterar senha", false);
+      }
+    } catch {
+      showMessage("Erro de conexão", false);
+    } finally {
+      setPasswordSaving(false);
+    }
+  }
+
+  async function handleDeleteAccount() {
+    if (deleteConfirmText !== "APAGAR") return;
+    setDeleting(true);
+    try {
+      const res = await fetch("/api/profile/account", { method: "DELETE" });
+      if (res.ok) {
+        window.location.href = "/login";
+      } else {
+        const d = await res.json();
+        showMessage(d.error || "Erro ao apagar conta", false);
+        setShowDeleteModal(false);
+      }
+    } catch {
+      showMessage("Erro de conexão", false);
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -150,6 +234,7 @@ export default function ProfilePage() {
 
   const zoomLocked = user.zoomIdentifiers?.[0]?.locked || false;
   const hasMultipleZoom = (user.zoomIdentifiers?.length || 0) > 1;
+  const roleLabel = ALL_ROLES.find(r => r.value === user.role)?.label || user.role;
 
   return (
     <div style={{ maxWidth: 600, margin: "0 auto" }}>
@@ -195,8 +280,8 @@ export default function ProfilePage() {
 
       {/* Role badge */}
       <div style={{ display: "flex", justifyContent: "center", marginBottom: 28 }}>
-        <span className={`badge badge-${user.role === "ADMIN" ? "warning" : "info"}`} style={{ padding: "4px 14px" }}>
-          {user.role === "ADMIN" ? "ADMIN" : "MEMBRO"}
+        <span className={`badge badge-${user.role === "SUPER_ADMIN" || user.role === "ADMIN" ? "warning" : "info"}`} style={{ padding: "6px 16px", fontSize: 14 }}>
+          {roleLabel}
         </span>
       </div>
 
@@ -214,6 +299,20 @@ export default function ProfilePage() {
             value={name}
             onChange={e => setName(e.target.value)}
             placeholder="Seu nome completo"
+          />
+        </div>
+
+        {/* WhatsApp */}
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>
+            WhatsApp <span style={{ color: "var(--accent)" }}>*</span>
+          </label>
+          <input
+            className="input-field"
+            value={whatsapp}
+            onChange={e => setWhatsapp(formatWhatsApp(e.target.value))}
+            placeholder="(11) 99999-9999"
+            style={{ maxWidth: 280 }}
           />
         </div>
 
@@ -253,15 +352,6 @@ export default function ProfilePage() {
             Usado para registrar sua presença automaticamente.
             {zoomLocked && " Para alteração, entre em contato com a equipe do Devocional Hub."}
           </p>
-
-          {zoomLocked && (
-            <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 6, fontSize: 12, color: "var(--success)" }}>
-              <svg width={14} height={14} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
-              </svg>
-              Correlação confirmada
-            </div>
-          )}
         </div>
       </div>
 
@@ -286,15 +376,10 @@ export default function ProfilePage() {
               }}
             >
               <div style={{
-                width: 34,
-                height: 34,
-                borderRadius: 8,
+                width: 34, height: 34, borderRadius: 8,
                 backgroundColor: "var(--surface-hover)",
                 border: "1px solid var(--border)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                flexShrink: 0,
+                display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
               }}>
                 <svg style={{ width: 16, height: 16, color: "var(--text-muted)" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d={item.icon} />
@@ -323,6 +408,136 @@ export default function ProfilePage() {
       {msg && (
         <div style={{ textAlign: "center", marginTop: 12 }}>
           <span className={`badge badge-${msg.ok ? "success" : "error"}`} style={{ padding: "4px 14px" }}>{msg.text}</span>
+        </div>
+      )}
+
+      {/* Redefinir Senha button */}
+      <button
+        onClick={() => setShowPasswordModal(true)}
+        className="btn-outline"
+        style={{ width: "100%", marginTop: 16, padding: "10px 0", fontSize: 15, borderRadius: 12, justifyContent: "center" }}
+      >
+        <svg style={{ width: 16, height: 16 }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z" />
+        </svg>
+        Redefinir Senha
+      </button>
+
+      {/* Apagar Conta button */}
+      <button
+        onClick={() => { setShowDeleteModal(true); setDeleteStep(1); setDeleteConfirmText(""); }}
+        style={{
+          width: "100%", marginTop: 12, padding: "10px 0", fontSize: 15, borderRadius: 12,
+          backgroundColor: "transparent", border: "1px solid var(--error)",
+          color: "var(--error)", cursor: "pointer", fontWeight: 600,
+          display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+          transition: "all 0.15s",
+        }}
+      >
+        <svg style={{ width: 16, height: 16 }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+        </svg>
+        Apagar Conta
+      </button>
+
+      {/* Password Modal */}
+      {showPasswordModal && (
+        <div style={{
+          position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.6)",
+          display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, padding: 16,
+        }} onClick={() => setShowPasswordModal(false)}>
+          <div style={{
+            backgroundColor: "var(--surface)", borderRadius: 16, padding: 24,
+            maxWidth: 400, width: "100%", boxShadow: "0 20px 60px rgba(0,0,0,0.3)",
+          }} onClick={e => e.stopPropagation()}>
+            <h3 style={{ fontSize: 18, fontWeight: 700, color: "var(--text)", marginBottom: 16 }}>Redefinir Senha</h3>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <input className="input-field" type="password" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} placeholder="Senha Atual" />
+              <input className="input-field" type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="Nova Senha" />
+              <input className="input-field" type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} placeholder="Confirmar Nova Senha" />
+              {newPassword && confirmPassword && newPassword !== confirmPassword && (
+                <div style={{ fontSize: 13, color: "var(--error)" }}>As senhas não coincidem</div>
+              )}
+            </div>
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 16 }}>
+              <button className="btn-ghost" onClick={() => { setShowPasswordModal(false); setCurrentPassword(""); setNewPassword(""); setConfirmPassword(""); }}>Cancelar</button>
+              <button className="btn-primary" onClick={handlePasswordChange} disabled={passwordSaving}>
+                {passwordSaving ? "Salvando..." : "Alterar Senha"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Account Modal (2 steps) */}
+      {showDeleteModal && (
+        <div style={{
+          position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.6)",
+          display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, padding: 16,
+        }} onClick={() => setShowDeleteModal(false)}>
+          <div style={{
+            backgroundColor: "var(--surface)", borderRadius: 16, padding: 24,
+            maxWidth: 420, width: "100%", boxShadow: "0 20px 60px rgba(0,0,0,0.3)",
+          }} onClick={e => e.stopPropagation()}>
+            {deleteStep === 1 ? (
+              <>
+                <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+                  <div style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: "var(--error-bg)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <svg style={{ width: 22, height: 22, color: "var(--error)" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                    </svg>
+                  </div>
+                  <h3 style={{ fontSize: 18, fontWeight: 700, color: "var(--text)" }}>Apagar Conta</h3>
+                </div>
+                <p style={{ fontSize: 15, color: "var(--text-secondary)", lineHeight: 1.6, marginBottom: 20 }}>
+                  Tem certeza? Esta ação não pode ser desfeita. Seus dados pessoais serão removidos permanentemente.
+                </p>
+                <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                  <button className="btn-ghost" onClick={() => setShowDeleteModal(false)}>Cancelar</button>
+                  <button
+                    onClick={() => setDeleteStep(2)}
+                    style={{
+                      padding: "8px 20px", borderRadius: 8, border: "none",
+                      backgroundColor: "var(--error)", color: "#fff",
+                      fontWeight: 600, cursor: "pointer", fontSize: 14,
+                    }}
+                  >
+                    Continuar
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <h3 style={{ fontSize: 18, fontWeight: 700, color: "var(--error)", marginBottom: 12 }}>Confirmação Final</h3>
+                <p style={{ fontSize: 15, color: "var(--text-secondary)", lineHeight: 1.6, marginBottom: 16 }}>
+                  Digite <strong>APAGAR</strong> para confirmar a exclusão da sua conta.
+                </p>
+                <input
+                  className="input-field"
+                  value={deleteConfirmText}
+                  onChange={e => setDeleteConfirmText(e.target.value)}
+                  placeholder='Digite "APAGAR"'
+                  style={{ marginBottom: 16 }}
+                />
+                <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                  <button className="btn-ghost" onClick={() => { setShowDeleteModal(false); setDeleteStep(1); }}>Cancelar</button>
+                  <button
+                    onClick={handleDeleteAccount}
+                    disabled={deleteConfirmText !== "APAGAR" || deleting}
+                    style={{
+                      padding: "8px 20px", borderRadius: 8, border: "none",
+                      backgroundColor: deleteConfirmText === "APAGAR" ? "var(--error)" : "var(--text-muted)",
+                      color: "#fff", fontWeight: 600,
+                      cursor: deleteConfirmText === "APAGAR" ? "pointer" : "not-allowed",
+                      fontSize: 14, opacity: deleteConfirmText === "APAGAR" ? 1 : 0.5,
+                    }}
+                  >
+                    {deleting ? "Apagando..." : "Apagar Conta Permanentemente"}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       )}
     </div>

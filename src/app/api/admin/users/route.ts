@@ -3,12 +3,15 @@ import { auth } from "@/features/auth/lib/auth";
 import { prisma } from "@/shared/lib/db";
 import { sendInviteEmail } from "@/features/email/lib/email";
 import crypto from "crypto";
+import bcrypt from "bcryptjs";
+
+const ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN"];
 
 async function isAdmin() {
   const session = await auth();
   if (!session?.user) return false;
   const user = await prisma.user.findUnique({ where: { id: (session.user as { id: string }).id } });
-  return user?.role === "ADMIN";
+  return user ? ADMIN_ROLES.includes(user.role) : false;
 }
 
 export async function GET() {
@@ -17,7 +20,7 @@ export async function GET() {
     orderBy: { createdAt: "desc" },
     select: {
       id: true, name: true, email: true, role: true, church: true, team: true,
-      subTeam: true, photoUrl: true, active: true, inviteToken: true, createdAt: true,
+      subTeam: true, photoUrl: true, whatsapp: true, active: true, inviteToken: true, createdAt: true,
       zoomIdentifiers: { select: { id: true, value: true, type: true, locked: true } },
     },
   });
@@ -27,19 +30,48 @@ export async function GET() {
 export async function POST(request: Request) {
   if (!(await isAdmin())) return NextResponse.json({ error: "Acesso negado" }, { status: 403 });
 
-  const { name, email, church, team, subTeam, zoomIdentifiers } = await request.json();
+  const { name, email, church, team, subTeam, zoomIdentifiers, password, confirmPassword, role, whatsapp } = await request.json();
   if (!name || !email || !church) return NextResponse.json({ error: "Nome, email e igreja são obrigatórios" }, { status: 400 });
 
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) return NextResponse.json({ error: "Email já cadastrado" }, { status: 409 });
 
+  // Validar role
+  const validRoles = ["SUPER_ADMIN", "ADMIN", "SUBSCRIBER_VIP", "SUBSCRIBER", "MEMBER"];
+  const userRole = role && validRoles.includes(role) ? role : "MEMBER";
+
+  // Modo 1: Criação com senha (sem envio de convite)
+  if (password && confirmPassword) {
+    if (password.length < 6) return NextResponse.json({ error: "Senha deve ter no mínimo 6 caracteres" }, { status: 400 });
+    if (password !== confirmPassword) return NextResponse.json({ error: "As senhas não coincidem" }, { status: 400 });
+
+    const hashedPassword = await bcrypt.hash(password, 12);
+
+    const user = await prisma.user.create({
+      data: {
+        name, email, password: hashedPassword, role: userRole,
+        church: church || "", team: team || "", subTeam: subTeam || "",
+        whatsapp: whatsapp?.trim() || null,
+        zoomIdentifiers: zoomIdentifiers?.length ? {
+          create: zoomIdentifiers.map((zi: { value: string; type: string }) => ({
+            value: zi.value, type: zi.type || "EMAIL",
+          })),
+        } : undefined,
+      },
+    });
+
+    return NextResponse.json(user);
+  }
+
+  // Modo 2: Criação com convite (comportamento original)
   const inviteToken = crypto.randomBytes(32).toString("hex");
   const inviteExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
   const user = await prisma.user.create({
     data: {
-      name, email, password: null, role: "MEMBER",
+      name, email, password: null, role: userRole,
       church: church || "", team: team || "", subTeam: subTeam || "",
+      whatsapp: whatsapp?.trim() || null,
       inviteToken, inviteExpiresAt,
       zoomIdentifiers: zoomIdentifiers?.length ? {
         create: zoomIdentifiers.map((zi: { value: string; type: string }) => ({

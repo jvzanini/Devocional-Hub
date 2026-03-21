@@ -11,6 +11,7 @@ export default function InvitePage({ params }: { params: Promise<{ token: string
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [zoomIdentifier, setZoomIdentifier] = useState("");
+  const [whatsapp, setWhatsapp] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [success, setSuccess] = useState(false);
@@ -37,12 +38,13 @@ export default function InvitePage({ params }: { params: Promise<{ token: string
     if (password.length < 6) { setError("Senha deve ter no mínimo 6 caracteres"); return; }
     if (password !== confirmPassword) { setError("As senhas não coincidem"); return; }
     if (!zoomIdentifier.trim()) { setError("O email/username do Zoom é obrigatório"); return; }
+    if (!whatsapp.trim()) { setError("O WhatsApp é obrigatório"); return; }
 
     setLoading(true);
     const res = await fetch(`/api/invite/${token}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ password, zoomIdentifier: zoomIdentifier.trim(), zoomType: "EMAIL" }),
+      body: JSON.stringify({ password, zoomIdentifier: zoomIdentifier.trim(), zoomType: "EMAIL", whatsapp: whatsapp.trim() }),
     });
 
     if (res.ok) {
@@ -123,6 +125,10 @@ export default function InvitePage({ params }: { params: Promise<{ token: string
                 Usado para registrar sua presença automaticamente nos devocionais.
               </p>
               <input className="input-field" value={zoomIdentifier} onChange={e => setZoomIdentifier(e.target.value)} placeholder="seu.email@zoom.com" required />
+            </div>
+            <div>
+              <label className="label">WhatsApp *</label>
+              <input type="tel" className="input-field" value={whatsapp} onChange={e => setWhatsapp(e.target.value)} placeholder="(11) 99999-9999" required />
             </div>
             {error && (
               <div className="alert-error" style={{ fontSize: 13, color: "#dc2626" }}>{error}</div>

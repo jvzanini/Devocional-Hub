@@ -23,7 +23,7 @@ export async function POST(
   { params }: { params: Promise<{ token: string }> }
 ) {
   const { token } = await params;
-  const { password, zoomIdentifier, zoomType } = await request.json();
+  const { password, zoomIdentifier, zoomType, whatsapp } = await request.json();
 
   if (!password || password.length < 6) {
     return NextResponse.json({ error: "Senha deve ter no mínimo 6 caracteres" }, { status: 400 });
@@ -47,6 +47,7 @@ export async function POST(
       password: hashedPassword,
       inviteToken: null,
       inviteExpiresAt: null,
+      ...(whatsapp?.trim() ? { whatsapp: whatsapp.trim() } : {}),
     },
   });
 

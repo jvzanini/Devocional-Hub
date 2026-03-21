@@ -44,3 +44,6 @@ next-env.d.ts
 
 # playwright session
 playwright-state/
+
+# storage local (fotos, documentos)
+/data/

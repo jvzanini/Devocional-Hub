@@ -5,7 +5,8 @@
 
 import { prisma } from "@/shared/lib/db";
 import { getVttTranscript, getVttByMeetingId, getDetailedParticipants, getMeetingSummary, getMeetingInstances } from "@/features/zoom/lib/zoom";
-import { processTranscript, generateTheologicalResearch, buildNotebookKnowledgeBase, extractSessionPassword } from "@/features/pipeline/lib/ai";
+import { processTranscript, generateTheologicalResearch, buildNotebookKnowledgeBase, extractSessionPassword, callAI } from "@/features/pipeline/lib/ai";
+import { triageTranscription } from "@/features/pipeline/lib/transcription-triage";
 import { getChaptersText } from "@/features/bible/lib/bible";
 import { runNotebookLMAutomation } from "@/features/pipeline/lib/notebooklm";
 import { uploadText, uploadFile, ensureBucket, getFileSize } from "@/shared/lib/storage";
@@ -19,6 +20,115 @@ export interface PipelineOptions {
   meetingUuid?: string; // UUID da sessão específica (via webhook)
   skipNotebookLM?: boolean;
   sessionId?: string;
+}
+
+// ─── Detecção de Multi-Sessão ──────────────────────────────────────────
+
+interface MultiSessionResult {
+  isMultiSession: boolean;
+  existingSessionId?: string;
+  isPartial: boolean; // Se a transcrição atual indica continuação futura
+}
+
+const CONTINUITY_PATTERNS = [
+  /continua(?:mos|remos)?\s+(?:amanhã|na\s+próxima)/i,
+  /não\s+termina(?:mos|ram)/i,
+  /próxima\s+sessão/i,
+  /parte\s+\d/i,
+  /vamos\s+continuar/i,
+  /ficou\s+para\s+(?:amanhã|próxima)/i,
+];
+
+/**
+ * Detecta se um capítulo está sendo discutido em múltiplas sessões.
+ * Verifica se já existe sessão para o mesmo chapterRef e analisa
+ * sinais de continuidade na transcrição.
+ */
+async function detectMultiSession(
+  chapterRef: string,
+  transcript: string
+): Promise<MultiSessionResult> {
+  if (!chapterRef || chapterRef === "Não identificado") {
+    return { isMultiSession: false, isPartial: false };
+  }
+
+  // 1. Verificar se já existe sessão COMPLETA para este capítulo
+  const existing = await prisma.session.findFirst({
+    where: { chapterRef, status: PipelineStatus.COMPLETED },
+    orderBy: { date: "desc" },
+  });
+
+  // 2. Analisar transcrição para sinais de continuidade
+  const hasPartialSignal = CONTINUITY_PATTERNS.some(p => p.test(transcript));
+
+  return {
+    isMultiSession: !!existing,
+    existingSessionId: existing?.id,
+    isPartial: hasPartialSignal,
+  };
+}
+
+/**
+ * Faz merge da transcrição atual com a sessão existente do mesmo capítulo.
+ * Reaproveita texto bíblico e teológico já gerados (economiza tokens IA).
+ */
+async function mergeWithExistingSession(
+  existingSessionId: string,
+  newSessionId: string,
+  newTranscript: string,
+  chapterRef: string,
+  isPartial: boolean
+): Promise<void> {
+  const existingSession = await prisma.session.findUnique({
+    where: { id: existingSessionId },
+    include: { documents: true },
+  });
+  if (!existingSession) return;
+
+  // Buscar transcrição anterior
+  const prevTranscriptDoc = existingSession.documents.find(
+    d => d.type === DocType.TRANSCRIPT_CLEAN
+  );
+  let mergedTranscript = newTranscript;
+  if (prevTranscriptDoc) {
+    try {
+      const { downloadFile } = await import("@/shared/lib/storage");
+      const prevBuffer = await downloadFile(prevTranscriptDoc.storagePath);
+      const prevText = prevBuffer.toString("utf-8");
+      mergedTranscript = `--- PARTE ANTERIOR ---\n${prevText}\n\n--- CONTINUAÇÃO ---\n${newTranscript}`;
+    } catch {
+      console.warn("[MultiSession] Não foi possível recuperar transcrição anterior");
+    }
+  }
+
+  // Contar quantas partes já existem
+  const relatedIds = existingSession.relatedSessionIds || [];
+  const partNumber = relatedIds.length + 2; // +2 porque a original é parte 1
+
+  // Atualizar sessão existente com referência à nova
+  await prisma.session.update({
+    where: { id: existingSessionId },
+    data: {
+      relatedSessionIds: [...relatedIds, newSessionId],
+      summary: isPartial
+        ? `${existingSession.summary}\n\n[Parte ${partNumber} adicionada — capítulo em andamento]`
+        : `${existingSession.summary}\n\n[Capítulo completo — ${partNumber} sessões]`,
+    },
+  });
+
+  // Marcar nova sessão como relacionada
+  await prisma.session.update({
+    where: { id: newSessionId },
+    data: {
+      relatedSessionIds: [existingSessionId],
+    },
+  });
+
+  // Salvar transcrição mesclada
+  const mergedPath = `sessions/${existingSessionId}/transcript-merged.txt`;
+  await uploadText(mergedPath, mergedTranscript);
+
+  console.log(`[MultiSession] Merge: sessão ${newSessionId} → ${existingSessionId} (Parte ${partNumber})`);
 }
 
 export async function runPipeline(options: PipelineOptions = {}): Promise<string> {
@@ -104,25 +214,63 @@ export async function runPipeline(options: PipelineOptions = {}): Promise<string
       data: { sessionId, type: DocType.TRANSCRIPT_RAW, fileName: "transcript-raw.txt", storagePath: rawPath, fileSize: Buffer.byteLength(rawTranscript, "utf-8") },
     });
 
-    // 4. Buscar participantes detalhados
+    // 4. Buscar participantes detalhados + deduplicar por email
     log(sessionId, "Buscando participantes detalhados...");
-    const participants = await getDetailedParticipants(meetingUuid);
+    const rawParticipants = await getDetailedParticipants(meetingUuid);
 
-    if (participants.length > 0) {
-      // Salvar cada participante no banco
-      for (const p of participants) {
-        await prisma.participant.create({
+    if (rawParticipants.length > 0) {
+      // Deduplicar: agrupar por email (ou nome se sem email)
+      const byKey = new Map<string, typeof rawParticipants>();
+      for (const p of rawParticipants) {
+        const key = p.email?.toLowerCase() || `name:${p.name.toLowerCase()}`;
+        if (!byKey.has(key)) byKey.set(key, []);
+        byKey.get(key)!.push(p);
+      }
+
+      for (const [, entries] of byKey) {
+        // Manter o nome mais completo
+        const bestName = entries.reduce((a, b) =>
+          a.name.length >= b.name.length ? a : b
+        ).name;
+        const email = entries[0].email || null;
+
+        // Calcular duração total (soma de todas as entradas)
+        const totalDuration = entries.reduce((sum, e) => sum + e.duration, 0);
+
+        // Usar joinTime/leaveTime da primeira e última entrada
+        const sortedEntries = [...entries].sort(
+          (a, b) => new Date(a.joinTime).getTime() - new Date(b.joinTime).getTime()
+        );
+        const firstJoin = new Date(sortedEntries[0].joinTime);
+        const lastLeave = new Date(sortedEntries[sortedEntries.length - 1].leaveTime);
+
+        // Criar participante deduplicado
+        const participant = await prisma.participant.create({
           data: {
             sessionId,
-            name: p.name,
-            email: p.email || null,
-            joinTime: new Date(p.joinTime),
-            leaveTime: new Date(p.leaveTime),
-            duration: p.duration,
+            name: bestName,
+            email,
+            joinTime: firstJoin,
+            leaveTime: lastLeave,
+            duration: totalDuration,
+            totalDuration,
           },
         });
+
+        // Criar ParticipantEntry para cada entrada/saída individual
+        for (const entry of entries) {
+          await prisma.participantEntry.create({
+            data: {
+              participantId: participant.id,
+              joinTime: new Date(entry.joinTime),
+              leaveTime: new Date(entry.leaveTime),
+              duration: entry.duration,
+            },
+          });
+        }
       }
-      log(sessionId, `${participants.length} participantes salvos`);
+
+      log(sessionId, `${rawParticipants.length} registros → ${byKey.size} participantes únicos (deduplicados por email)`);
     }
 
     // 5. Buscar nome do orador principal (configuração do admin)
@@ -187,19 +335,75 @@ export async function runPipeline(options: PipelineOptions = {}): Promise<string
       }
     }
 
-    // 8.6. Construir Knowledge Base unificada para NotebookLM
+    // 8.6. Triagem inteligente da transcrição
+    let triagedSynthesis = "";
+    if ((process.env.OPENAI_API_KEY || process.env.OPENROUTER_API_KEY || process.env.GEMINI_API_KEY) && bibleText) {
+      log(sessionId, "Triando transcrição (validação teológica)...");
+      try {
+        triagedSynthesis = await triageTranscription(
+          processed.cleanText,
+          bibleText,
+          theologicalResearch
+        );
+        log(sessionId, `Transcrição triada: ${triagedSynthesis.length} chars`);
+      } catch (err) {
+        log(sessionId, `Aviso: falha na triagem, usando transcrição original: ${err}`);
+      }
+    }
+
+    // 8.7. Construir Knowledge Base unificada para NotebookLM
     let knowledgeBase = "";
     if (theologicalResearch || bibleText) {
       knowledgeBase = buildNotebookKnowledgeBase(
         processed.cleanText,
         bibleText,
         theologicalResearch,
-        processed.chapterRefString
+        processed.chapterRefString,
+        triagedSynthesis || undefined
       );
       log(sessionId, `KB unificada construída: ${knowledgeBase.length} chars`);
     }
 
-    // 8.7. Extrair senha da transcrição
+    // 8.8. Gerar AI_SUMMARY (resumo IA baseado nas 3 seções)
+    if ((process.env.OPENAI_API_KEY || process.env.OPENROUTER_API_KEY || process.env.GEMINI_API_KEY) && (bibleText || theologicalResearch || triagedSynthesis)) {
+      log(sessionId, "Gerando resumo IA (AI_SUMMARY)...");
+      try {
+        const summaryPrompt = `Você é um teólogo pastoral. Gere um RESUMO COMPLETO do devocional sobre ${processed.chapterRefString} baseado nas 3 fontes abaixo.
+
+O resumo deve:
+- Ter 4-6 parágrafos densos e informativos
+- Cobrir os pontos principais discutidos no devocional
+- Incluir referências bíblicas relevantes
+- Destacar aplicações práticas mencionadas
+- Ser compreensível sem ter assistido ao devocional
+- Estar em português brasileiro
+
+TEXTO BÍBLICO:
+${bibleText.substring(0, 3000)}
+
+PESQUISA TEOLÓGICA:
+${theologicalResearch.substring(0, 3000)}
+
+SÍNTESE DO DEVOCIONAL:
+${(triagedSynthesis || processed.cleanText).substring(0, 5000)}
+
+Responda APENAS com o texto do resumo (sem JSON, sem cabeçalhos).`;
+
+        const aiSummaryText = await callAI(summaryPrompt, 2000);
+        if (aiSummaryText && aiSummaryText.trim().length > 100) {
+          const summaryPath = `sessions/${sessionId}/ai-summary.txt`;
+          await uploadText(summaryPath, aiSummaryText);
+          await prisma.document.create({
+            data: { sessionId, type: DocType.AI_SUMMARY, fileName: "ai-summary.txt", storagePath: summaryPath, fileSize: Buffer.byteLength(aiSummaryText, "utf-8") },
+          });
+          log(sessionId, `AI_SUMMARY gerado: ${aiSummaryText.length} chars`);
+        }
+      } catch (err) {
+        log(sessionId, `Aviso: falha ao gerar AI_SUMMARY: ${err}`);
+      }
+    }
+
+    // 8.9. Extrair senha da transcrição
     let contentPassword: string | null = null;
     try {
       log(sessionId, "Extraindo senha da transcrição...");
@@ -223,9 +427,47 @@ export async function runPipeline(options: PipelineOptions = {}): Promise<string
       },
     });
 
+    // 9.5. Detectar multi-sessão (mesmo capítulo discutido em múltiplas sessões)
+    log(sessionId, "Verificando multi-sessão...");
+    try {
+      const multiSession = await detectMultiSession(
+        processed.chapterRefString,
+        processed.cleanText
+      );
+      if (multiSession.isMultiSession && multiSession.existingSessionId) {
+        log(sessionId, `Multi-sessão detectada! Sessão anterior: ${multiSession.existingSessionId}`);
+        await mergeWithExistingSession(
+          multiSession.existingSessionId,
+          sessionId,
+          processed.cleanText,
+          processed.chapterRefString,
+          multiSession.isPartial
+        );
+      } else if (multiSession.isPartial) {
+        log(sessionId, "Sinal de continuidade detectado — marcando como sessão parcial");
+      }
+    } catch (err) {
+      log(sessionId, `Aviso: falha na detecção multi-sessão: ${err}`);
+    }
+
     // 10. NotebookLM (opcional)
     if (!options.skipNotebookLM) {
       log(sessionId, "Iniciando automação do NotebookLM...");
+
+      // Determinar sufixo de nomenclatura para arquivos (Parte N ou Cap Completo)
+      const chapterLabel = processed.chapterRefString || "Devocional";
+      let fileSuffix = "";
+      try {
+        const multiCheck = await detectMultiSession(processed.chapterRefString, processed.cleanText);
+        if (multiCheck.isMultiSession && multiCheck.existingSessionId) {
+          const existing = await prisma.session.findUnique({ where: { id: multiCheck.existingSessionId } });
+          const partNum = (existing?.relatedSessionIds?.length || 0) + 2;
+          fileSuffix = multiCheck.isPartial ? ` - Parte ${partNum}` : " - Cap Completo";
+        } else if (multiCheck.isPartial) {
+          fileSuffix = " - Parte 1";
+        }
+      } catch { /* fallback: sem sufixo */ }
+
       try {
         const nlmResult = await runNotebookLMAutomation(
           sessionId,
@@ -235,22 +477,25 @@ export async function runPipeline(options: PipelineOptions = {}): Promise<string
           knowledgeBase || undefined
         );
         if (nlmResult.slidesPath && fs.existsSync(nlmResult.slidesPath)) {
-          const sp = `sessions/${sessionId}/slides.pdf`;
+          const slidesName = `${chapterLabel}${fileSuffix} - Slides.pdf`;
+          const sp = `sessions/${sessionId}/${slidesName}`;
           await uploadFile(sp, nlmResult.slidesPath);
-          await prisma.document.create({ data: { sessionId, type: DocType.SLIDES, fileName: "slides.pdf", storagePath: sp, fileSize: getFileSize(sp) } });
+          await prisma.document.create({ data: { sessionId, type: DocType.SLIDES, fileName: slidesName, storagePath: sp, fileSize: getFileSize(sp) } });
           fs.unlinkSync(nlmResult.slidesPath);
         }
         if (nlmResult.infographicPath && fs.existsSync(nlmResult.infographicPath)) {
-          const ip = `sessions/${sessionId}/infographic.pdf`;
+          const mapName = `${chapterLabel}${fileSuffix} - Mapa Mental.pdf`;
+          const ip = `sessions/${sessionId}/${mapName}`;
           await uploadFile(ip, nlmResult.infographicPath);
-          await prisma.document.create({ data: { sessionId, type: DocType.INFOGRAPHIC, fileName: "infographic.pdf", storagePath: ip, fileSize: getFileSize(ip) } });
+          await prisma.document.create({ data: { sessionId, type: DocType.INFOGRAPHIC, fileName: mapName, storagePath: ip, fileSize: getFileSize(ip) } });
           fs.unlinkSync(nlmResult.infographicPath);
         }
         if (nlmResult.audioOverviewPath && fs.existsSync(nlmResult.audioOverviewPath)) {
           const ext = nlmResult.audioOverviewPath.split(".").pop() || "wav";
-          const ap = `sessions/${sessionId}/audio-overview.${ext}`;
+          const videoName = `${chapterLabel}${fileSuffix} - Video Resumo.${ext}`;
+          const ap = `sessions/${sessionId}/${videoName}`;
           await uploadFile(ap, nlmResult.audioOverviewPath);
-          await prisma.document.create({ data: { sessionId, type: DocType.AUDIO_OVERVIEW, fileName: `audio-overview.${ext}`, storagePath: ap, fileSize: getFileSize(ap) } });
+          await prisma.document.create({ data: { sessionId, type: DocType.AUDIO_OVERVIEW, fileName: videoName, storagePath: ap, fileSize: getFileSize(ap) } });
           fs.unlinkSync(nlmResult.audioOverviewPath);
           log(sessionId, "Audio Overview (vídeo PT-BR) salvo com sucesso!");
         }

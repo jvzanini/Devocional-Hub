@@ -14,7 +14,7 @@ export async function GET() {
     where: { id: session.user.id },
     select: {
       id: true, name: true, email: true, church: true, team: true, subTeam: true,
-      photoUrl: true, role: true,
+      photoUrl: true, role: true, whatsapp: true,
       zoomIdentifiers: { select: { id: true, value: true, type: true, locked: true } },
     },
   });
@@ -32,14 +32,24 @@ export async function PUT(req: NextRequest) {
   const photo = formData.get("photo") as File | null;
   const zoomValue = formData.get("zoomIdentifier") as string | null;
   const zoomType = (formData.get("zoomType") as string | null) || "EMAIL";
+  const whatsapp = formData.get("whatsapp") as string | null;
 
-  const updateData: { name?: string; photoUrl?: string } = {};
+  const updateData: { name?: string; photoUrl?: string; whatsapp?: string } = {};
 
   if (name && name.trim()) {
     updateData.name = name.trim();
   }
 
+  if (whatsapp !== null) {
+    updateData.whatsapp = whatsapp.replace(/\D/g, "");
+  }
+
   if (photo && photo.size > 0) {
+    // Validate file size (max 5MB)
+    const MAX_PHOTO_SIZE = 5 * 1024 * 1024;
+    if (photo.size > MAX_PHOTO_SIZE) {
+      return NextResponse.json({ error: "Imagem muito grande. Máximo: 5MB." }, { status: 400 });
+    }
     // Validate MIME type
     const validTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
     if (!validTypes.includes(photo.type)) {
@@ -95,7 +105,7 @@ export async function PUT(req: NextRequest) {
     }
   }
 
-  if (Object.keys(updateData).length === 0 && !zoomValue) {
+  if (Object.keys(updateData).length === 0 && !zoomValue && whatsapp === null) {
     return NextResponse.json({ error: "Nenhum dado para atualizar" }, { status: 400 });
   }
 
@@ -104,7 +114,7 @@ export async function PUT(req: NextRequest) {
     data: Object.keys(updateData).length > 0 ? updateData : {},
     select: {
       id: true, name: true, email: true, church: true, team: true, subTeam: true,
-      photoUrl: true, role: true,
+      photoUrl: true, role: true, whatsapp: true,
       zoomIdentifiers: { select: { id: true, value: true, type: true, locked: true } },
     },
   });

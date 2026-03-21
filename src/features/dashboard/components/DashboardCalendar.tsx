@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { formatChapterLabel } from "@/features/bible/lib/bible-abbreviations";
 
-interface PlanDay { chapters: string; bookAbbr: string; completed: boolean; }
+interface PlanDay { chapters: string; bookAbbr: string; completed: boolean; bookName?: string; }
 
 interface CalendarProps {
   datesWithDevotional: string[];
@@ -103,6 +104,14 @@ export function DashboardCalendar({ datesWithDevotional, dateToSessionId, planDa
     }
   }
 
+  function isPastDate(key: string): boolean {
+    return key < today;
+  }
+
+  function isFutureDate(key: string): boolean {
+    return key > today;
+  }
+
   const isCurrentMonth = month === now.getMonth() && year === now.getFullYear();
 
   return (
@@ -152,28 +161,50 @@ export function DashboardCalendar({ datesWithDevotional, dateToSessionId, planDa
           const isToday = key === today;
           const sessionId = dateToSessionId[key];
           const planDay = planDays[key];
+          const past = isPastDate(key);
+          const future = isFutureDate(key);
 
+          // Determinar classe do cell
           const classes = [
             "calendar-cell",
-            isToday && !hasDev ? "today" : "",
-            hasDev ? "has-devotional" : "",
+            isToday ? "calendar-today" : "",
+            hasDev && past ? "has-devotional-past" : "",
+            hasDev && future ? "has-devotional-future" : "",
+            hasDev && isToday ? "has-devotional-today" : "",
+            !hasDev && planDay && future ? "has-plan-future" : "",
+            !hasDev && planDay && past ? "has-plan-past" : "",
             (hasDev || planDay) ? "clickable" : "",
           ].filter(Boolean).join(" ");
+
+          // Gerar label de legenda
+          let label = "";
+          if (planDay) {
+            const bookName = planDay.bookName || planDay.bookAbbr;
+            label = formatChapterLabel(bookName, planDay.chapters);
+          }
 
           const cellContent = (
             <div
               className={classes}
               onClick={!hasDev && planDay ? () => handleDayClick(key) : undefined}
             >
-              <span style={{ fontSize: 16, lineHeight: 1.2 }}>{day}</span>
-              {hasDev && !planDay && (
-                <div style={{ width: 5, height: 5, borderRadius: "50%", backgroundColor: "#ffffff", marginTop: 3, opacity: 0.7 }} />
-              )}
-              {planDay && !hasDev && (
-                <div className="calendar-cell-plan" style={{
-                  color: planDay.completed ? "var(--success)" : "var(--text-muted)",
+              <span className="calendar-day-number">{day}</span>
+              {label && (
+                <div className="calendar-cell-label" style={{
+                  color: hasDev
+                    ? (past ? "var(--text-muted)" : "#fff")
+                    : (planDay?.completed ? "var(--success)" : "var(--text-muted)"),
+                  fontSize: 9,
+                  fontWeight: 600,
+                  lineHeight: 1,
+                  marginTop: 2,
+                  letterSpacing: "0.02em",
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  maxWidth: "100%",
                 }}>
-                  {planDay.bookAbbr} {planDay.chapters.split("-")[0]}
+                  {label}
                 </div>
               )}
             </div>
@@ -195,10 +226,14 @@ export function DashboardCalendar({ datesWithDevotional, dateToSessionId, planDa
       <div style={{ display: "flex", gap: 20, marginTop: 16, paddingTop: 14, borderTop: "1px solid var(--border-light)", flexWrap: "wrap" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "var(--text-muted)" }}>
           <div style={{ width: 12, height: 12, borderRadius: 3, background: "linear-gradient(135deg, var(--accent), var(--accent-hover))" }} />
-          Devocional realizado
+          Futuro (agendado)
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "var(--text-muted)" }}>
-          <div style={{ width: 12, height: 12, borderRadius: 3, border: "2px solid var(--accent)", backgroundColor: "var(--accent-light)" }} />
+          <div style={{ width: 12, height: 12, borderRadius: 3, border: "2px solid var(--accent)", backgroundColor: "transparent" }} />
+          Realizado
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "var(--text-muted)" }}>
+          <div style={{ width: 12, height: 12, borderRadius: 3, border: "3px solid var(--success)", backgroundColor: "var(--accent-light)" }} />
           Hoje
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "var(--text-muted)" }}>

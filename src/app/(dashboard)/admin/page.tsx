@@ -4,8 +4,9 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { BIBLE_BOOKS } from "@/features/bible/lib/bible-books";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
+import { ALL_ROLES, isAdmin as checkIsAdmin, type UserRoleType } from "@/features/permissions/lib/role-hierarchy";
 
-type Tab = "zoom" | "schedule" | "webhooks" | "users" | "reading" | "attendance" | "ia";
+type Tab = "zoom" | "schedule" | "webhooks" | "users" | "reading" | "attendance" | "ia" | "permissions" | "subscriptions";
 
 interface ZoomIdentifier { id: string; value: string; type: string; locked: boolean; }
 interface Webhook { id: string; name: string; slug: string; active: boolean; createdAt: string; }
@@ -64,11 +65,15 @@ function EditableField({ label, value, description, onSave }: {
   label: string; value: string; description?: string;
   onSave: (val: string) => Promise<void>;
 }) {
-  const [editing, setEditing] = useState(false);
+  const isEmpty = !value || value.trim() === "";
+  const [editing, setEditing] = useState(isEmpty);
   const [draft, setDraft] = useState(value);
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => { setDraft(value); }, [value]);
+  useEffect(() => {
+    setDraft(value);
+    setEditing(!value || value.trim() === "");
+  }, [value]);
 
   async function handleSave() {
     setSaving(true);
@@ -88,8 +93,8 @@ function EditableField({ label, value, description, onSave }: {
           onChange={e => setDraft(e.target.value)}
           disabled={!editing}
           style={{ flex: 1, opacity: editing ? 1 : 0.7, transition: "opacity 0.15s" }}
-          onBlur={() => { if (editing && draft === value) setEditing(false); }}
-          onKeyDown={e => { if (e.key === "Enter") handleSave(); if (e.key === "Escape") { setDraft(value); setEditing(false); } }}
+          onBlur={() => { if (editing && draft === value && !isEmpty) setEditing(false); }}
+          onKeyDown={e => { if (e.key === "Enter") handleSave(); if (e.key === "Escape") { setDraft(value); if (!isEmpty) setEditing(false); } }}
         />
         {editing ? (
           <button className="btn-icon" onClick={handleSave} disabled={saving} title="Salvar" style={{ color: "var(--success)", borderColor: "var(--success-border)" }}>
@@ -130,18 +135,32 @@ export default function AdminPage() {
   const [inviteTeam, setInviteTeam] = useState("");
   const [inviteSubTeam, setInviteSubTeam] = useState("");
   const [inviteZoomId, setInviteZoomId] = useState("");
+  const [inviteZoomIds, setInviteZoomIds] = useState<string[]>([]);
+  const [inviteRole, setInviteRole] = useState<string>("MEMBER");
+  const [invitePassword, setInvitePassword] = useState("");
+  const [invitePasswordConfirm, setInvitePasswordConfirm] = useState("");
+  const [inviteWhatsApp, setInviteWhatsApp] = useState("");
   const [userSearch, setUserSearch] = useState("");
   const [editingUser, setEditingUser] = useState<string | null>(null);
-  const [editUserData, setEditUserData] = useState<Partial<User>>({});
+  const [editUserData, setEditUserData] = useState<Partial<User & { role: string; email: string }>>({});
   const [newZoomId, setNewZoomId] = useState("");
 
   // Reading plan form
   const [selectedBook, setSelectedBook] = useState<string>("");
   const [chaptersPerDay, setChaptersPerDay] = useState(3);
   const [selectedDates, setSelectedDates] = useState<string[]>([]);
+  const [editingPlanId, setEditingPlanId] = useState<string | null>(null);
   const [planMonth, setPlanMonth] = useState(new Date().getMonth());
   const [planYear, setPlanYear] = useState(new Date().getFullYear());
   const [planFilter, setPlanFilter] = useState<string>("all");
+
+  // Modal retroativo
+  const [retroModal, setRetroModal] = useState<{ planId: string; retroDays: { dayId: string; date: string; chapters: string }[] } | null>(null);
+  const [retroChecks, setRetroChecks] = useState<Record<string, boolean>>({});
+
+  // Popup horário dia bloqueado
+  const [timePopup, setTimePopup] = useState<{ dateStr: string; dayName: string } | null>(null);
+  const [timePopupValue, setTimePopupValue] = useState("07:00");
 
   // Attendance state
   const [attendanceData, setAttendanceData] = useState<AttendanceRecord[]>([]);
@@ -156,6 +175,10 @@ export default function AdminPage() {
   const [attendanceLoading, setAttendanceLoading] = useState(false);
 
   const [copied, setCopied] = useState<string | null>(null);
+
+  // Permissions state
+  const [permissions, setPermissions] = useState<Record<string, string>>({});
+  const [permissionsLoading, setPermissionsLoading] = useState(false);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -199,6 +222,30 @@ export default function AdminPage() {
     if (tab === "attendance") loadAttendance();
   }, [tab, loadAttendance]);
 
+  // Load permissions
+  useEffect(() => {
+    if (tab === "permissions") {
+      setPermissionsLoading(true);
+      fetch("/api/admin/permissions")
+        .then(r => r.ok ? r.json() : [])
+        .then((data: { resource: string; minRole: string }[]) => {
+          const map: Record<string, string> = {};
+          for (const p of data) map[p.resource] = p.minRole;
+          setPermissions(map);
+        })
+        .finally(() => setPermissionsLoading(false));
+    }
+  }, [tab]);
+
+  async function savePermission(resource: string, minRole: string) {
+    await fetch("/api/admin/permissions", {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ permissions: [{ resource, minRole }] }),
+    });
+    setPermissions(prev => ({ ...prev, [resource]: minRole }));
+    showMsg("Permissão atualizada!");
+  }
+
   function showMsg(text: string) { setMsg(text); setTimeout(() => setMsg(""), 3000); }
 
   async function saveSetting(key: string, value: string) {
@@ -231,16 +278,42 @@ export default function AdminPage() {
     loadData(); showMsg("Webhook atualizado!");
   }
 
+  function addInviteZoomId() {
+    if (!inviteZoomId.trim()) return;
+    setInviteZoomIds(prev => [...prev, inviteZoomId.trim()]);
+    setInviteZoomId("");
+  }
+
+  function formatWhatsApp(value: string): string {
+    const digits = value.replace(/\D/g, "").slice(0, 11);
+    if (digits.length <= 2) return digits;
+    if (digits.length <= 7) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+  }
+
+  const hasPassword = invitePassword.length > 0 || invitePasswordConfirm.length > 0;
+
   async function inviteUser() {
     if (!inviteName || !inviteEmail || !inviteChurch) { showMsg("Nome, email e igreja são obrigatórios"); return; }
-    const zoomIdentifiers = inviteZoomId ? [{ value: inviteZoomId, type: "EMAIL" }] : [];
+    if (hasPassword && invitePassword !== invitePasswordConfirm) { showMsg("As senhas não coincidem"); return; }
+    const zoomIdentifiers = inviteZoomIds.map(v => ({ value: v, type: "EMAIL" }));
+    const body: Record<string, unknown> = {
+      name: inviteName, email: inviteEmail, church: inviteChurch,
+      team: inviteTeam, subTeam: inviteSubTeam, zoomIdentifiers,
+      role: inviteRole,
+    };
+    if (hasPassword) body.password = invitePassword;
+    if (inviteWhatsApp) body.whatsapp = inviteWhatsApp.replace(/\D/g, "");
+
     const res = await fetch("/api/admin/users", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: inviteName, email: inviteEmail, church: inviteChurch, team: inviteTeam, subTeam: inviteSubTeam, zoomIdentifiers }),
+      body: JSON.stringify(body),
     });
     if (res.ok) {
-      setInviteName(""); setInviteEmail(""); setInviteChurch(""); setInviteTeam(""); setInviteSubTeam(""); setInviteZoomId("");
-      loadData(); showMsg("Convite enviado!");
+      setInviteName(""); setInviteEmail(""); setInviteChurch(""); setInviteTeam(""); setInviteSubTeam("");
+      setInviteZoomId(""); setInviteZoomIds([]); setInviteRole("MEMBER");
+      setInvitePassword(""); setInvitePasswordConfirm(""); setInviteWhatsApp("");
+      loadData(); showMsg(hasPassword ? "Usuário criado!" : "Convite enviado!");
     } else { const d = await res.json(); showMsg(d.error || "Erro"); }
   }
 
@@ -289,7 +362,25 @@ export default function AdminPage() {
         chaptersPerDay, totalChapters: book.chapters, selectedDates,
       }),
     });
-    if (res.ok) { setSelectedBook(""); setSelectedDates([]); loadData(); showMsg("Plano criado!"); }
+    if (res.ok) {
+      const data = await res.json();
+      const hasRetroDates = selectedDates.some(d => d <= todayStr);
+      if (hasRetroDates && data.plan?.id) {
+        // Abrir modal retroativo obrigatório
+        const retroDays = (data.plan.days || [])
+          .filter((d: { date: string }) => d.date.split("T")[0] <= todayStr)
+          .map((d: { id: string; date: string; chapters: string }) => ({
+            dayId: d.id,
+            date: d.date.split("T")[0],
+            chapters: d.chapters,
+          }));
+        if (retroDays.length > 0) {
+          setRetroModal({ planId: data.plan.id, retroDays });
+          setRetroChecks({});
+        }
+      }
+      setSelectedBook(""); setSelectedDates([]); loadData(); showMsg("Plano criado!");
+    }
     else { const d = await res.json(); showMsg(d.error || "Erro"); }
   }
 
@@ -383,6 +474,12 @@ export default function AdminPage() {
     } else if (selectedDates.length === 0) {
       // First selection: auto-fill from this date
       autoFillDates(dateStr);
+    } else if (selectedDates.length > 0 && dateStr < selectedDates[0]) {
+      // Clicar antes da data de início = nova data de início, recalcular
+      autoFillDates(dateStr);
+    } else if (selectedDates.length >= neededDays) {
+      // Rotação: remover primeiro dia, adicionar novo no final
+      setSelectedDates(prev => [...prev.slice(1), dateStr].sort());
     } else {
       setSelectedDates(prev => [...prev, dateStr].sort());
     }
@@ -485,6 +582,8 @@ export default function AdminPage() {
             { key: "reading", label: "Leitura", icon: "M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" },
             { key: "attendance", label: "Presença", icon: "M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" },
             { key: "ia", label: "IA", icon: "M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z" },
+            { key: "permissions", label: "Permissões", icon: "M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" },
+            { key: "subscriptions", label: "Assinaturas", icon: "M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z" },
           ] as { key: Tab; label: string; icon: string }[]).map(t => (
             <button key={t.key} onClick={() => setTab(t.key)} className={`tab-trigger ${tab === t.key ? "active" : ""}`}>
               <svg width={16} height={16} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -537,7 +636,7 @@ export default function AdminPage() {
                   const key = `schedule_${day}`;
                   return (
                     <div key={day} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                      <label style={{ fontSize: 14, fontWeight: 600, color: isWeekend ? "#a8a29e" : "#44403c" }}>
+                      <label style={{ fontSize: 14, fontWeight: 600, color: isWeekend ? "var(--text-muted)" : "var(--text)" }}>
                         {labels[i]} {!isWeekend && <span style={{ color: "var(--accent)" }}>*</span>}
                       </label>
                       <input
@@ -627,7 +726,7 @@ export default function AdminPage() {
                             className="btn-icon"
                             onClick={() => copyToClipboard(webhookUrl, w.id)}
                             title="Copiar URL"
-                            style={{ flexShrink: 0, color: copied === w.id ? "#059669" : "#78716c", borderColor: copied === w.id ? "#a7f3d0" : "#e7e5e4" }}
+                            style={{ flexShrink: 0, color: copied === w.id ? "var(--success)" : "var(--text-muted)", borderColor: copied === w.id ? "var(--success-border)" : "var(--border)" }}
                           >
                             {copied === w.id ? <IconCheck size={14} /> : <IconCopy size={14} />}
                           </button>
@@ -663,122 +762,188 @@ export default function AdminPage() {
         {/* ─── TAB: Usuários ─── */}
         {tab === "users" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            {/* Search */}
-            <div style={{ position: "relative" }}>
-              <div style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }}>
-                <IconSearch size={16} />
-              </div>
-              <input
-                className="search-input"
-                value={userSearch}
-                onChange={e => setUserSearch(e.target.value)}
-                placeholder="Buscar por nome, email ou igreja..."
-              />
-            </div>
-
             {/* Invite form */}
             <div className="section-card" style={{ padding: 18 }}>
-              <div className="section-title">Convidar Novo Usuário</div>
+              <div className="section-title">Novo Usuário</div>
               <div className="admin-grid-2">
                 <input className="input-field" value={inviteName} onChange={e => setInviteName(e.target.value)} placeholder="Nome completo *" />
                 <input className="input-field" value={inviteEmail} onChange={e => setInviteEmail(e.target.value)} placeholder="Email *" type="email" />
                 <input className="input-field" value={inviteChurch} onChange={e => setInviteChurch(e.target.value)} placeholder="Igreja *" />
                 <input className="input-field" value={inviteTeam} onChange={e => setInviteTeam(e.target.value)} placeholder="Equipe" />
                 <input className="input-field" value={inviteSubTeam} onChange={e => setInviteSubTeam(e.target.value)} placeholder="SubEquipe" />
-                <input className="input-field" value={inviteZoomId} onChange={e => setInviteZoomId(e.target.value)} placeholder="Email/Username do Zoom" />
+                <select className="input-field" value={inviteRole} onChange={e => setInviteRole(e.target.value)} style={{ cursor: "pointer" }}>
+                  {ALL_ROLES.map(r => (
+                    <option key={r.value} value={r.value}>{r.label}</option>
+                  ))}
+                </select>
               </div>
-              <button className="btn-primary" onClick={inviteUser} style={{ marginTop: 12, width: "100%" }}>
-                Enviar Convite
+
+              {/* Zoom identifiers com + */}
+              <div style={{ marginTop: 12 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", marginBottom: 6 }}>Identificadores Zoom</div>
+                {inviteZoomIds.length > 0 && (
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
+                    {inviteZoomIds.map((zi, idx) => (
+                      <span key={idx} style={{
+                        display: "inline-flex", alignItems: "center", gap: 4,
+                        padding: "4px 10px", borderRadius: 6,
+                        backgroundColor: "var(--accent-light)", color: "var(--accent)",
+                        fontSize: 13, fontWeight: 500,
+                      }}>
+                        {zi}
+                        <button onClick={() => setInviteZoomIds(prev => prev.filter((_, i) => i !== idx))} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--accent)", padding: 0 }}>
+                          <IconX size={12} />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <div style={{ display: "flex", gap: 6 }}>
+                  <input className="input-field" value={inviteZoomId} onChange={e => setInviteZoomId(e.target.value)} placeholder="Email/Username do Zoom" style={{ flex: 1 }}
+                    onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addInviteZoomId(); } }}
+                  />
+                  <button className="btn-icon" onClick={addInviteZoomId} style={{ color: "var(--success)", borderColor: "var(--success-border)" }}>
+                    <IconPlus size={14} />
+                  </button>
+                </div>
+              </div>
+
+              {/* WhatsApp */}
+              <div style={{ marginTop: 12 }}>
+                <input className="input-field" value={inviteWhatsApp} onChange={e => setInviteWhatsApp(formatWhatsApp(e.target.value))} placeholder="WhatsApp (DDD + número)" style={{ maxWidth: 280 }} />
+              </div>
+
+              {/* Campos de senha */}
+              <div style={{ marginTop: 12 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", marginBottom: 6 }}>Senha (opcional — se preenchido, cria usuário sem enviar convite)</div>
+                <div className="admin-grid-2">
+                  <input className="input-field" type="password" value={invitePassword} onChange={e => setInvitePassword(e.target.value)} placeholder="Criar Senha" />
+                  <input className="input-field" type="password" value={invitePasswordConfirm} onChange={e => setInvitePasswordConfirm(e.target.value)} placeholder="Confirmar Senha" />
+                </div>
+                {hasPassword && invitePassword !== invitePasswordConfirm && invitePasswordConfirm.length > 0 && (
+                  <div style={{ fontSize: 13, color: "var(--error)", marginTop: 4 }}>As senhas não coincidem</div>
+                )}
+              </div>
+
+              <button className="btn-primary" onClick={inviteUser} style={{ marginTop: 14, width: "auto", padding: "10px 24px" }}>
+                {hasPassword ? "Criar Usuário" : "Enviar Convite"}
               </button>
             </div>
 
-            {/* Users list */}
-            <div className="section-title">Usuários ({filteredUsers.length})</div>
-            {filteredUsers.map(u => (
-              <div key={u.id} className="section-card" style={{ padding: 16 }}>
-                {editingUser === u.id ? (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                    <div className="admin-grid-2">
-                      <input className="input-field" value={editUserData.name ?? u.name} onChange={e => setEditUserData(p => ({ ...p, name: e.target.value }))} placeholder="Nome" />
-                      <input className="input-field" value={editUserData.church ?? u.church} onChange={e => setEditUserData(p => ({ ...p, church: e.target.value }))} placeholder="Igreja" />
-                      <input className="input-field" value={editUserData.team ?? u.team} onChange={e => setEditUserData(p => ({ ...p, team: e.target.value }))} placeholder="Equipe" />
-                      <input className="input-field" value={editUserData.subTeam ?? u.subTeam} onChange={e => setEditUserData(p => ({ ...p, subTeam: e.target.value }))} placeholder="SubEquipe" />
-                    </div>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase" }}>Identificadores Zoom</div>
-                    {u.zoomIdentifiers.map(zi => (
-                      <div key={zi.id} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                        <code style={{ fontSize: 13, color: "var(--text-secondary)", flex: 1 }}>{zi.value}</code>
-                        <button className="btn-icon" onClick={() => removeZoomIdentifier(u.id, zi.id)} style={{ width: 28, height: 28 }}>
-                          <IconX size={12} />
+            {/* Users list with search */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+              <div className="section-title" style={{ marginBottom: 0 }}>Usuários ({filteredUsers.length})</div>
+              <div style={{ position: "relative", flex: 1, maxWidth: 320 }}>
+                <div style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }}>
+                  <IconSearch size={16} />
+                </div>
+                <input
+                  className="search-input"
+                  value={userSearch}
+                  onChange={e => setUserSearch(e.target.value)}
+                  placeholder="Buscar..."
+                />
+              </div>
+            </div>
+            {filteredUsers.map(u => {
+              const roleLabel = ALL_ROLES.find(r => r.value === u.role)?.label || u.role;
+              const isUserAdmin = checkIsAdmin(u.role as UserRoleType);
+              return (
+                <div key={u.id} className="section-card" style={{ padding: 16 }}>
+                  {editingUser === u.id ? (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                      <div className="admin-grid-2">
+                        <input className="input-field" value={editUserData.name ?? u.name} onChange={e => setEditUserData(p => ({ ...p, name: e.target.value }))} placeholder="Nome" />
+                        <input className="input-field" value={editUserData.email ?? u.email} onChange={e => setEditUserData(p => ({ ...p, email: e.target.value }))} placeholder="Email" type="email" />
+                        <input className="input-field" value={editUserData.church ?? u.church} onChange={e => setEditUserData(p => ({ ...p, church: e.target.value }))} placeholder="Igreja" />
+                        <input className="input-field" value={editUserData.team ?? u.team} onChange={e => setEditUserData(p => ({ ...p, team: e.target.value }))} placeholder="Equipe" />
+                        <input className="input-field" value={editUserData.subTeam ?? u.subTeam} onChange={e => setEditUserData(p => ({ ...p, subTeam: e.target.value }))} placeholder="SubEquipe" />
+                        <select className="input-field" value={editUserData.role ?? u.role} onChange={e => setEditUserData(p => ({ ...p, role: e.target.value }))} style={{ cursor: "pointer" }}>
+                          {ALL_ROLES.map(r => (
+                            <option key={r.value} value={r.value}>{r.label}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase" }}>Identificadores Zoom</div>
+                      {u.zoomIdentifiers.map(zi => (
+                        <div key={zi.id} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          <code style={{ fontSize: 13, color: "var(--text-secondary)", flex: 1 }}>{zi.value}</code>
+                          <button className="btn-icon" onClick={() => removeZoomIdentifier(u.id, zi.id)} style={{ width: 28, height: 28 }}>
+                            <IconX size={12} />
+                          </button>
+                        </div>
+                      ))}
+                      <div style={{ display: "flex", gap: 6 }}>
+                        <input className="input-field" value={newZoomId} onChange={e => setNewZoomId(e.target.value)} placeholder="Adicionar email/username do Zoom" style={{ flex: 1 }} />
+                        <button className="btn-icon" onClick={() => addZoomIdentifier(u.id)} style={{ color: "var(--success)", borderColor: "var(--success-border)" }}>
+                          <IconPlus size={14} />
                         </button>
                       </div>
-                    ))}
-                    <div style={{ display: "flex", gap: 6 }}>
-                      <input className="input-field" value={newZoomId} onChange={e => setNewZoomId(e.target.value)} placeholder="Adicionar email/username do Zoom" style={{ flex: 1 }} />
-                      <button className="btn-icon" onClick={() => addZoomIdentifier(u.id)} style={{ color: "var(--success)", borderColor: "var(--success-border)" }}>
-                        <IconPlus size={14} />
-                      </button>
-                    </div>
-                    <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-                      <button className="btn-ghost" onClick={() => { setEditingUser(null); setEditUserData({}); }}>Cancelar</button>
-                      <button className="btn-primary" onClick={() => saveUserEdit(u.id)}>Salvar</button>
-                    </div>
-                  </div>
-                ) : (
-                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                    <div className="avatar-sm" style={{ width: 40, height: 40, fontSize: 16 }}>
-                      {u.name.charAt(0).toUpperCase()}
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-                        <span style={{ fontWeight: 600, fontSize: 16, color: "var(--text)" }}>{u.name}</span>
-                        <span className={`badge badge-${u.role === "ADMIN" ? "warning" : "info"}`}>
-                          {u.role === "ADMIN" ? "Admin" : "Usuário"}
-                        </span>
-                        {u.inviteToken && <span className="badge" style={{ backgroundColor: "var(--warning-bg)", color: "var(--warning)", borderColor: "var(--warning-border)" }}>Pendente</span>}
-                        {!u.active && <span className="badge badge-error">Inativo</span>}
+                      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                        <button className="btn-ghost" onClick={() => { setEditingUser(null); setEditUserData({}); }}>Cancelar</button>
+                        <button className="btn-primary" onClick={() => saveUserEdit(u.id)}>Salvar</button>
                       </div>
-                      <div style={{ fontSize: 14, color: "var(--text-muted)" }}>{u.email}</div>
-                      {(u.church || u.team) && (
-                        <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2 }}>
-                          {[u.church, u.team, u.subTeam].filter(Boolean).join(" · ")}
-                        </div>
-                      )}
-                      {u.zoomIdentifiers.length > 0 && (
-                        <div style={{ fontSize: 12, color: "var(--accent)", marginTop: 2 }}>
-                          Zoom: {u.zoomIdentifiers.map(z => z.value).join(", ")}
-                        </div>
-                      )}
                     </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
-                      {u.role !== "ADMIN" && (
-                        <>
-                          <div className="tooltip-wrapper">
-                            <button
-                              className={`toggle-switch ${u.active ? "active" : ""}`}
-                              onClick={() => toggleUserActive(u.id, !u.active)}
-                            />
-                            <span className="tooltip">{u.active ? "Desativar acesso" : "Ativar acesso"}</span>
+                  ) : (
+                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                      <div className="avatar-sm" style={{ width: 44, height: 44, fontSize: 16, overflow: "hidden" }}>
+                        {(u as unknown as { photoUrl?: string }).photoUrl ? (
+                          <img src={`/api/profile/photo/${u.id}?size=thumbnail`} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                        ) : (
+                          u.name.charAt(0).toUpperCase()
+                        )}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                          <span style={{ fontWeight: 600, fontSize: 16, color: "var(--text)" }}>{u.name}</span>
+                          <span className={`badge badge-${isUserAdmin ? "warning" : "info"}`}>
+                            {roleLabel}
+                          </span>
+                          {u.inviteToken && <span className="badge" style={{ backgroundColor: "var(--warning-bg)", color: "var(--warning)", borderColor: "var(--warning-border)" }}>Pendente</span>}
+                          {!u.active && <span className="badge badge-error">Inativo</span>}
+                        </div>
+                        <div style={{ fontSize: 14, color: "var(--text-muted)" }}>{u.email}</div>
+                        {(u.church || u.team) && (
+                          <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2 }}>
+                            {[u.church, u.team, u.subTeam].filter(Boolean).join(" · ")}
                           </div>
-                          <div className="tooltip-wrapper">
-                            <button className="btn-icon" onClick={() => { setEditingUser(u.id); setEditUserData({}); setNewZoomId(""); }}>
-                              <IconPencil size={14} />
-                            </button>
-                            <span className="tooltip">Editar</span>
+                        )}
+                        {u.zoomIdentifiers.length > 0 && (
+                          <div style={{ fontSize: 12, color: "var(--accent)", marginTop: 2 }}>
+                            Zoom: {u.zoomIdentifiers.map(z => z.value).join(", ")}
                           </div>
-                          <div className="tooltip-wrapper">
-                            <button className="btn-danger" onClick={() => deleteUser(u.id)}>
-                              <IconTrash size={14} />
-                            </button>
-                            <span className="tooltip">Remover</span>
-                          </div>
-                        </>
-                      )}
+                        )}
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                        <div className="tooltip-wrapper">
+                          <button className="btn-icon" onClick={() => { setEditingUser(u.id); setEditUserData({}); setNewZoomId(""); }}>
+                            <IconPencil size={14} />
+                          </button>
+                          <span className="tooltip">Editar</span>
+                        </div>
+                        {!isUserAdmin && (
+                          <>
+                            <div className="tooltip-wrapper">
+                              <button
+                                className={`toggle-switch ${u.active ? "active" : ""}`}
+                                onClick={() => toggleUserActive(u.id, !u.active)}
+                              />
+                              <span className="tooltip">{u.active ? "Desativar acesso" : "Ativar acesso"}</span>
+                            </div>
+                            <div className="tooltip-wrapper">
+                              <button className="btn-danger" onClick={() => deleteUser(u.id)}>
+                                <IconTrash size={14} />
+                              </button>
+                              <span className="tooltip">Remover</span>
+                            </div>
+                          </>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                )}
-              </div>
-            ))}
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
 
@@ -834,9 +999,31 @@ export default function AdminPage() {
                         </button>
                       ))}
                     </div>
-                    <div style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 6 }}>
-                      {selectedBookData?.chapters} capítulos ÷ {chaptersPerDay}/dia = <strong>{neededDays} dias</strong> necessários
-                      {selectedDates.length > 0 && <> · <span style={{ color: "var(--accent)" }}>{selectedDates.length} selecionados</span></>}
+                    <div style={{
+                      display: "grid",
+                      gridTemplateColumns: "repeat(3, 1fr)",
+                      gap: 10,
+                      marginTop: 10,
+                      padding: 12,
+                      borderRadius: 10,
+                      background: "var(--surface-hover)",
+                    }}>
+                      <div style={{ textAlign: "center" }}>
+                        <div style={{ fontSize: 20, fontWeight: 700, color: "var(--text)" }}>{selectedBookData?.chapters}</div>
+                        <div style={{ fontSize: 12, color: "var(--text-muted)" }}>Capítulos</div>
+                      </div>
+                      <div style={{ textAlign: "center" }}>
+                        <div style={{ fontSize: 20, fontWeight: 700, color: "var(--accent)" }}>{neededDays}</div>
+                        <div style={{ fontSize: 12, color: "var(--text-muted)" }}>Dias necessários</div>
+                      </div>
+                      <div style={{ textAlign: "center" }}>
+                        <div style={{ fontSize: 20, fontWeight: 700, color: "var(--text)" }}>
+                          {selectedDates.length > 0
+                            ? new Date(selectedDates[selectedDates.length - 1]).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })
+                            : "—"}
+                        </div>
+                        <div style={{ fontSize: 12, color: "var(--text-muted)" }}>Previsão término</div>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -847,7 +1034,7 @@ export default function AdminPage() {
                       <button className="btn-icon" onClick={() => { if (planMonth === 0) { setPlanMonth(11); setPlanYear(y => y - 1); } else setPlanMonth(m => m - 1); }}>
                         <svg width={16} height={16} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7"/></svg>
                       </button>
-                      <span style={{ fontWeight: 700, fontSize: 15, color: "var(--text)" }}>{MONTHS[planMonth]} {planYear}</span>
+                      <span style={{ fontWeight: 700, fontSize: 18, color: "var(--text)" }}>{MONTHS[planMonth]} {planYear}</span>
                       <button className="btn-icon" onClick={() => { if (planMonth === 11) { setPlanMonth(0); setPlanYear(y => y + 1); } else setPlanMonth(m => m + 1); }}>
                         <svg width={16} height={16} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/></svg>
                       </button>
@@ -855,7 +1042,7 @@ export default function AdminPage() {
 
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4, marginBottom: 4 }}>
                       {DAYS_NAMES.map(d => (
-                        <div key={d} style={{ textAlign: "center", fontSize: 12, fontWeight: 600, color: "var(--text-muted)", padding: 4 }}>{d}</div>
+                        <div key={d} style={{ textAlign: "center", fontSize: 14, fontWeight: 700, color: "var(--text-secondary)", padding: 6 }}>{d}</div>
                       ))}
                     </div>
 
@@ -866,7 +1053,7 @@ export default function AdminPage() {
                         const isPast = dateStr < todayStr;
                         const isUsed = usedDates.has(dateStr);
                         const isSelected = selectedDates.includes(dateStr);
-                        const disabled = isPast || isUsed;
+                        const disabled = isUsed; // Permitir datas passadas para criação retroativa
 
                         return (
                           <button
@@ -874,13 +1061,14 @@ export default function AdminPage() {
                             onClick={() => !disabled && toggleDate(dateStr)}
                             disabled={disabled}
                             style={{
-                              width: "100%", aspectRatio: "1", borderRadius: 8,
-                              border: isSelected ? "2px solid #d97706" : "1px solid transparent",
-                              backgroundColor: isSelected ? "#fffbeb" : isUsed ? "#44403c" : isPast ? "#f5f5f4" : "#fff",
-                              color: isSelected ? "#d97706" : isUsed ? "#78716c" : isPast ? "#a8a29e" : "#44403c",
+                              width: "100%", aspectRatio: "1", borderRadius: 10,
+                              border: isSelected ? "2px solid var(--accent)" : "1px solid var(--border, rgba(128,128,128,0.15))",
+                              backgroundColor: isSelected ? "rgba(245,166,35,0.1)" : isUsed ? "var(--surface-hover)" : "var(--surface)",
+                              color: isSelected ? "var(--accent)" : isUsed ? "var(--text-muted)" : isPast ? "var(--text-muted)" : "var(--text)",
                               fontWeight: isSelected ? 700 : 500,
-                              fontSize: 13, cursor: disabled ? "default" : "pointer",
-                              opacity: disabled ? 0.5 : 1,
+                              fontSize: 15, cursor: disabled ? "default" : "pointer",
+                              opacity: disabled ? 0.4 : 1,
+                              transition: "all 0.15s ease",
                             }}
                           >
                             {day}
@@ -892,8 +1080,24 @@ export default function AdminPage() {
                 )}
 
                 {selectedBook && selectedDates.length > 0 && (
-                  <button className="btn-primary" onClick={createReadingPlan} style={{ width: "100%" }}>
-                    Criar Plano ({selectedDates.length} dias)
+                  <button
+                    onClick={createReadingPlan}
+                    style={{
+                      width: "100%",
+                      padding: "12px 24px",
+                      borderRadius: 10,
+                      border: "none",
+                      background: "linear-gradient(135deg, var(--accent), var(--accent-hover))",
+                      color: "#fff",
+                      fontSize: 15,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      transition: "transform 0.15s, box-shadow 0.15s",
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.transform = "scale(1.02)"; e.currentTarget.style.boxShadow = "0 4px 16px rgba(245,166,35,0.3)"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.transform = "scale(1)"; e.currentTarget.style.boxShadow = "none"; }}
+                  >
+                    Criar Plano — {selectedDates.length} dias
                   </button>
                 )}
               </div>
@@ -952,17 +1156,42 @@ export default function AdminPage() {
                       </div>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      {/* Percentual circular */}
+                      <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <svg width={40} height={40} style={{ transform: "rotate(-90deg)" }}>
+                          <circle cx={20} cy={20} r={16} fill="none" stroke="var(--border, rgba(128,128,128,0.15))" strokeWidth={3} />
+                          <circle cx={20} cy={20} r={16} fill="none" stroke={book?.color || "var(--accent)"} strokeWidth={3} strokeDasharray={100.53} strokeDashoffset={100.53 - (progress / 100) * 100.53} strokeLinecap="round" style={{ transition: "stroke-dashoffset 0.4s" }} />
+                        </svg>
+                        <span style={{ position: "absolute", fontSize: 10, fontWeight: 700, color: "var(--text)" }}>{progress}%</span>
+                      </div>
                       <span className={`badge badge-${plan.status === "COMPLETED" ? "success" : plan.status === "IN_PROGRESS" ? "warning" : "info"}`}>
                         {plan.status === "COMPLETED" ? "Concluído" : plan.status === "IN_PROGRESS" ? "Em andamento" : "Próximo"}
                       </span>
+                      <button className="btn-ghost" title="Editar plano" onClick={() => {
+                        setSelectedBook(plan.bookCode);
+                        setChaptersPerDay(plan.chaptersPerDay);
+                        setEditingPlanId(plan.id);
+                      }}>
+                        <IconPencil size={14} />
+                      </button>
                       <button className="btn-danger" onClick={() => deleteReadingPlan(plan.id)}>
                         <IconTrash size={14} />
                       </button>
                     </div>
                   </div>
 
-                  <div style={{ height: 6, borderRadius: 3, backgroundColor: "#f5f5f4", marginBottom: 12, overflow: "hidden" }}>
-                    <div style={{ height: "100%", borderRadius: 3, backgroundColor: book?.color || "#d97706", width: `${progress}%`, transition: "width 0.3s" }} />
+                  <div style={{ marginBottom: 12 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                      <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>
+                        {completedDays} de {plan.days.length} dias ({progress}%)
+                      </span>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: book?.color || "var(--accent)" }}>
+                        {completedDays * plan.chaptersPerDay} de {plan.totalChapters} capítulos
+                      </span>
+                    </div>
+                    <div style={{ height: 6, borderRadius: 3, backgroundColor: "var(--surface-hover)", overflow: "hidden" }}>
+                      <div style={{ height: "100%", borderRadius: 3, backgroundColor: book?.color || "var(--accent)", width: `${progress}%`, transition: "width 0.3s" }} />
+                    </div>
                   </div>
 
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
@@ -991,6 +1220,106 @@ export default function AdminPage() {
                 </div>
               );
             })}
+          </div>
+        )}
+
+        {/* ─── Modal Retroativo ─── */}
+        {retroModal && (
+          <div style={{ position: "fixed", inset: 0, zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}>
+            <div style={{ background: "var(--surface)", borderRadius: 16, padding: 24, width: "90vw", maxWidth: 500, maxHeight: "80vh", overflowY: "auto" }}>
+              <h3 style={{ fontSize: 18, fontWeight: 700, color: "var(--text)", marginBottom: 4 }}>Dias Retroativos</h3>
+              <p style={{ fontSize: 13, color: "var(--text-secondary)", marginBottom: 16 }}>Marque os capítulos que já foram lidos nos dias passados:</p>
+              {retroModal.retroDays.map((day) => (
+                <div key={day.dayId} style={{ padding: "10px 0", borderBottom: "1px solid var(--border, rgba(128,128,128,0.1))" }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+                    <span style={{ fontSize: 14, fontWeight: 600, color: "var(--text)" }}>
+                      {new Date(day.date + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "long" })}
+                    </span>
+                    <span style={{ fontSize: 13, color: "var(--text-muted)" }}>Cap. {day.chapters}</span>
+                  </div>
+                  <div
+                    role="checkbox"
+                    aria-checked={!!retroChecks[day.dayId]}
+                    tabIndex={0}
+                    onClick={() => setRetroChecks(prev => ({ ...prev, [day.dayId]: !prev[day.dayId] }))}
+                    onKeyDown={(e) => { if (e.key === " " || e.key === "Enter") setRetroChecks(prev => ({ ...prev, [day.dayId]: !prev[day.dayId] })); }}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 10, padding: "6px 8px", borderRadius: 8, cursor: "pointer",
+                      background: retroChecks[day.dayId] ? "rgba(34,197,94,0.1)" : "transparent",
+                    }}
+                  >
+                    <div style={{
+                      width: 22, height: 22, borderRadius: 6,
+                      border: `2px solid ${retroChecks[day.dayId] ? "var(--success)" : "var(--border, rgba(128,128,128,0.3))"}`,
+                      background: retroChecks[day.dayId] ? "var(--success)" : "transparent",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                    }}>
+                      {retroChecks[day.dayId] && (
+                        <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                      )}
+                    </div>
+                    <span style={{ fontSize: 14, color: "var(--text)" }}>Lido</span>
+                  </div>
+                </div>
+              ))}
+              <button
+                onClick={async () => {
+                  const completedDayIds = Object.entries(retroChecks).filter(([, v]) => v).map(([k]) => k);
+                  await fetch(`/api/admin/reading-plans/${retroModal.planId}/retroactive`, {
+                    method: "POST", headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ completedDayIds }),
+                  });
+                  setRetroModal(null);
+                  loadData();
+                  showMsg("Dias retroativos salvos!");
+                }}
+                style={{
+                  width: "100%", marginTop: 16, padding: "12px 24px", borderRadius: 10,
+                  border: "none", background: "var(--accent)", color: "#fff",
+                  fontSize: 15, fontWeight: 700, cursor: "pointer",
+                }}
+              >
+                Salvar ({Object.values(retroChecks).filter(Boolean).length} dias marcados)
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ─── Popup Horário Dia Bloqueado ─── */}
+        {timePopup && (
+          <div style={{ position: "fixed", inset: 0, zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.4)" }} onClick={() => setTimePopup(null)}>
+            <div style={{ background: "var(--surface)", borderRadius: 14, padding: 20, width: "90vw", maxWidth: 320 }} onClick={(e) => e.stopPropagation()}>
+              <h4 style={{ fontSize: 16, fontWeight: 700, color: "var(--text)", marginBottom: 4 }}>Definir Horário</h4>
+              <p style={{ fontSize: 13, color: "var(--text-secondary)", marginBottom: 14 }}>Defina o horário para {timePopup.dayName}:</p>
+              <input
+                type="time"
+                value={timePopupValue}
+                onChange={(e) => setTimePopupValue(e.target.value)}
+                style={{
+                  width: "100%", padding: "10px 14px", borderRadius: 8,
+                  border: "1px solid var(--border, rgba(128,128,128,0.2))",
+                  background: "var(--surface)", color: "var(--text)",
+                  fontSize: 16, marginBottom: 14,
+                }}
+              />
+              <button
+                onClick={async () => {
+                  await fetch("/api/admin/settings", {
+                    method: "POST", headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ key: `schedule:${timePopup.dayName}`, value: timePopupValue }),
+                  });
+                  setTimePopup(null);
+                  showMsg(`Horário ${timePopupValue} salvo para ${timePopup.dayName}`);
+                }}
+                style={{
+                  width: "100%", padding: "10px 20px", borderRadius: 8,
+                  border: "none", background: "var(--accent)", color: "#fff",
+                  fontSize: 14, fontWeight: 600, cursor: "pointer",
+                }}
+              >
+                Salvar
+              </button>
+            </div>
           </div>
         )}
 
@@ -1127,7 +1456,7 @@ export default function AdminPage() {
               </p>
 
               <div style={{ marginBottom: 16 }}>
-                <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#d6d3d1", marginBottom: 6 }}>
+                <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "var(--text-secondary)", marginBottom: 6 }}>
                   Modelo Principal (OpenAI)
                 </label>
                 <select
@@ -1153,17 +1482,14 @@ export default function AdminPage() {
                     <option value="o3">o3 — Raciocínio avançado</option>
                     <option value="o3-mini">o3-mini — Raciocínio avançado, econômico</option>
                   </optgroup>
-                  <optgroup label="Legado">
-                    <option value="gpt-3.5-turbo">GPT-3.5 Turbo — Mais barato</option>
-                  </optgroup>
                 </select>
               </div>
 
-              <div style={{ padding: 14, background: "#1c1917", borderRadius: 8, border: "1px solid #44403c" }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: "#d6d3d1", marginBottom: 8 }}>Cascata de Fallback</div>
+              <div style={{ padding: 14, backgroundColor: "var(--surface-hover)", borderRadius: 8, border: "1px solid var(--border)" }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text-secondary)", marginBottom: 8 }}>Cascata de Fallback</div>
                 <div style={{ fontSize: 13, color: "var(--text-muted)", lineHeight: 1.8 }}>
                   <div>1. <span style={{ color: "#10b981" }}>OpenAI</span> — <strong>{settings.aiModel || "gpt-4.1-mini"}</strong> (primário)</div>
-                  <div>2. <span style={{ color: "#f59e0b" }}>OpenRouter</span> — Nemotron 120B, Step 3.5, Nemotron 30B (gratuito)</div>
+                  <div>2. <span style={{ color: "#f59e0b" }}>OpenRouter</span> — Nemotron 120B (gratuito)</div>
                   <div>3. <span style={{ color: "#3b82f6" }}>Gemini</span> — 2.5 Flash (gratuito)</div>
                 </div>
               </div>
@@ -1173,18 +1499,103 @@ export default function AdminPage() {
               <div className="section-title">Status das APIs</div>
               <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 12 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <span style={{ width: 10, height: 10, borderRadius: "50%", background: process.env.NEXT_PUBLIC_HAS_OPENAI === "true" ? "#10b981" : "#78716c", display: "inline-block" }} />
-                  <span style={{ fontSize: 14, color: "#d6d3d1" }}>OpenAI — Configurada via variável de ambiente</span>
+                  <span style={{ width: 10, height: 10, borderRadius: "50%", background: process.env.NEXT_PUBLIC_HAS_OPENAI === "true" ? "#10b981" : "var(--text-muted)", display: "inline-block" }} />
+                  <span style={{ fontSize: 14, color: "var(--text-secondary)" }}>OpenAI — Configurada via variável de ambiente</span>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <span style={{ width: 10, height: 10, borderRadius: "50%", background: "#78716c", display: "inline-block" }} />
-                  <span style={{ fontSize: 14, color: "#d6d3d1" }}>OpenRouter — Fallback gratuito</span>
+                  <span style={{ width: 10, height: 10, borderRadius: "50%", background: "var(--text-muted)", display: "inline-block" }} />
+                  <span style={{ fontSize: 14, color: "var(--text-secondary)" }}>OpenRouter — Fallback gratuito</span>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <span style={{ width: 10, height: 10, borderRadius: "50%", background: "#78716c", display: "inline-block" }} />
-                  <span style={{ fontSize: 14, color: "#d6d3d1" }}>Gemini — Fallback gratuito</span>
+                  <span style={{ width: 10, height: 10, borderRadius: "50%", background: "var(--text-muted)", display: "inline-block" }} />
+                  <span style={{ fontSize: 14, color: "var(--text-secondary)" }}>Gemini — Fallback gratuito</span>
                 </div>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* ─── TAB: Permissões ─── */}
+        {tab === "permissions" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            {permissionsLoading ? (
+              <div style={{ textAlign: "center", color: "var(--text-muted)", padding: 32 }}>Carregando permissões...</div>
+            ) : (
+              <>
+                <div className="section-card" style={{ padding: 18 }}>
+                  <div className="section-title">Arquivos do Card Devocional</div>
+                  <p style={{ fontSize: 14, color: "var(--text-muted)", marginBottom: 16 }}>
+                    Defina o nível mínimo de acesso para visualizar cada tipo de arquivo.
+                  </p>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                    {[
+                      { resource: "document:bible_text", label: "Texto Bíblico" },
+                      { resource: "document:slides", label: "Slides" },
+                      { resource: "document:infographic", label: "Mapa Mental" },
+                      { resource: "document:video", label: "Vídeo Resumo" },
+                      { resource: "document:ai_summary", label: "Resumo IA" },
+                    ].map(item => (
+                      <div key={item.resource} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "8px 0", borderBottom: "1px solid var(--border-light)" }}>
+                        <span style={{ fontSize: 15, fontWeight: 500, color: "var(--text)" }}>{item.label}</span>
+                        <select
+                          className="input-field"
+                          value={permissions[item.resource] || "MEMBER"}
+                          onChange={e => savePermission(item.resource, e.target.value)}
+                          style={{ width: 200, cursor: "pointer" }}
+                        >
+                          {ALL_ROLES.map(r => (
+                            <option key={r.value} value={r.value}>{r.label}</option>
+                          ))}
+                        </select>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="section-card" style={{ padding: 18 }}>
+                  <div className="section-title">Menus</div>
+                  <p style={{ fontSize: 14, color: "var(--text-muted)", marginBottom: 16 }}>
+                    Defina o nível mínimo de acesso para cada menu da plataforma.
+                  </p>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                    {[
+                      { resource: "menu:planning", label: "Planejamento" },
+                      { resource: "menu:subscriptions", label: "Assinaturas" },
+                    ].map(item => (
+                      <div key={item.resource} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "8px 0", borderBottom: "1px solid var(--border-light)" }}>
+                        <span style={{ fontSize: 15, fontWeight: 500, color: "var(--text)" }}>{item.label}</span>
+                        <select
+                          className="input-field"
+                          value={permissions[item.resource] || "ADMIN"}
+                          onChange={e => savePermission(item.resource, e.target.value)}
+                          style={{ width: 200, cursor: "pointer" }}
+                        >
+                          {ALL_ROLES.map(r => (
+                            <option key={r.value} value={r.value}>{r.label}</option>
+                          ))}
+                        </select>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* ─── TAB: Assinaturas (placeholder) ─── */}
+        {tab === "subscriptions" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            <div className="section-card" style={{ padding: 40, textAlign: "center" }}>
+              <div style={{ width: 64, height: 64, borderRadius: 16, backgroundColor: "var(--accent-light)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+                <svg style={{ width: 32, height: 32, color: "var(--accent)" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z" />
+                </svg>
+              </div>
+              <h3 style={{ fontSize: 20, fontWeight: 700, color: "var(--text)", marginBottom: 8 }}>Assinaturas</h3>
+              <p style={{ fontSize: 15, color: "var(--text-muted)", maxWidth: 400, margin: "0 auto" }}>
+                Funcionalidade em desenvolvimento. Em breve será possível gerenciar planos de assinatura, pagamentos e acessos premium.
+              </p>
             </div>
           </div>
         )}

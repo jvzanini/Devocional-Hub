@@ -1,19 +1,13 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/features/auth/lib/auth";
 import { prisma } from "@/shared/lib/db";
-
-async function isAdmin() {
-  const session = await auth();
-  if (!session?.user) return false;
-  const user = await prisma.user.findUnique({ where: { id: (session.user as { id: string }).id } });
-  return user?.role === "ADMIN";
-}
+import { requireRole } from "@/features/permissions/lib/permission-guard";
 
 export async function PUT(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  if (!(await isAdmin())) return NextResponse.json({ error: "Acesso negado" }, { status: 403 });
+  const authResult = await requireRole("ADMIN");
+  if (!authResult.authorized) return authResult.response;
   const { id: planId } = await params;
   const { dayId, completed, logNote, actualChapters } = await request.json();
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, LineChart, Line } from "recharts";
 
 // ─── Types ────────────────────────────────────────────
 
@@ -139,6 +139,12 @@ export default function ReportsPage() {
   const [filterUser, setFilterUser] = useState("");
   const [filterChurch, setFilterChurch] = useState("");
   const [filterTeam, setFilterTeam] = useState("");
+  const [filterSubTeam, setFilterSubTeam] = useState("");
+  const [filterBook, setFilterBook] = useState("");
+
+  // Toggle states
+  const [chartMode, setChartMode] = useState<"week" | "month">("week");
+  const [tableMode, setTableMode] = useState<"weekly" | "monthly" | "yearly">("monthly");
 
   // Data states
   const [attendances, setAttendances] = useState<AttendanceRecord[]>([]);
@@ -148,6 +154,7 @@ export default function ReportsPage() {
   // Computed unique values for filter dropdowns
   const churches = Array.from(new Set(users.map(u => u.church).filter(Boolean))).sort();
   const teams = Array.from(new Set(users.map(u => u.team).filter(Boolean))).sort();
+  const subTeams = Array.from(new Set(users.map(u => u.subTeam).filter(Boolean))).sort();
 
   // Year options (current year + 2 previous)
   const yearOptions = [currentYear - 2, currentYear - 1, currentYear];
@@ -199,13 +206,40 @@ export default function ReportsPage() {
     fetchAttendance();
   }, [fetchAttendance]);
 
+  // ─── Books from sessions ────────────────────────
+
+  const books = Array.from(
+    new Set(
+      attendances
+        .map(a => {
+          const ref = a.session?.chapterRef || "";
+          const match = ref.match(/^(.+?)\s+\d/);
+          return match ? match[1].trim() : ref.trim();
+        })
+        .filter(Boolean)
+    )
+  ).sort();
+
+  // ─── Filter attendances by book & subTeam ──────
+
+  const filteredAttendances = attendances.filter(a => {
+    if (filterSubTeam && a.user?.subTeam !== filterSubTeam) return false;
+    if (filterBook) {
+      const ref = a.session?.chapterRef || "";
+      const match = ref.match(/^(.+?)\s+\d/);
+      const bookName = match ? match[1].trim() : ref.trim();
+      if (bookName !== filterBook) return false;
+    }
+    return true;
+  });
+
   // ─── Computed stats ──────────────────────────────
 
-  const totalAttendances = attendances.length;
+  const totalAttendances = filteredAttendances.length;
 
-  const uniqueMembers = new Set(attendances.map(a => a.user?.id || a.userId)).size;
+  const uniqueMembers = new Set(filteredAttendances.map(a => a.user?.id || a.userId)).size;
 
-  const uniqueSessions = new Set(attendances.map(a => a.session?.id)).size;
+  const uniqueSessions = new Set(filteredAttendances.map(a => a.session?.id)).size;
 
   const avgFrequency = uniqueSessions > 0 && uniqueMembers > 0
     ? Math.round((totalAttendances / (uniqueMembers * uniqueSessions)) * 100)
@@ -213,9 +247,21 @@ export default function ReportsPage() {
 
   // ─── Weekly chart data ───────────────────────────
 
-  const weeklyData: WeeklyData[] = (() => {
+  const chartData: WeeklyData[] = (() => {
+    if (chartMode === "month") {
+      const months: Record<number, number> = {};
+      for (const att of filteredAttendances) {
+        const date = new Date(att.joinTime || att.session?.date);
+        const m = date.getMonth();
+        months[m] = (months[m] || 0) + 1;
+      }
+      return MONTH_NAMES.map((name, i) => ({
+        name: name.substring(0, 3),
+        presenças: months[i] || 0,
+      })).filter(d => d.presenças > 0 || true);
+    }
     const weeks: Record<number, number> = {};
-    for (const att of attendances) {
+    for (const att of filteredAttendances) {
       const date = new Date(att.joinTime || att.session?.date);
       const week = getWeekNumber(date);
       weeks[week] = (weeks[week] || 0) + 1;
@@ -228,10 +274,58 @@ export default function ReportsPage() {
     return result;
   })();
 
+  // ─── Line chart data (frequency evolution) ────
+
+  const frequencyLineData = (() => {
+    if (chartMode === "month") {
+      const monthSessions: Record<number, Set<string>> = {};
+      const monthMembers: Record<number, Set<string>> = {};
+      const monthAttendances: Record<number, number> = {};
+      for (const att of filteredAttendances) {
+        const date = new Date(att.joinTime || att.session?.date);
+        const m = date.getMonth();
+        if (!monthSessions[m]) monthSessions[m] = new Set();
+        if (!monthMembers[m]) monthMembers[m] = new Set();
+        monthSessions[m].add(att.session?.id || "");
+        monthMembers[m].add(att.user?.id || att.userId);
+        monthAttendances[m] = (monthAttendances[m] || 0) + 1;
+      }
+      return MONTH_NAMES.map((name, i) => {
+        const sess = monthSessions[i]?.size || 0;
+        const memb = monthMembers[i]?.size || 0;
+        const att = monthAttendances[i] || 0;
+        const freq = sess > 0 && memb > 0 ? Math.round((att / (memb * sess)) * 100) : 0;
+        return { name: name.substring(0, 3), frequência: freq };
+      });
+    }
+    const weekSessions: Record<number, Set<string>> = {};
+    const weekMembers: Record<number, Set<string>> = {};
+    const weekAttendances: Record<number, number> = {};
+    for (const att of filteredAttendances) {
+      const date = new Date(att.joinTime || att.session?.date);
+      const w = getWeekNumber(date);
+      if (!weekSessions[w]) weekSessions[w] = new Set();
+      if (!weekMembers[w]) weekMembers[w] = new Set();
+      weekSessions[w].add(att.session?.id || "");
+      weekMembers[w].add(att.user?.id || att.userId);
+      weekAttendances[w] = (weekAttendances[w] || 0) + 1;
+    }
+    const maxWeek = Math.max(5, ...Object.keys(weekAttendances).map(Number));
+    const result = [];
+    for (let w = 1; w <= maxWeek; w++) {
+      const sess = weekSessions[w]?.size || 0;
+      const memb = weekMembers[w]?.size || 0;
+      const att = weekAttendances[w] || 0;
+      const freq = sess > 0 && memb > 0 ? Math.round((att / (memb * sess)) * 100) : 0;
+      result.push({ name: `Sem ${w}`, frequência: freq });
+    }
+    return result;
+  })();
+
   // ─── User detail table ──────────────────────────
 
   const userStatsMap = new Map<string, UserStats>();
-  for (const att of attendances) {
+  for (const att of filteredAttendances) {
     const uid = att.user?.id || att.userId;
     const name = att.user?.name || "Desconhecido";
     if (!userStatsMap.has(uid)) {
@@ -280,8 +374,8 @@ export default function ReportsPage() {
   // ─── Computed extras ────────────────────────────
 
   const topMember = userStatsList.length > 0 ? userStatsList[0] : null;
-  const avgDuration = attendances.length > 0
-    ? Math.round(attendances.reduce((sum, a) => sum + (a.duration || 0), 0) / attendances.length / 60)
+  const avgDuration = filteredAttendances.length > 0
+    ? Math.round(filteredAttendances.reduce((sum, a) => sum + (a.duration || 0), 0) / filteredAttendances.length / 60)
     : 0;
 
   // ─── Render ──────────────────────────────────────
@@ -374,6 +468,34 @@ export default function ReportsPage() {
                 ))}
               </select>
             </div>
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 500, color: "var(--text-muted)", marginBottom: 4, display: "block" }}>SubEquipe</label>
+              <select
+                className="input-field"
+                value={filterSubTeam}
+                onChange={e => setFilterSubTeam(e.target.value)}
+                style={{ width: "100%", fontSize: 14, backgroundColor: "var(--surface)", color: "var(--text)", border: "1px solid var(--border)", borderRadius: 8, padding: "8px 12px" }}
+              >
+                <option value="">Todas</option>
+                {subTeams.map(st => (
+                  <option key={st} value={st}>{st}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 500, color: "var(--text-muted)", marginBottom: 4, display: "block" }}>Livro</label>
+              <select
+                className="input-field"
+                value={filterBook}
+                onChange={e => setFilterBook(e.target.value)}
+                style={{ width: "100%", fontSize: 14, backgroundColor: "var(--surface)", color: "var(--text)", border: "1px solid var(--border)", borderRadius: 8, padding: "8px 12px" }}
+              >
+                <option value="">Todos</option>
+                {books.map(b => (
+                  <option key={b} value={b}>{b}</option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
 
@@ -446,9 +568,44 @@ export default function ReportsPage() {
 
       {/* Chart section */}
       <div className="reports-chart-card">
-        <h2 style={{ fontSize: 18, fontWeight: 700, color: "var(--text)", margin: "0 0 20px" }}>
-          Presenças por Semana
-        </h2>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, flexWrap: "wrap", gap: 10 }}>
+          <h2 style={{ fontSize: 18, fontWeight: 700, color: "var(--text)", margin: 0 }}>
+            Presenças por {chartMode === "week" ? "Semana" : "Mês"}
+          </h2>
+          <div style={{ display: "flex", borderRadius: 8, overflow: "hidden", border: "1px solid var(--border)" }}>
+            <button
+              onClick={() => setChartMode("week")}
+              style={{
+                padding: "6px 16px",
+                fontSize: 13,
+                fontWeight: 600,
+                border: "none",
+                cursor: "pointer",
+                backgroundColor: chartMode === "week" ? "var(--accent)" : "var(--surface)",
+                color: chartMode === "week" ? "#fff" : "var(--text-muted)",
+                transition: "all 0.2s",
+              }}
+            >
+              Semana
+            </button>
+            <button
+              onClick={() => setChartMode("month")}
+              style={{
+                padding: "6px 16px",
+                fontSize: 13,
+                fontWeight: 600,
+                border: "none",
+                borderLeft: "1px solid var(--border)",
+                cursor: "pointer",
+                backgroundColor: chartMode === "month" ? "var(--accent)" : "var(--surface)",
+                color: chartMode === "month" ? "#fff" : "var(--text-muted)",
+                transition: "all 0.2s",
+              }}
+            >
+              Mês
+            </button>
+          </div>
+        </div>
         <div style={{ width: "100%", height: 280 }}>
           {loading ? (
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "var(--text-muted)" }}>
@@ -456,7 +613,7 @@ export default function ReportsPage() {
             </div>
           ) : (
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={weeklyData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+              <BarChart data={chartData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
                 <XAxis
                   dataKey="name"
@@ -490,11 +647,89 @@ export default function ReportsPage() {
         </div>
       </div>
 
+      {/* Line chart — Frequency evolution */}
+      <div className="reports-chart-card" style={{ marginTop: 20 }}>
+        <h2 style={{ fontSize: 18, fontWeight: 700, color: "var(--text)", margin: "0 0 20px" }}>
+          Evolução da Frequência (%)
+        </h2>
+        <div style={{ width: "100%", height: 260 }}>
+          {loading ? (
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "var(--text-muted)" }}>
+              Carregando...
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={frequencyLineData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                <XAxis
+                  dataKey="name"
+                  tick={{ fill: "var(--text-muted)", fontSize: 13 }}
+                  axisLine={{ stroke: "var(--border)" }}
+                  tickLine={false}
+                />
+                <YAxis
+                  tick={{ fill: "var(--text-muted)", fontSize: 13 }}
+                  axisLine={false}
+                  tickLine={false}
+                  allowDecimals={false}
+                  domain={[0, 100]}
+                  tickFormatter={(v: number) => `${v}%`}
+                />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "var(--surface)",
+                    border: "1px solid var(--border)",
+                    borderRadius: 10,
+                    color: "var(--text)",
+                    fontSize: 14,
+                    padding: "10px 14px",
+                    boxShadow: "var(--shadow-md)",
+                  }}
+                  formatter={(value) => [`${value}%`, "Frequência"]}
+                  labelStyle={{ fontWeight: 600, marginBottom: 4 }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="frequência"
+                  stroke="var(--accent)"
+                  strokeWidth={2.5}
+                  dot={{ fill: "var(--accent)", r: 4, strokeWidth: 0 }}
+                  activeDot={{ r: 6, fill: "var(--accent)", stroke: "var(--surface)", strokeWidth: 2 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+      </div>
+
       {/* Table section */}
       <div className="reports-table-card">
-        <h2 style={{ fontSize: 18, fontWeight: 700, color: "var(--text)", margin: "0 0 20px" }}>
-          Detalhamento por Usuário
-        </h2>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, flexWrap: "wrap", gap: 10 }}>
+          <h2 style={{ fontSize: 18, fontWeight: 700, color: "var(--text)", margin: 0 }}>
+            Detalhamento por Usuário
+          </h2>
+          <div style={{ display: "flex", borderRadius: 8, overflow: "hidden", border: "1px solid var(--border)" }}>
+            {(["weekly", "monthly", "yearly"] as const).map((mode, i) => (
+              <button
+                key={mode}
+                onClick={() => setTableMode(mode)}
+                style={{
+                  padding: "6px 14px",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  border: "none",
+                  borderLeft: i > 0 ? "1px solid var(--border)" : "none",
+                  cursor: "pointer",
+                  backgroundColor: tableMode === mode ? "var(--accent)" : "var(--surface)",
+                  color: tableMode === mode ? "#fff" : "var(--text-muted)",
+                  transition: "all 0.2s",
+                }}
+              >
+                {mode === "weekly" ? "Semanal" : mode === "monthly" ? "Mensal" : "Anual"}
+              </button>
+            ))}
+          </div>
+        </div>
 
         {loading ? (
           <div style={{ padding: 40, textAlign: "center", color: "var(--text-muted)" }}>Carregando...</div>

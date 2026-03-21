@@ -1,16 +1,10 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/features/auth/lib/auth";
 import { prisma } from "@/shared/lib/db";
-
-async function isAdmin() {
-  const session = await auth();
-  if (!session?.user) return false;
-  const user = await prisma.user.findUnique({ where: { id: (session.user as { id: string }).id } });
-  return user?.role === "ADMIN";
-}
+import { requireRole } from "@/features/permissions/lib/permission-guard";
 
 export async function GET(request: Request) {
-  if (!(await isAdmin())) return NextResponse.json({ error: "Acesso negado" }, { status: 403 });
+  const authResult = await requireRole("ADMIN");
+  if (!authResult.authorized) return authResult.response;
 
   const { searchParams } = new URL(request.url);
   const status = searchParams.get("status");
@@ -21,7 +15,10 @@ export async function GET(request: Request) {
     where,
     orderBy: { startDate: "asc" },
     include: {
-      days: { orderBy: { date: "asc" } },
+      days: {
+        orderBy: { date: "asc" },
+        include: { chapterReadings: true },
+      },
     },
   });
 
@@ -29,12 +26,13 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  if (!(await isAdmin())) return NextResponse.json({ error: "Acesso negado" }, { status: 403 });
+  const authResult = await requireRole("ADMIN");
+  if (!authResult.authorized) return authResult.response;
 
   const body = await request.json();
-  const { bookName, bookCode, bookOrder, chaptersPerDay, totalChapters, startDate, selectedDates } = body;
+  const { bookName, bookCode, bookOrder, chaptersPerDay, totalChapters, startDate, selectedDates, skipWeekendDays } = body;
 
-  if (!bookName || !bookCode || !selectedDates?.length) {
+  if (!bookName || !bookCode) {
     return NextResponse.json({ error: "Dados incompletos" }, { status: 400 });
   }
 
@@ -46,32 +44,70 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Este livro já possui um plano ativo" }, { status: 409 });
   }
 
-  // Calculate chapters per day
-  const sortedDates = [...selectedDates].sort();
-  const endDate = sortedDates[sortedDates.length - 1];
+  // Buscar horários configurados para saber quais dias pular
+  const blockedDays: number[] = skipWeekendDays || [];
 
-  // Generate day entries
-  let currentChapter = 1;
-  const daysData = sortedDates.map((dateStr: string) => {
-    const start = currentChapter;
-    const end = Math.min(start + chaptersPerDay - 1, totalChapters);
-    currentChapter = end + 1;
-    return {
-      date: new Date(dateStr),
-      chapters: start === end ? `${start}` : `${start}-${end}`,
-    };
-  });
+  let daysData: { date: Date; chapters: string }[];
+
+  if (selectedDates?.length) {
+    // Modo original: datas selecionadas manualmente
+    const sortedDates = [...selectedDates].sort();
+    let currentChapter = 1;
+    daysData = sortedDates.map((dateStr: string) => {
+      const start = currentChapter;
+      const end = Math.min(start + chaptersPerDay - 1, totalChapters);
+      currentChapter = end + 1;
+      return {
+        date: new Date(dateStr),
+        chapters: start === end ? `${start}` : `${start}-${end}`,
+      };
+    });
+  } else if (startDate) {
+    // Modo novo: gerar automaticamente a partir de startDate, pulando dias bloqueados
+    daysData = [];
+    let currentChapter = 1;
+    const start = new Date(startDate);
+    let currentDate = new Date(start);
+    const maxDays = 365; // Safety limit
+    let iterations = 0;
+
+    while (currentChapter <= totalChapters && iterations < maxDays) {
+      const dayOfWeek = currentDate.getUTCDay();
+
+      if (!blockedDays.includes(dayOfWeek)) {
+        const startCh = currentChapter;
+        const endCh = Math.min(startCh + chaptersPerDay - 1, totalChapters);
+        currentChapter = endCh + 1;
+        daysData.push({
+          date: new Date(currentDate),
+          chapters: startCh === endCh ? `${startCh}` : `${startCh}-${endCh}`,
+        });
+      }
+
+      currentDate.setUTCDate(currentDate.getUTCDate() + 1);
+      iterations++;
+    }
+  } else {
+    return NextResponse.json({ error: "startDate ou selectedDates é obrigatório" }, { status: 400 });
+  }
+
+  if (daysData.length === 0) {
+    return NextResponse.json({ error: "Nenhum dia válido para o plano" }, { status: 400 });
+  }
+
+  const endDate = daysData[daysData.length - 1].date;
+  const actualStartDate = daysData[0].date;
 
   const plan = await prisma.readingPlan.create({
     data: {
       bookName,
       bookCode,
-      bookOrder,
-      chaptersPerDay,
+      bookOrder: bookOrder || 0,
+      chaptersPerDay: chaptersPerDay || 1,
       totalChapters,
-      startDate: new Date(sortedDates[0]),
-      endDate: new Date(endDate),
-      status: new Date(sortedDates[0]) <= new Date() ? "IN_PROGRESS" : "UPCOMING",
+      startDate: actualStartDate,
+      endDate,
+      status: actualStartDate <= new Date() ? "IN_PROGRESS" : "UPCOMING",
       days: { create: daysData },
     },
     include: { days: { orderBy: { date: "asc" } } },

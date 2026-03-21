@@ -19,16 +19,23 @@ model User {
   team            String           @default("")
   subTeam         String           @default("")
   photoUrl        String?
+  whatsapp        String?
   active          Boolean          @default(true)
+  deletedAt       DateTime?
+  deletedBy       String?
   inviteToken     String?          @unique
   inviteExpiresAt DateTime?
   createdAt       DateTime         @default(now())
   zoomIdentifiers ZoomIdentifier[]
   attendances     Attendance[]
+  passwordResets  PasswordResetToken[]
 }
 
 enum UserRole {
+  SUPER_ADMIN
   ADMIN
+  SUBSCRIBER_VIP
+  SUBSCRIBER
   MEMBER
 }
 
@@ -49,35 +56,74 @@ enum ZoomIdType {
   USERNAME
 }
 
+// ─── Token de Redefinição de Senha ──────────────────────────────────────
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+}
+
+// ─── Permissões ─────────────────────────────────────────────────────────
+
+model Permission {
+  id        String   @id @default(cuid())
+  resource  String   @unique
+  minRole   UserRole
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 // ─── Sessões (devocionais) ───────────────────────────────────────────────
 
 model Session {
-  id              String         @id @default(cuid())
-  date            DateTime
-  zoomMeetingId   String
-  zoomRecordingId String
-  zoomUuid        String         @default("")
-  chapterRef      String         @default("")
-  summary         String         @default("") @db.Text
-  contentPassword String?
-  status          PipelineStatus @default(PENDING)
-  errorMessage    String?
-  documents       Document[]
-  participants    Participant[]
-  attendances     Attendance[]
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
+  id                String         @id @default(cuid())
+  date              DateTime
+  startTime         DateTime?
+  zoomMeetingId     String
+  zoomRecordingId   String
+  zoomUuid          String         @default("")
+  chapterRef        String         @default("")
+  summary           String         @default("") @db.Text
+  contentPassword   String?
+  status            PipelineStatus @default(PENDING)
+  errorMessage      String?
+  relatedSessionIds String[]
+  documents         Document[]
+  participants      Participant[]
+  attendances       Attendance[]
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  @@index([chapterRef])
+  @@index([date])
+  @@index([status])
 }
 
 model Participant {
-  id        String   @id @default(cuid())
-  sessionId String
-  session   Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  name      String
-  email     String?
-  joinTime  DateTime
-  leaveTime DateTime
-  duration  Int
+  id            String             @id @default(cuid())
+  sessionId     String
+  session       Session            @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  name          String
+  email         String?
+  joinTime      DateTime
+  leaveTime     DateTime
+  duration      Int
+  totalDuration Int                @default(0)
+  entries       ParticipantEntry[]
+}
+
+model ParticipantEntry {
+  id            String      @id @default(cuid())
+  participantId String
+  participant   Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  joinTime      DateTime
+  leaveTime     DateTime
+  duration      Int
 }
 
 model Document {
@@ -98,6 +144,8 @@ enum DocType {
   INFOGRAPHIC
   SLIDES
   AUDIO_OVERVIEW
+  AI_SUMMARY
+  PLANNING
 }
 
 enum PipelineStatus {
@@ -137,6 +185,7 @@ model ReadingPlan {
   status         ReadingPlanStatus @default(UPCOMING)
   imageUrl       String?
   days           ReadingPlanDay[]
+  planningCards  PlanningCard[]
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
 }
@@ -148,16 +197,48 @@ enum ReadingPlanStatus {
 }
 
 model ReadingPlanDay {
-  id             String      @id @default(cuid())
-  planId         String
-  plan           ReadingPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
-  date           DateTime
-  chapters       String
-  completed      Boolean     @default(false)
-  logNote        String?
-  actualChapters String?
+  id              String           @id @default(cuid())
+  planId          String
+  plan            ReadingPlan      @relation(fields: [planId], references: [id], onDelete: Cascade)
+  date            DateTime
+  chapters        String
+  completed       Boolean          @default(false)
+  logNote         String?
+  actualChapters  String?
+  chapterReadings ChapterReading[]
 
   @@unique([planId, date])
+}
+
+model ChapterReading {
+  id          String          @id @default(cuid())
+  dayId       String
+  day         ReadingPlanDay  @relation(fields: [dayId], references: [id], onDelete: Cascade)
+  chapter     Int
+  isComplete  Boolean         @default(false)
+  isPartial   Boolean         @default(false)
+  sessions    Int             @default(1)
+  completedAt DateTime?
+
+  @@unique([dayId, chapter])
+}
+
+// ─── Cards de Planejamento ──────────────────────────────────────────────
+
+model PlanningCard {
+  id         String      @id @default(cuid())
+  planId     String
+  plan       ReadingPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  bookName   String
+  bookCode   String
+  chapter    Int
+  analysis   String      @db.Text
+  references String      @db.Text
+  studyLinks String[]
+  imageUrls  String[]
+  themeGroup String?
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
 }
 
 // ─── Webhooks ────────────────────────────────────────────────────────────

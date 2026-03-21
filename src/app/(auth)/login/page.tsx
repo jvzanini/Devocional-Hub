@@ -11,6 +11,13 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Modal "Esqueci minha senha"
+  const [showForgotModal, setShowForgotModal] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotMessage, setForgotMessage] = useState("");
+  const [forgotError, setForgotError] = useState("");
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
@@ -19,6 +26,32 @@ export default function LoginPage() {
     if (result?.error) { setError("Email ou senha incorretos"); setLoading(false); return; }
     router.push("/");
     router.refresh();
+  }
+
+  async function handleForgotPassword(e: React.FormEvent) {
+    e.preventDefault();
+    setForgotLoading(true);
+    setForgotError("");
+    setForgotMessage("");
+
+    try {
+      const res = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: forgotEmail }),
+      });
+
+      if (res.ok) {
+        setForgotMessage("Se este email estiver cadastrado, você receberá um link de redefinição.");
+      } else {
+        const data = await res.json();
+        setForgotError(data.error || "Erro ao enviar email");
+      }
+    } catch {
+      setForgotError("Erro de conexão. Tente novamente.");
+    } finally {
+      setForgotLoading(false);
+    }
   }
 
   return (
@@ -46,7 +79,13 @@ export default function LoginPage() {
             <div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
                 <label htmlFor="password" className="label" style={{ marginBottom: 0 }}>Senha</label>
-                <span style={{ fontSize: 13, color: "var(--accent)", fontWeight: 500, cursor: "pointer" }}>Esqueceu a senha?</span>
+                <button
+                  type="button"
+                  onClick={() => { setShowForgotModal(true); setForgotEmail(email); setForgotMessage(""); setForgotError(""); }}
+                  style={{ fontSize: 13, color: "var(--accent)", fontWeight: 500, cursor: "pointer", background: "none", border: "none", padding: 0 }}
+                >
+                  Esqueceu a senha?
+                </button>
               </div>
               <input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)}
                 required autoComplete="current-password" className="input-field" placeholder="••••••••" />
@@ -73,6 +112,77 @@ export default function LoginPage() {
           </form>
         </div>
       </div>
+
+      {/* Modal: Esqueci minha senha */}
+      {showForgotModal && (
+        <div
+          onClick={() => setShowForgotModal(false)}
+          style={{
+            position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.6)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            zIndex: 1000, padding: 16,
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              width: "100%", maxWidth: 400, backgroundColor: "var(--surface)",
+              borderRadius: 16, padding: 28, border: "1px solid var(--border)",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+              <h2 style={{ fontSize: 18, fontWeight: 700, color: "var(--text)", margin: 0 }}>Redefinir Senha</h2>
+              <button
+                onClick={() => setShowForgotModal(false)}
+                style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: 20, padding: 4 }}
+              >
+                &times;
+              </button>
+            </div>
+
+            <p style={{ color: "var(--text-muted)", fontSize: 14, marginBottom: 20, lineHeight: 1.5 }}>
+              Informe seu email e enviaremos um link para redefinir sua senha.
+            </p>
+
+            <form onSubmit={handleForgotPassword} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              <div>
+                <label htmlFor="forgotEmail" className="label">Email</label>
+                <input
+                  id="forgotEmail"
+                  type="email"
+                  className="input-field"
+                  value={forgotEmail}
+                  onChange={e => setForgotEmail(e.target.value)}
+                  placeholder="seu@email.com"
+                  required
+                  autoFocus
+                />
+              </div>
+
+              {forgotMessage && (
+                <div style={{ fontSize: 13, color: "#22c55e", padding: "10px 14px", backgroundColor: "rgba(34,197,94,0.1)", borderRadius: 8 }}>
+                  {forgotMessage}
+                </div>
+              )}
+
+              {forgotError && (
+                <div className="alert-error" style={{ fontSize: 13, color: "var(--error)" }}>
+                  {forgotError}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={forgotLoading}
+                className="btn-primary"
+                style={{ width: "100%", padding: "12px 16px", fontSize: 14, borderRadius: 10 }}
+              >
+                {forgotLoading ? "Enviando..." : "Enviar Link de Redefinição"}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,12 +1,10 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/features/auth/lib/auth";
+import { requireRole } from "@/features/permissions/lib/permission-guard";
 import { runPipeline } from "@/features/pipeline/lib/pipeline";
 
 export async function POST(request: Request) {
-  const session = await auth();
-  if (!session) {
-    return NextResponse.json({ error: "Nao autorizado" }, { status: 401 });
-  }
+  const guard = await requireRole("ADMIN");
+  if (!guard.authorized) return guard.response;
 
   try {
     const body = await request.json().catch(() => ({}));

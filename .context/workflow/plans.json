@@ -1,0 +1,14 @@
+{
+  "active": [
+    {
+      "slug": "devocional-hub-master-update-v2",
+      "path": "plans/devocional-hub-master-update-v2.md",
+      "title": "DevocionalHub Master Update v2 — Plano de Execução Completo",
+      "summary": "Atualização master da plataforma DevocionalHub: 22 features, 8 tracks de desenvolvimento, 7 etapas de execução, organizado para desenvolvimento paralelo com multiagentes.",
+      "linkedAt": "2026-03-21T00:01:04.967Z",
+      "status": "active"
+    }
+  ],
+  "completed": [],
+  "primary": "devocional-hub-master-update-v2"
+}
