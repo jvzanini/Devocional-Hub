@@ -1,37 +1,36 @@
 project:
-  name: "bible-bubble-v4.1-refinements"
-  scale: MEDIUM
-  started: "2026-03-21T19:07:38.186Z"
+  name: "bible-v4.2-player-fixes"
+  scale: SMALL
+  started: "2026-03-21T19:30:50.297Z"
   current_phase: E
 
 phases:
   P:
     status: filled
-    started_at: "2026-03-21T19:07:38.186Z"
-    completed_at: "2026-03-21T19:07:46.685Z"
+    started_at: "2026-03-21T19:30:50.297Z"
+    completed_at: "2026-03-21T19:31:00.652Z"
   R:
-    status: filled
-    started_at: "2026-03-21T19:07:46.685Z"
-    completed_at: "2026-03-21T19:07:53.189Z"
+    status: skipped
+    reason: "Not required for scale SMALL"
   E:
     status: in_progress
-    started_at: "2026-03-21T19:07:53.190Z"
+    started_at: "2026-03-21T19:31:00.653Z"
   V:
     status: pending
   C:
     status: skipped
-    reason: "Not required for scale MEDIUM"
+    reason: "Not required for scale SMALL"
 
 execution:
   history:
-    - timestamp: "2026-03-21T19:07:53.190Z"
+    - timestamp: "2026-03-21T19:31:00.653Z"
       phase: E
       action: started
-  last_activity: "2026-03-21T19:07:53.190Z"
+  last_activity: "2026-03-21T19:31:00.653Z"
   resume_context: "Fase E (Execução) em progresso"
 
 settings:
   autonomous_mode: true
   require_plan: true
-  require_approval: true
+  require_approval: false
 

@@ -25,7 +25,6 @@ function formatTime(seconds: number): string {
 export function AudioPlayer({
   audioUrl,
   audioAvailable,
-  copyright,
   onPrevious,
   onNext,
   pendingSeekTime,
@@ -47,20 +46,17 @@ export function AudioPlayer({
     return () => { unsub(); unsubEnd(); };
   }, [onNext]);
 
-  // T5/T8: carregar áudio SEM autoplay, e só quando URL muda de fato
+  // Carregar áudio SEM autoplay, só quando URL muda de fato
   useEffect(() => {
     if (!audioUrl || audioUrl === loadedUrlRef.current) return;
     loadedUrlRef.current = audioUrl;
-    const manager = managerRef.current;
-    // Apenas carrega, não reproduz (T5: inicia pausado)
-    manager.loadOnly(audioUrl);
+    managerRef.current.loadOnly(audioUrl);
   }, [audioUrl]);
 
-  // T9: seek para posição salva
+  // Seek para posição salva
   useEffect(() => {
     if (pendingSeekTime && pendingSeekTime > 0) {
       const manager = managerRef.current;
-      // Aguardar metadata carregada
       const checkInterval = setInterval(() => {
         const s = manager.getState();
         if (s.duration > 0) {
@@ -93,12 +89,13 @@ export function AudioPlayer({
     };
   }, [isDragging, seekFromEvent]);
 
-  if (!audioAvailable) return null; // T3: não renderiza nada se sem áudio
+  if (!audioAvailable) return null;
 
   const progress = state.duration > 0 ? (state.currentTime / state.duration) * 100 : 0;
 
   return (
     <div className="bible-player">
+      {/* Controles: prev, play, next */}
       <div className="bible-player-controls">
         <button className="bible-player-btn" onClick={onPrevious} aria-label="Capítulo anterior">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z" /></svg>
@@ -125,11 +122,9 @@ export function AudioPlayer({
         <button className="bible-player-btn" onClick={onNext} aria-label="Próximo capítulo">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" /></svg>
         </button>
-
-        {/* T10: velocidade ao lado dos controles */}
-        <SpeedControl speed={state.speed as PlaybackSpeed} onCycleSpeed={() => managerRef.current.cycleSpeed()} />
       </div>
 
+      {/* Barra de progresso + tempo + velocidade */}
       <div className="bible-player-progress-row">
         <span className="bible-player-time">{formatTime(state.currentTime)}</span>
         <div
@@ -150,6 +145,7 @@ export function AudioPlayer({
           <div className="bible-player-progress-thumb" style={{ left: `${progress}%` }} />
         </div>
         <span className="bible-player-time">{formatTime(state.duration)}</span>
+        <SpeedControl speed={state.speed as PlaybackSpeed} onCycleSpeed={() => managerRef.current.cycleSpeed()} />
       </div>
     </div>
   );

@@ -1738,7 +1738,7 @@ select.input-field {
   margin-right: 2px;
 }
 .bible-content-text p {
-  margin: 0 0 12px;
+  margin: 0 0 4px;
 }
 .bible-content-text .s, .bible-content-text .s1 {
   display: block;
@@ -1814,7 +1814,7 @@ select.input-field {
 
 /* ─── Audio Player ───────────────────────────────── */
 .bible-player {
-  padding: 10px 16px 14px;
+  padding: 10px 16px 20px;
 }
 .bible-player--disabled {
   padding: 10px 16px;
@@ -1923,42 +1923,48 @@ select.input-field {
   color: var(--text);
 }
 
-/* Toggle expandir/recolher */
+/* Toggle expandir/recolher — seta sutil */
 .bible-player-toggle {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 4px 0;
+  padding: 2px 0 6px;
   cursor: pointer;
-  color: var(--accent);
-  font-size: 12px;
-  font-weight: 500;
+  color: var(--text-secondary);
+  opacity: 0.5;
   transition: opacity 0.15s;
   user-select: none;
 }
 .bible-player-toggle:hover {
-  opacity: 0.8;
+  opacity: 1;
+}
+.bible-player-toggle--up {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 4px;
 }
 
-/* Player colapsado */
+/* Player colapsado — compacto */
 .bible-player-collapsed {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 6px 12px;
+  gap: 6px;
+  padding: 8px 16px 12px;
+  position: relative;
 }
 .bible-player-collapsed-nav {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 4px 8px;
+  gap: 3px;
+  padding: 4px 6px;
   border-radius: var(--radius);
   border: none;
   background: transparent;
   color: var(--accent);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 500;
   cursor: pointer;
   transition: background 0.15s;
@@ -1972,8 +1978,8 @@ select.input-field {
   cursor: not-allowed;
 }
 .bible-player-collapsed-btn--play {
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   border: none;
   background: var(--accent);

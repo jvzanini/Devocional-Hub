@@ -410,82 +410,89 @@ export function BibleModal({
         </div>
 
         <div className="bible-modal-footer">
-          {/* T6: Navegação capítulo SEMPRE visível */}
-          <BibleNavigation
-            currentBookCode={bookCode}
-            currentChapter={chapter}
-            onNavigate={handleNavigate}
-          />
-
-          {/* T6: Seta expandir/recolher centralizada */}
-          {audioAvailable && (
-            <div className="bible-player-toggle" onClick={() => setIsPlayerCollapsed(!isPlayerCollapsed)}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{
-                transform: isPlayerCollapsed ? "rotate(180deg)" : "none",
-                transition: "transform 0.2s ease",
-              }}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-              </svg>
-              <span>{isPlayerCollapsed ? "Mostrar Controles" : "Esconder Controles"}</span>
-            </div>
-          )}
-
-          {/* T8: Player expandido — NÃO depende de isPlayerCollapsed para audioUrl */}
+          {/* ── PLAYER EXPANDIDO ── */}
           {!isPlayerCollapsed && audioAvailable && (
-            <AudioPlayer
-              audioUrl={audioUrl}
-              audioAvailable={audioAvailable}
-              copyright={copyright}
-              onPrevious={handlePreviousChapter}
-              onNext={handleNextChapter}
-              pendingSeekTime={pendingSeekTime}
-              onSeekHandled={() => setPendingSeekTime(null)}
-            />
+            <>
+              <BibleNavigation
+                currentBookCode={bookCode}
+                currentChapter={chapter}
+                onNavigate={handleNavigate}
+              />
+              <AudioPlayer
+                audioUrl={audioUrl}
+                audioAvailable={audioAvailable}
+                copyright={copyright}
+                onPrevious={handlePreviousChapter}
+                onNext={handleNextChapter}
+                pendingSeekTime={pendingSeekTime}
+                onSeekHandled={() => setPendingSeekTime(null)}
+              />
+              {/* Seta recolher — sutil */}
+              <div className="bible-player-toggle" onClick={() => setIsPlayerCollapsed(true)}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            </>
           )}
 
-          {/* T7: Player colapsado — play + labels de capítulo */}
+          {/* ── PLAYER COLAPSADO — compacto ── */}
           {isPlayerCollapsed && audioAvailable && (
             <div className="bible-player-collapsed">
               <button
                 className="bible-player-collapsed-nav"
                 onClick={handlePreviousChapter}
                 disabled={isFirst}
-                aria-label="Capítulo anterior"
               >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
                 </svg>
                 <span>{prevLabel}</span>
               </button>
 
               <button
-                className="bible-player-collapsed-btn bible-player-collapsed-btn--play"
+                className="bible-player-collapsed-btn--play"
                 onClick={handleAudioToggle}
                 aria-label={isAudioPlaying ? "Pausar" : "Reproduzir"}
               >
                 {isAudioPlaying ? (
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
                   </svg>
                 ) : (
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M8 5v14l11-7z" />
                   </svg>
                 )}
               </button>
 
               <button
-                className="bible-player-collapsed-nav bible-player-collapsed-nav--right"
+                className="bible-player-collapsed-nav"
                 onClick={handleNextChapter}
                 disabled={isLast}
-                aria-label="Próximo capítulo"
               >
                 <span>{nextLabel}</span>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                 </svg>
               </button>
+
+              {/* Seta expandir — sutil */}
+              <div className="bible-player-toggle bible-player-toggle--up" onClick={() => setIsPlayerCollapsed(false)}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" />
+                </svg>
+              </div>
             </div>
+          )}
+
+          {/* ── SEM ÁUDIO — só navegação ── */}
+          {!audioAvailable && (
+            <BibleNavigation
+              currentBookCode={bookCode}
+              currentChapter={chapter}
+              onNavigate={handleNavigate}
+            />
           )}
         </div>
       </div>
