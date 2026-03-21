@@ -4,6 +4,7 @@ This directory contains plans for coordinating work across documentation and pla
 
 ## Plan Queue
 1. [Devocional Hub Master Update V2](./devocional-hub-master-update-v2.md)
+2. [Devocional Hub V2 Hotfix](./devocional-hub-v2-hotfix.md)
 
 ## How To Create Or Update Plans
 - Run "ai-context plan <name>" to scaffold a new plan template.

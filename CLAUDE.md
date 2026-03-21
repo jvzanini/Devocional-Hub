@@ -1,19 +1,29 @@
 # Devocional Hub — Diretrizes do Projeto
 
-## Hotfix v2.1 — Correções pós-deploy (ATIVO)
+## Hotfix v2.1 — Correções pós-deploy (CONCLUÍDO — 2026-03-21)
 
-~30 bugs e ajustes de UI/UX identificados após review em produção. Execução em 3 terminais paralelos + 1 sequencial.
+~30 bugs e ajustes de UI/UX corrigidos após review em produção. Executado em 3 terminais paralelos + deploy.
 
-### Execução Paralela — Terminais Hotfix
-
-| Terminal | Etapas | Documento | Escopo | Status |
-|----------|--------|-----------|--------|--------|
-| A | 1+4 | `.context/workflow/HOTFIX-TERMINAL-A.md` | Backend bugs + Bíblia interativa | PENDENTE |
-| B | 2+3 | `.context/workflow/HOTFIX-TERMINAL-B.md` | Dashboard + Devocional/Cards | PENDENTE |
-| C | 5+6 | `.context/workflow/HOTFIX-TERMINAL-C.md` | Planejamento, Relatórios, Login, Perfil, Design | PENDENTE |
-| D | 7 | `.context/workflow/HOTFIX-TERMINAL-D.md` | Deploy (APÓS A+B+C) | PENDENTE |
-
-**IMPORTANTE:** Cada terminal NÃO deve tocar nos arquivos dos outros terminais. NÃO fazer push — apenas o Terminal D faz push.
+### Correções Realizadas
+- **Bubble Bíblia:** z-index 9999, pointer-events, cursor pointer
+- **Participantes:** deduplicação por email/nome, badge de tempo verde
+- **Foto perfil:** path corrigido para volume Docker persistente (`/app/data/user-photos/`)
+- **Endpoint cleanup:** `POST /api/admin/cleanup` (SUPER_ADMIN)
+- **Bíblia texto:** error handling, logs, verificação de API key
+- **Bíblia áudio:** fallback automático para versão PT com áudio
+- **Seletores:** transições suaves, separação AT/NT, fontes maiores
+- **Pizza:** layout compacto com total no centro e legendas integradas
+- **Calendário:** cores invertidas (passado=âmbar escuro, futuro=vibrante), bolinha hoje
+- **Abreviações:** case correto (Rm, Gn, Mt)
+- **Cards:** check verde SVG, trilha com expand/collapse e horários
+- **Navegação:** Voltar→/books, pular sessões com erro
+- **Planejamento:** markdown renderizado, expand/collapse por livro/capítulo
+- **Relatórios:** filtros em linha horizontal, filtros por role, card Duração Média
+- **Login:** esqueci senha inline (sem modal), logo maior, frase atualizada
+- **Perfil:** feedback como toast (position fixed)
+- **Cores accent:** goldenrod (#daa520 dark, #c7910a light)
+- **Sidebar:** Progresso→Relatórios, logo maior
+- **Limpeza:** 6 componentes órfãos removidos, workflow obsoleto deletado
 
 ## Master Update v2 — CONCLUÍDO
 
@@ -39,23 +49,6 @@ Correções da Etapa 4 (modal retroativo, popup horário, rotação de dias), re
 ### Etapa 7 — Validação & Deploy (CONCLUÍDA)
 Prisma generate e tsc --noEmit sem erros, zero imports antigos, zero credenciais no código, .gitignore completo, CLAUDE.md atualizado, deploy em produção.
 
-### Execução Paralela — Terminais
-Cada terminal deve ler seu documento de etapa ANTES de começar:
-
-| Terminal | Etapa | Documento de Instruções | Escopo | Status |
-|----------|-------|------------------------|--------|--------|
-| Terminal 1 | Etapa 2 — Backend | `.context/workflow/ETAPA-2-BACKEND.md` | Pipeline IA, triagem, deduplicação, email | CONCLUÍDA |
-| Terminal 2 | Etapa 3 — Frontend | `.context/workflow/ETAPA-3-FRONTEND.md` | Sidebar, calendário, admin, perfil | CONCLUÍDA |
-| Terminal 3 | Etapa 5 — Novas Features | `.context/workflow/ETAPA-5-NOVAS-FEATURES.md` | Bíblia interativa, planejamento | CONCLUÍDA |
-| Terminal 4 | Etapa 4 — Backend | `.context/workflow/ETAPA-4-BACKEND.md` | Endpoints de cards, busca, plano leitura, relatórios | CONCLUÍDA |
-| Terminal 5 | Etapa 4 — Frontend | `.context/workflow/ETAPA-4-FRONTEND.md` | UI de cards, plano leitura, relatórios, devocional | CONCLUÍDA (3 itens → Etapa 6) |
-| Terminal 6 | Etapa 6 — Polimento | `.context/workflow/ETAPA-6-POLIMENTO.md` | Responsividade, dark mode, performance, segurança, correções | CONCLUÍDA |
-| Terminal 7 | Etapa 7 — Deploy | `.context/workflow/ETAPA-7-DEPLOY.md` | Testes, documentação, deploy produção | CONCLUÍDA |
-
-**IMPORTANTE:** Ao abrir cada terminal, passar o prompt:
-```
-Leia o arquivo .context/workflow/ETAPA-{N}-{NOME}.md e execute todas as tasks descritas. O PRD está em .context/workflow/docs/prd-devocional-hub-master-update-v2.md e o Tech Spec em .context/workflow/docs/tech-spec-devocional-hub-master-update-v2.md
-```
 
 ### Novos Arquivos da Etapa 1 (já implementados)
 - `src/features/permissions/lib/role-hierarchy.ts` — Hierarquia de roles (SUPER_ADMIN:100 → MEMBER:20)
@@ -127,20 +120,20 @@ src/
 │   │   ├── admin/page.tsx        # Painel admin (7 abas com ícones)
 │   │   ├── profile/page.tsx      # Perfil do usuário
 │   │   └── session/[id]/page.tsx # Detalhe da sessão
-│   ├── api/                      # 51 API endpoints
+│   ├── api/                      # 52 API endpoints
 │   ├── layout.tsx                # Root layout (font, theme script)
 │   └── globals.css               # Design system v3 com CSS variables + dark mode
 ├── features/                     # Domínios de negócio
 │   ├── auth/lib/                 # Autenticação (NextAuth config)
 │   ├── sessions/                 # Sessões e presença
-│   │   ├── components/           # AttendanceSection, ProtectedDocuments, SessionCard, SessionNavigation, ParticipantLog
+│   │   ├── components/           # ProtectedDocuments, SessionNavigation, ParticipantLog
 │   │   └── lib/                  # attendance-sync.ts
 │   ├── dashboard/components/     # DashboardCalendar, BooksDistributionChart
-│   ├── admin/components/         # PipelineButton, ChapterChecklist
+│   ├── admin/components/         # Componentes do painel admin
 │   ├── search/                   # Busca inteligente
 │   ├── bible/                    # Textos bíblicos
-│   │   ├── components/           # BooksPageClient, BibleBooksGrid (legado)
-│   │   └── lib/                  # bible.ts, bible-books.ts
+│   │   ├── components/           # BooksPageClient
+│   │   └── lib/                  # bible.ts, bible-books.ts, bible-abbreviations.ts
 │   ├── bible-reader/             # Bíblia interativa (bubble + player) — NOVO
 │   │   ├── components/           # BibleBubble, BibleModal, AudioPlayer, Seletores
 │   │   └── lib/                  # bible-api-client, audio-manager, version-discovery
@@ -153,7 +146,7 @@ src/
 │   └── email/lib/                # Envio de emails (Gmail SMTP) — Templates atualizados
 ├── shared/                       # Código compartilhado entre features
 │   ├── components/               # Sidebar e componentes compartilhados
-│   │   ├── Sidebar.tsx           # Sidebar: Menu, Relatórios, Administração
+│   │   ├── Sidebar.tsx           # Sidebar: Início, Devocional, Planejamento, Relatórios, Admin
 │   │   └── ui/                   # Badge e componentes de UI
 │   └── lib/                      # db.ts, storage.ts, utils.ts, image-utils.ts
 └── middleware.ts                 # Middleware de autenticação
@@ -192,6 +185,7 @@ src/
 | Admin | `/api/admin/reading-plans/[id]/days/[dayId]/chapters` | Marcar capítulos |
 | Admin | `/api/admin/notebooklm-session` | Sessão NotebookLM |
 | Admin | `/api/admin/notebooklm-setup` | Setup NotebookLM |
+| Admin | `/api/admin/cleanup` | Limpar banco (SUPER_ADMIN) |
 | Bible | `/api/bible/versions` | Listar versões |
 | Bible | `/api/bible/books/[versionId]` | Listar livros |
 | Bible | `/api/bible/chapters/[versionId]/[bookId]` | Listar capítulos |
