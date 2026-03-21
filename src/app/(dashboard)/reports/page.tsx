@@ -150,6 +150,17 @@ export default function ReportsPage() {
   const [attendances, setAttendances] = useState<AttendanceRecord[]>([]);
   const [users, setUsers] = useState<UserRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [userRole, setUserRole] = useState<string>("MEMBER");
+
+  // Buscar role do usuário logado
+  useEffect(() => {
+    fetch("/api/profile")
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data?.role) setUserRole(data.role); })
+      .catch(() => {});
+  }, []);
+
+  const isAdminUser = ["SUPER_ADMIN", "ADMIN"].includes(userRole);
 
   // Computed unique values for filter dropdowns
   const churches = Array.from(new Set(users.map(u => u.church).filter(Boolean))).sort();
@@ -399,22 +410,26 @@ export default function ReportsPage() {
           <option value="">Livro: Todos</option>
           {books.map(b => <option key={b} value={b}>{b}</option>)}
         </select>
-        <select className="input-field" value={filterUser} onChange={e => setFilterUser(e.target.value)} style={{ width: 160, fontSize: 13 }}>
-          <option value="">Usuário: Todos</option>
-          {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
-        </select>
-        <select className="input-field" value={filterChurch} onChange={e => setFilterChurch(e.target.value)} style={{ width: 130, fontSize: 13 }}>
-          <option value="">Igreja: Todas</option>
-          {churches.map(c => <option key={c} value={c}>{c}</option>)}
-        </select>
-        <select className="input-field" value={filterTeam} onChange={e => setFilterTeam(e.target.value)} style={{ width: 130, fontSize: 13 }}>
-          <option value="">Equipe: Todas</option>
-          {teams.map(t => <option key={t} value={t}>{t}</option>)}
-        </select>
-        <select className="input-field" value={filterSubTeam} onChange={e => setFilterSubTeam(e.target.value)} style={{ width: 130, fontSize: 13 }}>
-          <option value="">SubEquipe: Todas</option>
-          {subTeams.map(st => <option key={st} value={st}>{st}</option>)}
-        </select>
+        {isAdminUser && (
+          <>
+            <select className="input-field" value={filterUser} onChange={e => setFilterUser(e.target.value)} style={{ width: 160, fontSize: 13 }}>
+              <option value="">Usuário: Todos</option>
+              {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+            </select>
+            <select className="input-field" value={filterChurch} onChange={e => setFilterChurch(e.target.value)} style={{ width: 130, fontSize: 13 }}>
+              <option value="">Igreja: Todas</option>
+              {churches.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+            <select className="input-field" value={filterTeam} onChange={e => setFilterTeam(e.target.value)} style={{ width: 130, fontSize: 13 }}>
+              <option value="">Equipe: Todas</option>
+              {teams.map(t => <option key={t} value={t}>{t}</option>)}
+            </select>
+            <select className="input-field" value={filterSubTeam} onChange={e => setFilterSubTeam(e.target.value)} style={{ width: 130, fontSize: 13 }}>
+              <option value="">SubEquipe: Todas</option>
+              {subTeams.map(st => <option key={st} value={st}>{st}</option>)}
+            </select>
+          </>
+        )}
         <button className="btn-outline" onClick={handleExport} style={{ borderColor: "var(--accent)", color: "var(--accent)", fontSize: 13 }}>
           <IconDownload size={14} />
           Exportar

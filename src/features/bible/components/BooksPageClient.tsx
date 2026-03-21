@@ -8,6 +8,7 @@ interface BookSession {
   chapterRef: string;
   summary: string;
   date: string;
+  startTime: string | null;
   status: string;
   documentsCount: number;
   participantsCount: number;
@@ -359,6 +360,7 @@ export function BooksPageClient({ books }: BooksPageClientProps) {
                         <div style={{ fontSize: 15, fontWeight: 600, color: "var(--text)" }}>{s.chapterRef}</div>
                         <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2 }}>
                           {new Date(s.date).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })}
+                          {s.startTime && ` · ${new Date(s.startTime).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`}
                           {" · "}
                           {s.participantsCount} participante{s.participantsCount !== 1 ? "s" : ""}
                         </div>

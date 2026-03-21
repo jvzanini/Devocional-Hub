@@ -33,6 +33,7 @@ export default async function BooksPage() {
       chapterRef: string;
       summary: string;
       date: string;
+      startTime: string | null;
       status: string;
       documentsCount: number;
       participantsCount: number;
@@ -49,6 +50,7 @@ export default async function BooksPage() {
       chapterRef: s.chapterRef,
       summary: s.summary,
       date: s.date.toISOString(),
+      startTime: s.startTime ? s.startTime.toISOString() : null,
       status: s.status,
       documentsCount: s.documents.length,
       participantsCount: s.participants.length,
