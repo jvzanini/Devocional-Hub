@@ -1,38 +1,43 @@
 project:
-  name: "devocional-hub-v2-hotfix"
-  scale: LARGE
-  started: "2026-03-21T04:04:25.175Z"
+  name: "bible-bubble-holy-bible-api"
+  scale: MEDIUM
+  started: "2026-03-21T17:06:50.465Z"
   current_phase: E
 
 phases:
   P:
     status: filled
-    started_at: "2026-03-21T04:04:25.175Z"
-    completed_at: "2026-03-21T04:04:40.346Z"
+    started_at: "2026-03-21T17:06:50.465Z"
+    completed_at: "2026-03-21T17:07:07.116Z"
   R:
     status: filled
-    started_at: "2026-03-21T04:04:40.355Z"
-    completed_at: "2026-03-21T04:04:47.232Z"
+    started_at: "2026-03-21T17:07:07.119Z"
+    completed_at: "2026-03-21T17:07:12.426Z"
   E:
     status: in_progress
-    started_at: "2026-03-21T04:04:47.233Z"
+    started_at: "2026-03-21T17:07:12.426Z"
   V:
     status: pending
   C:
-    status: pending
+    status: skipped
+    reason: "Not required for scale MEDIUM"
 
 execution:
   history:
-    - timestamp: "2026-03-21T04:04:47.233Z"
+    - timestamp: "2026-03-21T17:07:37.117Z"
       phase: E
-      action: started
-  last_activity: "2026-03-21T04:04:47.233Z"
-  resume_context: "Fase E (Execução) em progresso"
+      action: step_started
+      plan: "bible-bubble-holy-bible-api"
+      planPhase: "phase-1"
+      stepIndex: 1
+      stepDescription: "Step 1"
+  last_activity: "2026-03-21T17:07:37.117Z"
+  resume_context: "Trabalhando em: Step 1"
 
 settings:
   autonomous_mode: true
-  require_plan: false
-  require_approval: false
+  require_plan: true
+  require_approval: true
 
 approval:
   plan_created: true

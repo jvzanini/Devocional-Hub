@@ -1,0 +1,40 @@
+project:
+  name: "devocional-hub-v2-hotfix"
+  scale: LARGE
+  started: "2026-03-21T04:04:25.175Z"
+  current_phase: E
+
+phases:
+  P:
+    status: filled
+    started_at: "2026-03-21T04:04:25.175Z"
+    completed_at: "2026-03-21T04:04:40.346Z"
+  R:
+    status: filled
+    started_at: "2026-03-21T04:04:40.355Z"
+    completed_at: "2026-03-21T04:04:47.232Z"
+  E:
+    status: in_progress
+    started_at: "2026-03-21T04:04:47.233Z"
+  V:
+    status: pending
+  C:
+    status: pending
+
+execution:
+  history:
+    - timestamp: "2026-03-21T04:04:47.233Z"
+      phase: E
+      action: started
+  last_activity: "2026-03-21T04:04:47.233Z"
+  resume_context: "Fase E (Execução) em progresso"
+
+settings:
+  autonomous_mode: true
+  require_plan: false
+  require_approval: false
+
+approval:
+  plan_created: true
+  plan_approved: false
+

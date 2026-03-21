@@ -139,7 +139,6 @@ jobs:
             {'name': 'OPENAI_API_KEY', 'value': '${{ secrets.OPENAI_API_KEY }}'},
             {'name': 'OPENROUTER_API_KEY', 'value': '${{ secrets.OPENROUTER_API_KEY }}'},
             {'name': 'GEMINI_API_KEY', 'value': '${{ secrets.GEMINI_API_KEY }}'},
-            {'name': 'BIBLE_API_KEY', 'value': '${{ secrets.BIBLE_API_KEY }}'},
             {'name': 'GOOGLE_EMAIL', 'value': '${{ secrets.GOOGLE_EMAIL }}'},
             {'name': 'GOOGLE_PASSWORD', 'value': '${{ secrets.GOOGLE_PASSWORD }}'},
             {'name': 'ADMIN_EMAIL', 'value': '${{ secrets.ADMIN_EMAIL }}'},

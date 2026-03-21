@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/features/auth/lib/auth";
-import { getChapterContent } from "@/features/bible-reader/lib/bible-api-client";
+import { getChapterContentHtml } from "@/features/bible-reader/lib/holy-bible-client";
 
 export async function GET(
   _request: Request,
@@ -12,26 +12,34 @@ export async function GET(
   try {
     const { versionId, chapterId } = await params;
 
-    if (!process.env.BIBLE_API_KEY) {
-      console.error("[API /bible/content] BIBLE_API_KEY não configurada");
+    // chapterId vem como "ROM.13" do BibleModal
+    const [bookCode, chapterStr] = chapterId.split(".");
+    const chapter = parseInt(chapterStr, 10);
+
+    if (!bookCode || isNaN(chapter)) {
       return NextResponse.json(
-        { error: "API da Bíblia não configurada. Configure BIBLE_API_KEY." },
-        { status: 503 }
+        { error: `Formato de capítulo inválido: ${chapterId}` },
+        { status: 400 }
       );
     }
 
-    console.log(`[API /bible/content] Buscando: versionId=${versionId}, chapterId=${chapterId}`);
-    const content = await getChapterContent(versionId, chapterId);
-
-    if (!content || !content.content) {
-      console.warn(`[API /bible/content] Conteúdo vazio para ${versionId}/${chapterId}`);
+    const bibleId = parseInt(versionId, 10);
+    if (isNaN(bibleId)) {
       return NextResponse.json(
-        { error: "Conteúdo não encontrado para este capítulo" },
-        { status: 404 }
+        { error: `ID de versão inválido: ${versionId}` },
+        { status: 400 }
       );
     }
 
-    return NextResponse.json({ content });
+    const result = await getChapterContentHtml(bibleId, bookCode, chapter);
+
+    return NextResponse.json({
+      content: {
+        content: result.content,
+        copyright: result.copyright,
+        reference: result.reference,
+      },
+    });
   } catch (error) {
     const errMsg = error instanceof Error ? error.message : String(error);
     console.error(`[API /bible/content] Erro:`, errMsg);

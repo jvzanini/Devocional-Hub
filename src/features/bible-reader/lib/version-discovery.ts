@@ -1,13 +1,10 @@
 /**
- * Descoberta de versões da Bíblia em português com detecção de áudio
+ * Versões da Bíblia em português disponíveis na Holy Bible API
  *
- * Estratégia:
- * 1. Buscar todas as versões em português via API.Bible
- * 2. Para cada versão, verificar se há audioBibles associadas
- * 3. Manter allowlist configurável como fallback
+ * Fonte: https://holy-bible-api.com/bibles?language=portuguese
+ * IDs numéricos, sem autenticação
+ * Áudio PT-BR via Word Project (narração única para todas as versões)
  */
-
-import { getBibles, getAudioBibles, type BibleVersion } from "./bible-api-client";
 
 export interface DiscoveredVersion {
   id: string;
@@ -19,103 +16,126 @@ export interface DiscoveredVersion {
   audioBibleId: string | null;
 }
 
-// Allowlist de versões conhecidas em PT-BR (fallback se API falhar)
-const PORTUGUESE_VERSIONS_ALLOWLIST: DiscoveredVersion[] = [
+/**
+ * Versões portuguesas disponíveis (Holy Bible API IDs)
+ * Apenas versões com Bíblia completa (66 livros) e texto funcional
+ */
+const PORTUGUESE_VERSIONS: DiscoveredVersion[] = [
   {
-    id: "35b94e98b2e3a01a-01",
+    id: "644",
     abbreviation: "NVI",
     name: "Nova Versão Internacional",
     nameLocal: "Nova Versão Internacional",
     language: "por",
-    audioAvailable: false,
+    audioAvailable: true,
     audioBibleId: null,
   },
   {
-    id: "d63894c8d9a7a503-01",
-    abbreviation: "BLT",
-    name: "Biblia Livre Para Todos",
-    nameLocal: "Biblia Livre Para Todos",
+    id: "641",
+    abbreviation: "NAA",
+    name: "Nova Almeida Atualizada",
+    nameLocal: "Nova Almeida Atualizada",
     language: "por",
-    audioAvailable: false,
+    audioAvailable: true,
     audioBibleId: null,
   },
   {
-    id: "aee9474b4a88eefb-01",
+    id: "645",
+    abbreviation: "NVT",
+    name: "Nova Versão Transformadora",
+    nameLocal: "Nova Versão Transformadora",
+    language: "por",
+    audioAvailable: true,
+    audioBibleId: null,
+  },
+  {
+    id: "637",
+    abbreviation: "ARC",
+    name: "Almeida Revista e Corrigida",
+    nameLocal: "Almeida Revista e Corrigida",
+    language: "por",
+    audioAvailable: true,
+    audioBibleId: null,
+  },
+  {
+    id: "643",
+    abbreviation: "NTLH",
+    name: "Nova Tradução na Linguagem de Hoje",
+    nameLocal: "Nova Tradução na Linguagem de Hoje",
+    language: "por",
+    audioAvailable: true,
+    audioBibleId: null,
+  },
+  {
+    id: "636",
+    abbreviation: "ALMEIDA",
+    name: "Almeida Clássica",
+    nameLocal: "Almeida Clássica",
+    language: "por",
+    audioAvailable: true,
+    audioBibleId: null,
+  },
+  {
+    id: "635",
+    abbreviation: "ARA",
+    name: "Almeida Revista e Atualizada",
+    nameLocal: "Almeida Revista e Atualizada",
+    language: "por",
+    audioAvailable: true,
+    audioBibleId: null,
+  },
+  {
+    id: "642",
+    abbreviation: "NBV",
+    name: "Nova Bíblia Viva",
+    nameLocal: "Nova Bíblia Viva",
+    language: "por",
+    audioAvailable: true,
+    audioBibleId: null,
+  },
+  {
+    id: "646",
     abbreviation: "OL",
     name: "O Livro",
     nameLocal: "O Livro",
     language: "por",
-    audioAvailable: false,
+    audioAvailable: true,
+    audioBibleId: null,
+  },
+  {
+    id: "647",
+    abbreviation: "TB",
+    name: "Tradução Brasileira",
+    nameLocal: "Tradução Brasileira",
+    language: "por",
+    audioAvailable: true,
+    audioBibleId: null,
+  },
+  {
+    id: "640",
+    abbreviation: "CAP",
+    name: "Bíblia Católica Pastoral",
+    nameLocal: "Bíblia Católica Pastoral",
+    language: "por",
+    audioAvailable: true,
+    audioBibleId: null,
+  },
+  {
+    id: "639",
+    abbreviation: "BPT",
+    name: "Bíblia para Todos",
+    nameLocal: "Bíblia para Todos",
+    language: "por",
+    audioAvailable: true,
     audioBibleId: null,
   },
 ];
 
-// Cache em memória (versões mudam raramente)
-let cachedVersions: DiscoveredVersion[] | null = null;
-let cacheTimestamp = 0;
-const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 horas
-
 /**
- * Descobrir versões em português disponíveis na API.Bible
- * Com detecção de áudio disponível
+ * Retorna versões em português disponíveis
  */
 export async function discoverPortugueseVersions(): Promise<DiscoveredVersion[]> {
-  // Verificar cache
-  if (cachedVersions && Date.now() - cacheTimestamp < CACHE_TTL) {
-    return cachedVersions;
-  }
-
-  try {
-    // Buscar versões em português
-    const [textBibles, audioBibles] = await Promise.all([
-      getBibles("por"),
-      getAudioBibles("por").catch(() => [] as BibleVersion[]),
-    ]);
-
-    // Criar mapa de áudio bíblias por idioma/nome para matching
-    const audioMap = new Map<string, string>();
-    for (const ab of audioBibles) {
-      // Tentar associar por nome similar
-      const key = ab.name.toLowerCase().replace(/[^a-z0-9]/g, "");
-      audioMap.set(key, ab.id);
-    }
-
-    const versions: DiscoveredVersion[] = textBibles
-      .filter((bible) => {
-        // Filtrar apenas português
-        const lang = bible.language?.id?.toLowerCase() || "";
-        return lang === "por" || lang.startsWith("pt");
-      })
-      .map((bible) => {
-        // Verificar se há áudio disponível
-        const hasAudioBibles = bible.audioBibles && bible.audioBibles.length > 0;
-        const audioBibleId = hasAudioBibles ? bible.audioBibles[0].id : null;
-
-        // Preferir abbreviationLocal (ex: "NVI") sobre abbreviation (ex: "PtNVI")
-        const abbr = bible.abbreviationLocal || bible.abbreviation || bible.name.substring(0, 5);
-
-        return {
-          id: bible.id,
-          abbreviation: abbr,
-          name: bible.name,
-          nameLocal: bible.nameLocal || bible.name,
-          language: bible.language?.id || "por",
-          audioAvailable: hasAudioBibles,
-          audioBibleId,
-        };
-      });
-
-    // Se encontrou versões, usar; senão, fallback
-    cachedVersions = versions.length > 0 ? versions : PORTUGUESE_VERSIONS_ALLOWLIST;
-    cacheTimestamp = Date.now();
-
-    return cachedVersions;
-  } catch (error) {
-    console.warn("[VersionDiscovery] Falha ao descobrir versões, usando allowlist:", error);
-    cachedVersions = PORTUGUESE_VERSIONS_ALLOWLIST;
-    cacheTimestamp = Date.now();
-    return cachedVersions;
-  }
+  return PORTUGUESE_VERSIONS;
 }
 
 /**
@@ -134,12 +154,4 @@ export function getDefaultVersion(versions: DiscoveredVersion[]): DiscoveredVers
     versions.find((v) => v.abbreviation === "NAA") ||
     versions[0]
   );
-}
-
-/**
- * Invalidar cache (para forçar redescoberta)
- */
-export function invalidateVersionCache(): void {
-  cachedVersions = null;
-  cacheTimestamp = 0;
 }

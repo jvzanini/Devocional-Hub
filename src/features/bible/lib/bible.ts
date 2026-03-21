@@ -1,8 +1,8 @@
 /**
  * Bible API client — busca texto bíblico NVI em português
  *
- * Fonte principal: bolls.life (gratuita, sem chave)
- * Fallback: api.scripture.api.bible (requer BIBLE_API_KEY)
+ * Fonte: Holy Bible API (gratuita, sem chave)
+ * https://holy-bible-api.com
  */
 
 interface BibleChapter {
@@ -173,32 +173,40 @@ export function extractBibleReferences(text: string): Array<{ book: string; chap
   return references;
 }
 
-// ─── Fonte principal: bolls.life (gratuita, sem chave) ─────────────────────
+// ─── Fonte: Holy Bible API (gratuita, sem chave) ──────────────────────────
 
-interface BollsVerse {
+interface HolyBibleVerse {
+  bible_id: number;
+  book: number;
+  chapter: number;
   verse: number;
   text: string;
 }
 
-async function getChapterFromBolls(bookId: string, chapter: number): Promise<BibleChapter> {
-  const bollsBookId = BOOK_ID_TO_BOLLS[bookId];
-  if (!bollsBookId) {
-    throw new Error(`Livro ${bookId} não encontrado no mapeamento bolls.life`);
+// NVI = bible_id 644 na Holy Bible API
+const DEFAULT_HOLY_BIBLE_ID = 644;
+
+async function getChapterFromHolyBibleApi(bookId: string, chapter: number): Promise<BibleChapter> {
+  const bookNumber = BOOK_ID_TO_BOLLS[bookId]; // Mesmo mapeamento (1-66)
+  if (!bookNumber) {
+    throw new Error(`Livro ${bookId} não encontrado no mapeamento`);
   }
 
   const bookName = BOOK_ID_TO_NAME[bookId] || bookId;
 
-  console.log(`[Bible] Buscando ${bookName} ${chapter} via bolls.life (NVIPT)...`);
-  const response = await fetch(`https://bolls.life/get-chapter/NVIPT/${bollsBookId}/${chapter}/`);
+  console.log(`[Bible] Buscando ${bookName} ${chapter} via Holy Bible API (NVI)...`);
+  const response = await fetch(
+    `https://holy-bible-api.com/bibles/${DEFAULT_HOLY_BIBLE_ID}/books/${bookNumber}/chapters/${chapter}/verses`
+  );
 
   if (!response.ok) {
-    throw new Error(`bolls.life erro ${response.status}: ${await response.text()}`);
+    throw new Error(`Holy Bible API erro ${response.status}: ${await response.text()}`);
   }
 
-  const verses: BollsVerse[] = await response.json();
+  const verses: HolyBibleVerse[] = await response.json();
 
   if (!Array.isArray(verses) || verses.length === 0) {
-    throw new Error(`bolls.life retornou capítulo vazio para ${bookName} ${chapter}`);
+    throw new Error(`Holy Bible API retornou capítulo vazio para ${bookName} ${chapter}`);
   }
 
   const content = verses
@@ -214,83 +222,19 @@ async function getChapterFromBolls(bookId: string, chapter: number): Promise<Bib
   };
 }
 
-// ─── Fallback: api.scripture.api.bible ─────────────────────────────────────
-
-interface BibleApiChapterResponse {
-  data: {
-    id: string;
-    bookId: string;
-    number: string;
-    reference: string;
-    content: string;
-    verseCount: number;
-  };
-}
-
-async function getChapterFromScriptureApi(bookId: string, chapter: number): Promise<BibleChapter> {
-  const { BIBLE_API_KEY, BIBLE_NVI_ID } = process.env;
-
-  if (!BIBLE_API_KEY) {
-    throw new Error("BIBLE_API_KEY não configurada no .env");
-  }
-
-  const bibleId = BIBLE_NVI_ID || "35b94e98b2e3a01a-01";
-  const chapterId = `${bookId}.${chapter}`;
-
-  const response = await fetch(
-    `https://rest.api.bible/v1/bibles/${bibleId}/chapters/${chapterId}?content-type=text&include-notes=false&include-titles=true&include-chapter-numbers=false&include-verse-numbers=true`,
-    {
-      headers: {
-        "api-key": BIBLE_API_KEY,
-      },
-    }
-  );
-
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`Bible API erro ${response.status}: ${error}`);
-  }
-
-  const data: BibleApiChapterResponse = await response.json();
-
-  return {
-    id: data.data.id,
-    bookId: data.data.bookId,
-    number: data.data.number,
-    reference: data.data.reference,
-    content: cleanBibleContent(data.data.content),
-  };
-}
-
-function cleanBibleContent(content: string): string {
-  return content
-    .replace(/<[^>]+>/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-// ─── Função principal com fallback ─────────────────────────────────────────
+// ─── Função principal ─────────────────────────────────────────────────────
 
 /**
  * Busca o texto completo de um capítulo (NVI português)
- * Tenta bolls.life primeiro (gratuito), depois api.scripture.api.bible
+ * Fonte: Holy Bible API (gratuita, sem chave)
  */
 export async function getChapterText(bookId: string, chapter: number): Promise<BibleChapter> {
-  // 1. Tentar bolls.life (gratuito, sem chave)
   try {
-    return await getChapterFromBolls(bookId, chapter);
+    return await getChapterFromHolyBibleApi(bookId, chapter);
   } catch (err) {
-    console.warn(`[Bible] bolls.life falhou: ${err}`);
+    console.error(`[Bible] Holy Bible API falhou: ${err}`);
+    throw new Error(`Não foi possível buscar ${BOOK_ID_TO_NAME[bookId] || bookId} ${chapter}`);
   }
-
-  // 2. Fallback: api.scripture.api.bible
-  try {
-    return await getChapterFromScriptureApi(bookId, chapter);
-  } catch (err) {
-    console.warn(`[Bible] scripture API falhou: ${err}`);
-  }
-
-  throw new Error(`Não foi possível buscar ${BOOK_ID_TO_NAME[bookId] || bookId} ${chapter} em nenhuma API`);
 }
 
 /**

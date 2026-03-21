@@ -5,7 +5,6 @@
  * - Autoplay entre capítulos
  * - Controle de velocidade
  * - MediaSession API para controle em segundo plano (mobile)
- * - FUMS tracking (requisito API.Bible)
  */
 
 export type PlaybackSpeed = 1 | 1.25 | 1.5 | 1.75 | 2;
@@ -31,7 +30,6 @@ export class AudioManager {
   private chapterEndListeners: Set<ChapterEndListener> = new Set();
   private currentSpeed: PlaybackSpeed = 1;
   private autoplayEnabled = true;
-  private fumsToken: string | null = null;
 
   constructor() {
     if (typeof window !== "undefined") {
@@ -87,16 +85,14 @@ export class AudioManager {
     };
   }
 
-  async loadAndPlay(url: string, fumsToken?: string): Promise<void> {
+  async loadAndPlay(url: string): Promise<void> {
     if (!this.audio) return;
 
-    this.fumsToken = fumsToken || null;
     this.audio.src = url;
     this.audio.playbackRate = this.currentSpeed;
 
     try {
       await this.audio.play();
-      this.trackFums();
       this.updateMediaSession();
     } catch (err) {
       console.warn("[AudioManager] Autoplay bloqueado, aguardando interação:", err);
@@ -177,44 +173,6 @@ export class AudioManager {
   private notifyListeners(): void {
     const state = this.getState();
     this.listeners.forEach((cb) => cb(state));
-  }
-
-  // ─── FUMS Tracking (requisito API.Bible) ──────────────────────────────────
-
-  private trackFums(): void {
-    if (!this.fumsToken) return;
-
-    try {
-      // FUMS v3: enviar beacon de uso
-      const fumsUrl = `https://fums.api.bible/f3?t=${encodeURIComponent(this.fumsToken)}&dId=${this.getDeviceId()}&sId=${this.getSessionId()}`;
-      if (typeof navigator !== "undefined" && navigator.sendBeacon) {
-        navigator.sendBeacon(fumsUrl);
-      } else {
-        fetch(fumsUrl, { method: "GET", keepalive: true }).catch(() => {});
-      }
-    } catch {
-      // FUMS tracking é best-effort
-    }
-  }
-
-  private getDeviceId(): string {
-    if (typeof localStorage === "undefined") return "unknown";
-    let id = localStorage.getItem("devhub-fums-device");
-    if (!id) {
-      id = crypto.randomUUID();
-      localStorage.setItem("devhub-fums-device", id);
-    }
-    return id;
-  }
-
-  private getSessionId(): string {
-    if (typeof sessionStorage === "undefined") return "unknown";
-    let id = sessionStorage.getItem("devhub-fums-session");
-    if (!id) {
-      id = crypto.randomUUID();
-      sessionStorage.setItem("devhub-fums-session", id);
-    }
-    return id;
   }
 
   // ─── MediaSession API (controle em segundo plano) ──────────────────────────

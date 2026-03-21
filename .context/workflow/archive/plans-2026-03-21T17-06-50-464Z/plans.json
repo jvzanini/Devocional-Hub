@@ -1,0 +1,14 @@
+{
+  "active": [
+    {
+      "slug": "devocional-hub-v2-hotfix",
+      "path": "plans/devocional-hub-v2-hotfix.md",
+      "title": "DevocionalHub v2.1 Hotfix — Correções pós-deploy",
+      "summary": "Correções de ~30 bugs e ajustes de UI/UX identificados pelo usuário em produção após o Master Update v2.",
+      "linkedAt": "2026-03-21T04:04:32.860Z",
+      "status": "active"
+    }
+  ],
+  "completed": [],
+  "primary": "devocional-hub-v2-hotfix"
+}

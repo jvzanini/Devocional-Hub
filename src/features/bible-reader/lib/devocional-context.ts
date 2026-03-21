@@ -2,7 +2,7 @@
  * Resolver de contexto devocional — determina livro/capítulo a exibir
  *
  * Busca o plano de leitura ativo (IN_PROGRESS) e encontra o dia atual.
- * Fallback: Gênesis 1, versão NVI.
+ * Fallback: Gênesis 1, versão NVI (ID 644 na Holy Bible API).
  */
 
 import { prisma } from "@/shared/lib/db";
@@ -16,8 +16,8 @@ export interface DevocionalContext {
   preferredBibleVersionId?: string;
 }
 
-// Versão NVI padrão
-const DEFAULT_BIBLE_VERSION_ID = "35b94e98b2e3a01a-01";
+// Versão NVI padrão (Holy Bible API ID)
+const DEFAULT_BIBLE_VERSION_ID = "644";
 
 // Fallback: Gênesis 1
 const FALLBACK_CONTEXT: DevocionalContext = {
@@ -65,7 +65,6 @@ export async function resolveDevocionalContext(): Promise<DevocionalContext> {
     }
 
     // Extrair o primeiro capítulo do dia
-    // Formato: "1-5" ou "1, 3, 5" ou "3"
     const chaptersStr = targetDay.chapters;
     let firstChapter = 1;
 

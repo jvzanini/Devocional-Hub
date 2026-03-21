@@ -1,14 +1,14 @@
 {
   "active": [
     {
-      "slug": "devocional-hub-v2-hotfix",
-      "path": "plans/devocional-hub-v2-hotfix.md",
-      "title": "DevocionalHub v2.1 Hotfix — Correções pós-deploy",
-      "summary": "Correções de ~30 bugs e ajustes de UI/UX identificados pelo usuário em produção após o Master Update v2.",
-      "linkedAt": "2026-03-21T04:04:32.860Z",
+      "slug": "bible-bubble-holy-bible-api",
+      "path": "plans/bible-bubble-holy-bible-api.md",
+      "title": "Migrar Bible Bubble para Holy Bible API + Word Project Audio",
+      "summary": "Substituir completamente a API.Bible (requer API key, sem áudio PT) pela Holy Bible API (gratuita, sem key, 14 versões PT) + Word Project (áudio MP3 PT-BR, Bíblia completa). Zero mudanças no frontend — toda a UI (BibleModal, AudioPlayer, seletores) permanece intacta.",
+      "linkedAt": "2026-03-21T17:07:01.780Z",
       "status": "active"
     }
   ],
   "completed": [],
-  "primary": "devocional-hub-v2-hotfix"
+  "primary": "bible-bubble-holy-bible-api"
 }
