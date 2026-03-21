@@ -1,5 +1,20 @@
 # Devocional Hub — Diretrizes do Projeto
 
+## Hotfix v2.1 — Correções pós-deploy (ATIVO)
+
+~30 bugs e ajustes de UI/UX identificados após review em produção. Execução em 3 terminais paralelos + 1 sequencial.
+
+### Execução Paralela — Terminais Hotfix
+
+| Terminal | Etapas | Documento | Escopo | Status |
+|----------|--------|-----------|--------|--------|
+| A | 1+4 | `.context/workflow/HOTFIX-TERMINAL-A.md` | Backend bugs + Bíblia interativa | PENDENTE |
+| B | 2+3 | `.context/workflow/HOTFIX-TERMINAL-B.md` | Dashboard + Devocional/Cards | PENDENTE |
+| C | 5+6 | `.context/workflow/HOTFIX-TERMINAL-C.md` | Planejamento, Relatórios, Login, Perfil, Design | PENDENTE |
+| D | 7 | `.context/workflow/HOTFIX-TERMINAL-D.md` | Deploy (APÓS A+B+C) | PENDENTE |
+
+**IMPORTANTE:** Cada terminal NÃO deve tocar nos arquivos dos outros terminais. NÃO fazer push — apenas o Terminal D faz push.
+
 ## Master Update v2 — CONCLUÍDO
 
 Atualização master com 22 features em 8 tracks. Todas as 7 etapas foram concluídas com sucesso.
