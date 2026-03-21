@@ -1,5 +1,30 @@
 # Devocional Hub — Diretrizes do Projeto
 
+## Bible Bubble v3 — Migração Holy Bible API + Áudio PT-BR (CONCLUÍDO — 2026-03-21)
+
+Migrou a Bíblia interativa (bubble) de API.Bible para Holy Bible API + Word Project Audio:
+- **Texto:** Holy Bible API (holy-bible-api.com) — 12 versões PT, gratuita, sem API key
+- **Áudio:** Word Project (wordproaudio.org) — MP3 PT-BR, Bíblia completa, CORS habilitado
+- **Removidos:** bible-api-client.ts, rotas /books e /chapters, FUMS tracking, BIBLE_API_KEY, BIBLE_NVI_ID
+- **Criados:** holy-bible-client.ts, word-project-audio.ts
+- **Frontend:** Zero mudanças — AudioPlayer, BibleModal, seletores permanecem intactos
+
+### Arquitetura da Bíblia (v3)
+```
+Frontend → /api/bible/versions → version-discovery.ts → lista estática 12 versões PT
+Frontend → /api/bible/content  → holy-bible-client.ts → holy-bible-api.com (texto)
+Frontend → /api/bible/audio    → word-project-audio.ts → wordproaudio.org (MP3 PT-BR)
+Frontend → /api/bible/context  → devocional-context.ts → Prisma (plano de leitura ativo)
+```
+
+### Versões PT disponíveis
+NVI (644), NAA (641), NVT (645), ARC (637), NTLH (643), Almeida (636), ARA (635), NBV (642), OL (646), TB (647), CAP (640), BPT (639)
+
+### URLs de APIs externas
+- Texto: `https://holy-bible-api.com/bibles/{id}/books/{book}/chapters/{ch}/verses`
+- Áudio: `https://www.wordproaudio.org/bibles/app/audio/2_BR/{book}/{ch}.mp3`
+- book = 1-66 (order em BIBLE_BOOKS), ch = número do capítulo
+
 ## Hotfix v2.1 — Correções pós-deploy (CONCLUÍDO — 2026-03-21)
 
 ~30 bugs e ajustes de UI/UX corrigidos após review em produção. Executado em 3 terminais paralelos + deploy.
@@ -136,7 +161,7 @@ src/
 │   │   └── lib/                  # bible.ts, bible-books.ts, bible-abbreviations.ts
 │   ├── bible-reader/             # Bíblia interativa (bubble + player) — NOVO
 │   │   ├── components/           # BibleBubble, BibleModal, AudioPlayer, Seletores
-│   │   └── lib/                  # bible-api-client, audio-manager, version-discovery
+│   │   └── lib/                  # holy-bible-client, word-project-audio, audio-manager, version-discovery
 │   ├── permissions/lib/          # Sistema de permissões multi-nível — NOVO
 │   ├── planning/                 # Módulo de planejamento teológico — NOVO
 │   │   ├── components/           # PlanningPage, PlanningCard, ThemeGroup
@@ -186,12 +211,10 @@ src/
 | Admin | `/api/admin/notebooklm-session` | Sessão NotebookLM |
 | Admin | `/api/admin/notebooklm-setup` | Setup NotebookLM |
 | Admin | `/api/admin/cleanup` | Limpar banco (SUPER_ADMIN) |
-| Bible | `/api/bible/versions` | Listar versões |
-| Bible | `/api/bible/books/[versionId]` | Listar livros |
-| Bible | `/api/bible/chapters/[versionId]/[bookId]` | Listar capítulos |
-| Bible | `/api/bible/content/[versionId]/[chapterId]` | Conteúdo do capítulo |
-| Bible | `/api/bible/audio/[versionId]/[chapterId]` | URL do áudio |
-| Bible | `/api/bible/context` | Contexto devocional |
+| Bible | `/api/bible/versions` | Listar versões PT (Holy Bible API) |
+| Bible | `/api/bible/content/[versionId]/[chapterId]` | Texto do capítulo (Holy Bible API) |
+| Bible | `/api/bible/audio/[versionId]/[chapterId]` | URL áudio MP3 PT-BR (Word Project) |
+| Bible | `/api/bible/context` | Contexto devocional (plano ativo) |
 | Planning | `/api/planning/current` | Plano ativo com cards |
 | Planning | `/api/planning/cards/[planId]` | Cards de um plano |
 | Planning | `/api/planning/card/[cardId]` | Detalhe de um card |
@@ -255,7 +278,7 @@ src/
 6. Triagem teológica da transcrição (remove nomes, corrige fatos bíblicos, mantém interpretações)
 7. Detecção de multi-sessão (verifica se capítulo já tem sessão anterior, sinais de continuidade)
 8. Processa transcrição com IA (cascata de fallbacks)
-9. Busca texto bíblico NVI via API.Bible
+9. Busca texto bíblico NVI via Holy Bible API (gratuita, sem chave)
 10. Gera pesquisa teológica + Knowledge Base unificada
 11. Extrai senha da transcrição (se mencionada)
 12. NotebookLM: cria notebook com KB rica, gera slides + infográfico + vídeo resumo
@@ -285,7 +308,7 @@ Modelos disponíveis: gpt-4.1-mini, gpt-4.1, gpt-4.1-nano, gpt-4o, gpt-4o-mini, 
 - Todas as credenciais são configuradas via variáveis de ambiente no Portainer
 - No repositório, usar SEMPRE valores genéricos (YOUR_*, changeme, etc.)
 - NUNCA commitar senhas, API keys, tokens ou emails reais no Git
-- Variáveis usadas: ADMIN_EMAIL, ADMIN_PASSWORD, SMTP_USER, SMTP_PASS, ZOOM_*, OPENAI_API_KEY, GEMINI_API_KEY, OPENROUTER_API_KEY, BIBLE_API_KEY, GOOGLE_EMAIL, GOOGLE_PASSWORD
+- Variáveis usadas: ADMIN_EMAIL, ADMIN_PASSWORD, SMTP_USER, SMTP_PASS, ZOOM_*, OPENAI_API_KEY, GEMINI_API_KEY, OPENROUTER_API_KEY, GOOGLE_EMAIL, GOOGLE_PASSWORD
 
 ## Segurança — REGRAS OBRIGATÓRIAS
 - NUNCA commitar credenciais, senhas, API keys, tokens ou emails reais no Git
