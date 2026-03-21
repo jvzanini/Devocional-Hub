@@ -11,7 +11,8 @@ interface AudioPlayerProps {
   copyright?: string;
   onPrevious: () => void;
   onNext: () => void;
-  onCollapse?: () => void;
+  pendingSeekTime?: number | null;
+  onSeekHandled?: () => void;
 }
 
 function formatTime(seconds: number): string {
@@ -27,39 +28,52 @@ export function AudioPlayer({
   copyright,
   onPrevious,
   onNext,
-  onCollapse,
+  pendingSeekTime,
+  onSeekHandled,
 }: AudioPlayerProps) {
   const [state, setState] = useState<AudioState>({
-    isPlaying: false,
-    isPaused: true,
-    currentTime: 0,
-    duration: 0,
-    speed: 1,
-    isLoading: false,
-    error: null,
+    isPlaying: false, isPaused: true, currentTime: 0,
+    duration: 0, speed: 1, isLoading: false, error: null,
   });
   const [isDragging, setIsDragging] = useState(false);
   const progressRef = useRef<HTMLDivElement>(null);
   const managerRef = useRef(getAudioManager());
+  const loadedUrlRef = useRef<string | null>(null);
 
   useEffect(() => {
     const manager = managerRef.current;
     const unsub = manager.subscribe(setState);
     const unsubEnd = manager.onChapterEnd(onNext);
-    return () => {
-      unsub();
-      unsubEnd();
-    };
+    return () => { unsub(); unsubEnd(); };
   }, [onNext]);
 
+  // T5/T8: carregar áudio SEM autoplay, e só quando URL muda de fato
   useEffect(() => {
-    if (audioUrl) {
-      managerRef.current.loadAndPlay(audioUrl);
-    }
+    if (!audioUrl || audioUrl === loadedUrlRef.current) return;
+    loadedUrlRef.current = audioUrl;
+    const manager = managerRef.current;
+    // Apenas carrega, não reproduz (T5: inicia pausado)
+    manager.loadOnly(audioUrl);
   }, [audioUrl]);
 
-  // ─── Drag-to-seek (mouse + touch) ──────────────────────────────────────
+  // T9: seek para posição salva
+  useEffect(() => {
+    if (pendingSeekTime && pendingSeekTime > 0) {
+      const manager = managerRef.current;
+      // Aguardar metadata carregada
+      const checkInterval = setInterval(() => {
+        const s = manager.getState();
+        if (s.duration > 0) {
+          manager.seek(pendingSeekTime);
+          onSeekHandled?.();
+          clearInterval(checkInterval);
+        }
+      }, 200);
+      return () => clearInterval(checkInterval);
+    }
+  }, [pendingSeekTime, onSeekHandled]);
 
+  // Drag-to-seek
   const seekFromEvent = useCallback((clientX: number) => {
     if (!progressRef.current || !state.duration) return;
     const rect = progressRef.current.getBoundingClientRect();
@@ -67,26 +81,10 @@ export function AudioPlayer({
     managerRef.current.seek(pct * state.duration);
   }, [state.duration]);
 
-  function handleProgressClick(e: React.MouseEvent<HTMLDivElement>) {
-    seekFromEvent(e.clientX);
-  }
-
-  function handleMouseDown(e: React.MouseEvent) {
-    e.preventDefault();
-    setIsDragging(true);
-    seekFromEvent(e.clientX);
-  }
-
   useEffect(() => {
     if (!isDragging) return;
-
-    function handleMouseMove(e: MouseEvent) {
-      seekFromEvent(e.clientX);
-    }
-    function handleMouseUp() {
-      setIsDragging(false);
-    }
-
+    function handleMouseMove(e: MouseEvent) { seekFromEvent(e.clientX); }
+    function handleMouseUp() { setIsDragging(false); }
     window.addEventListener("mousemove", handleMouseMove);
     window.addEventListener("mouseup", handleMouseUp);
     return () => {
@@ -95,48 +93,15 @@ export function AudioPlayer({
     };
   }, [isDragging, seekFromEvent]);
 
-  function handleTouchStart(e: React.TouchEvent) {
-    setIsDragging(true);
-    seekFromEvent(e.touches[0].clientX);
-  }
-
-  function handleTouchMove(e: React.TouchEvent) {
-    if (isDragging) {
-      seekFromEvent(e.touches[0].clientX);
-    }
-  }
-
-  function handleTouchEnd() {
-    setIsDragging(false);
-  }
-
-  function handleCycleSpeed() {
-    managerRef.current.cycleSpeed();
-  }
-
-  if (!audioAvailable) {
-    return (
-      <div className="bible-player bible-player--disabled">
-        <span style={{ color: "var(--text-secondary)", fontSize: "13px" }}>
-          Áudio não disponível para esta versão
-        </span>
-      </div>
-    );
-  }
+  if (!audioAvailable) return null; // T3: não renderiza nada se sem áudio
 
   const progress = state.duration > 0 ? (state.currentTime / state.duration) * 100 : 0;
 
   return (
     <div className="bible-player">
       <div className="bible-player-controls">
-        <button
-          className="bible-player-btn"
-          onClick={onPrevious}
-          aria-label="Capítulo anterior"
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z" />
-          </svg>
+        <button className="bible-player-btn" onClick={onPrevious} aria-label="Capítulo anterior">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z" /></svg>
         </button>
 
         <button
@@ -151,25 +116,18 @@ export function AudioPlayer({
               </circle>
             </svg>
           ) : state.isPlaying ? (
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
-            </svg>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" /></svg>
           ) : (
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M8 5v14l11-7z" />
-            </svg>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
           )}
         </button>
 
-        <button
-          className="bible-player-btn"
-          onClick={onNext}
-          aria-label="Próximo capítulo"
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" />
-          </svg>
+        <button className="bible-player-btn" onClick={onNext} aria-label="Próximo capítulo">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" /></svg>
         </button>
+
+        {/* T10: velocidade ao lado dos controles */}
+        <SpeedControl speed={state.speed as PlaybackSpeed} onCycleSpeed={() => managerRef.current.cycleSpeed()} />
       </div>
 
       <div className="bible-player-progress-row">
@@ -177,11 +135,11 @@ export function AudioPlayer({
         <div
           ref={progressRef}
           className={`bible-player-progress ${isDragging ? "bible-player-progress--dragging" : ""}`}
-          onClick={handleProgressClick}
-          onMouseDown={handleMouseDown}
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
+          onClick={(e) => seekFromEvent(e.clientX)}
+          onMouseDown={(e) => { e.preventDefault(); setIsDragging(true); seekFromEvent(e.clientX); }}
+          onTouchStart={(e) => { setIsDragging(true); seekFromEvent(e.touches[0].clientX); }}
+          onTouchMove={(e) => { if (isDragging) seekFromEvent(e.touches[0].clientX); }}
+          onTouchEnd={() => setIsDragging(false)}
           role="slider"
           aria-label="Progresso do áudio"
           aria-valuenow={Math.round(progress)}
@@ -189,29 +147,9 @@ export function AudioPlayer({
           aria-valuemax={100}
         >
           <div className="bible-player-progress-fill" style={{ width: `${progress}%` }} />
-          <div
-            className="bible-player-progress-thumb"
-            style={{ left: `${progress}%` }}
-          />
+          <div className="bible-player-progress-thumb" style={{ left: `${progress}%` }} />
         </div>
         <span className="bible-player-time">{formatTime(state.duration)}</span>
-      </div>
-
-      <div className="bible-player-extras">
-        <SpeedControl speed={state.speed as PlaybackSpeed} onCycleSpeed={handleCycleSpeed} />
-
-        {onCollapse && (
-          <button
-            className="bible-player-collapse-btn"
-            onClick={onCollapse}
-            aria-label="Recolher controles de áudio"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-            </svg>
-            <span>Esconder Controles</span>
-          </button>
-        )}
       </div>
     </div>
   );

@@ -24,18 +24,60 @@ function LoadingSkeleton() {
   );
 }
 
-/** Highlight de busca no HTML (client-side) */
-function highlightSearch(html: string, query: string): string {
+/**
+ * Normalizar texto para busca: remove acentos, pontuação, lowercase
+ */
+function normalizeForSearch(text: string): string {
+  return text
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") // remove acentos
+    .replace(/[^\w\s]/g, "")         // remove pontuação
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * Filtrar HTML mostrando apenas parágrafos que contêm o texto buscado
+ * e destacar os trechos encontrados
+ */
+function filterAndHighlight(html: string, query: string): string {
   if (!query || query.length < 2) return html;
 
-  const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const regex = new RegExp(`(${escaped})`, "gi");
+  const normalizedQuery = normalizeForSearch(query);
+  if (!normalizedQuery) return html;
 
-  // Evitar substituir dentro de tags HTML
-  return html.replace(/>([^<]+)</g, (match, text) => {
-    const highlighted = text.replace(regex, '<mark style="background:var(--accent);color:#000;border-radius:2px;padding:0 2px">$1</mark>');
-    return `>${highlighted}<`;
-  });
+  // Separar em parágrafos
+  const paragraphs = html.split(/<\/p>/i);
+
+  const filtered = paragraphs
+    .map((p) => {
+      // Extrair texto puro do parágrafo para comparação
+      const plainText = p.replace(/<[^>]+>/g, "");
+      const normalizedPlain = normalizeForSearch(plainText);
+
+      if (!normalizedPlain.includes(normalizedQuery)) {
+        return null; // ocultar parágrafo que não contém a busca
+      }
+
+      // Destacar no HTML original (case-insensitive, ignora acentos)
+      const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const regex = new RegExp(`(${escaped})`, "gi");
+
+      const highlighted = p.replace(/>([^<]+)</g, (match, text) => {
+        const h = text.replace(regex, '<mark style="background:var(--accent);color:#000;border-radius:2px;padding:0 2px">$1</mark>');
+        return `>${h}<`;
+      });
+
+      return highlighted + "</p>";
+    })
+    .filter(Boolean);
+
+  if (filtered.length === 0) {
+    return '<p style="color:var(--text-secondary);text-align:center;padding:20px 0">Nenhum versículo encontrado.</p>';
+  }
+
+  return filtered.join("\n");
 }
 
 export function BibleContent({
@@ -48,7 +90,7 @@ export function BibleContent({
   const processedHtml = useMemo(() => {
     if (!htmlContent) return null;
     if (searchQuery && searchQuery.length >= 2) {
-      return highlightSearch(htmlContent, searchQuery);
+      return filterAndHighlight(htmlContent, searchQuery);
     }
     return htmlContent;
   }, [htmlContent, searchQuery]);

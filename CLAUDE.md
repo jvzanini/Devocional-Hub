@@ -1,11 +1,19 @@
 # Devocional Hub — Diretrizes do Projeto
 
+## Bible Bubble v4.1 — Refinamentos UX + Cache (CONCLUÍDO — 2026-03-21)
+
+- **Removido:** Word Project (fallback), ícone de volume do header
+- **Player:** inicia colapsado/pausado, sem autoplay, cache de posição (localStorage 24h)
+- **Busca:** filtra versículos (oculta não-correspondentes), ignora acentos/pontuação
+- **Bubble:** subido 20px, anti-zoom iOS no input de busca
+- **Colapsado:** seta expandir/recolher + labels de capítulo (← Romanos 9 [Play] Romanos 11 →)
+- **Fix:** áudio não reinicia ao colapsar/expandir (loadOnly vs loadAndPlay)
+
 ## Bible Bubble v4 — Bible.is Audio Versão-Específico + UX Overhaul (CONCLUÍDO — 2026-03-21)
 
 Áudio versão-específico via Bible.is (FCBH) + overhaul completo de UX:
 - **Texto:** Holy Bible API (holy-bible-api.com) — 12 versões PT, gratuita, sem API key
-- **Áudio principal:** Bible.is (live.bible.is) — 4 versões com áudio próprio: NVI, NAA, NTLH, NVT
-- **Áudio fallback:** Word Project (wordproaudio.org) — narração genérica PT-BR
+- **Áudio:** Bible.is (live.bible.is) — 4 versões com áudio próprio: NVI, NAA, NTLH, NVT
 - **Criados:** bible-is-audio.ts (mapeamento de filesets Bible.is)
 - **UX:** Bubble com label, scroll lock, player colapsável, drag-to-seek, busca no capítulo
 
@@ -176,7 +184,7 @@ src/
 │   │   └── lib/                  # bible.ts, bible-books.ts, bible-abbreviations.ts
 │   ├── bible-reader/             # Bíblia interativa (bubble + player) — NOVO
 │   │   ├── components/           # BibleBubble, BibleModal, AudioPlayer, Seletores
-│   │   └── lib/                  # holy-bible-client, bible-is-audio, word-project-audio, audio-manager, version-discovery
+│   │   └── lib/                  # holy-bible-client, bible-is-audio, audio-manager, version-discovery
 │   ├── permissions/lib/          # Sistema de permissões multi-nível — NOVO
 │   ├── planning/                 # Módulo de planejamento teológico — NOVO
 │   │   ├── components/           # PlanningPage, PlanningCard, ThemeGroup

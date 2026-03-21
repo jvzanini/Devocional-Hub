@@ -2,8 +2,7 @@
  * Versões da Bíblia em português disponíveis na Holy Bible API
  *
  * Fonte texto: https://holy-bible-api.com/bibles?language=portuguese
- * Fonte áudio: Bible.is (live.bible.is) — 4 versões com áudio versão-específico
- * Fallback áudio: Word Project (narração genérica PT-BR)
+ * Fonte áudio: Bible.is (live.bible.is) — 4 versões com áudio versão-específico (NVI, NAA, NTLH, NVT)
  */
 
 import { hasVersionSpecificAudio } from "./bible-is-audio";

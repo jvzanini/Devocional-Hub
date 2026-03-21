@@ -99,6 +99,15 @@ export class AudioManager {
     }
   }
 
+  /** Carregar áudio sem reproduzir (pré-carrega apenas) */
+  loadOnly(url: string): void {
+    if (!this.audio) return;
+    this.audio.src = url;
+    this.audio.playbackRate = this.currentSpeed;
+    this.audio.load();
+    this.notifyListeners();
+  }
+
   play(): void {
     this.audio?.play().catch(console.warn);
     this.updateMediaSession();

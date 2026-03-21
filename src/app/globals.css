@@ -1560,7 +1560,7 @@ select.input-field {
 /* ─── Bubble Flutuante ───────────────────────────── */
 .bible-bubble {
   position: fixed;
-  bottom: 28px;
+  bottom: 48px;
   right: 28px;
   z-index: 9999;
   width: 64px;
@@ -1923,56 +1923,70 @@ select.input-field {
   color: var(--text);
 }
 
+/* Toggle expandir/recolher */
+.bible-player-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 4px 0;
+  cursor: pointer;
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 500;
+  transition: opacity 0.15s;
+  user-select: none;
+}
+.bible-player-toggle:hover {
+  opacity: 0.8;
+}
+
 /* Player colapsado */
 .bible-player-collapsed {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  padding: 8px 16px;
+  gap: 8px;
+  padding: 6px 12px;
 }
-.bible-player-collapsed-btn {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
+.bible-player-collapsed-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: var(--radius);
   border: none;
   background: transparent;
-  color: var(--text);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+.bible-player-collapsed-nav:hover:not(:disabled) {
+  background: var(--surface-hover);
+}
+.bible-player-collapsed-nav:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+.bible-player-collapsed-btn--play {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: none;
+  background: var(--accent);
+  color: #fff;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: background 0.15s;
-}
-.bible-player-collapsed-btn:hover {
-  background: var(--surface-hover);
-}
-.bible-player-collapsed-btn--play {
-  width: 48px;
-  height: 48px;
-  background: var(--accent);
-  color: #fff;
+  flex-shrink: 0;
 }
 .bible-player-collapsed-btn--play:hover {
   background: var(--accent-hover);
-}
-.bible-player-collapsed-expand {
-  position: absolute;
-  right: 16px;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  border: 1px solid var(--border, rgba(128,128,128,0.2));
-  background: var(--surface);
-  color: var(--text-secondary);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.15s;
-}
-.bible-player-collapsed-expand:hover {
-  background: var(--surface-hover);
 }
 
 /* Barra de busca */
@@ -2457,7 +2471,7 @@ select.input-field {
 /* ─── Mobile Responsivo ──────────────────────────── */
 @media (max-width: 767px) {
   .bible-bubble {
-    bottom: 20px;
+    bottom: 40px;
     right: 20px;
     width: 58px;
     height: 58px;

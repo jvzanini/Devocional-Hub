@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/features/auth/lib/auth";
 import { getBibleIsAudioUrl } from "@/features/bible-reader/lib/bible-is-audio";
-import { getWordProjectAudioUrl } from "@/features/bible-reader/lib/word-project-audio";
 
 export async function GET(
   _request: Request,
@@ -21,24 +20,13 @@ export async function GET(
       return NextResponse.json({ audioUrl: null, available: false });
     }
 
-    // 1. Tentar Bible.is (áudio versão-específico: NVI, NAA, NTLH, NVT)
-    const bibleIsResult = await getBibleIsAudioUrl(versionId, bookCode, chapter);
-    if (bibleIsResult) {
-      return NextResponse.json({
-        audioUrl: bibleIsResult.url,
-        available: true,
-      });
+    // Bible.is (áudio versão-específico: NVI, NAA, NTLH, NVT)
+    const result = await getBibleIsAudioUrl(versionId, bookCode, chapter);
+    if (result) {
+      return NextResponse.json({ audioUrl: result.url, available: true });
     }
 
-    // 2. Fallback: Word Project (narração genérica PT-BR)
-    const wordProjectUrl = getWordProjectAudioUrl(bookCode, chapter);
-    if (wordProjectUrl) {
-      return NextResponse.json({
-        audioUrl: wordProjectUrl,
-        available: true,
-      });
-    }
-
+    // Sem áudio para esta versão
     return NextResponse.json({ audioUrl: null, available: false });
   } catch (error) {
     console.error("[API /bible/audio] Erro:", error);
