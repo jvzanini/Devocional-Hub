@@ -95,13 +95,16 @@ export function BibleModal({
 
       try {
         const res = await fetch(`/api/bible/content/${selectedVersion!.id}/${chapterId}`);
-        if (!res.ok) throw new Error(`Erro ${res.status}`);
         const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || `Erro ${res.status}`);
+        }
         setHtmlContent(data.content?.content || "");
         setCopyright(data.content?.copyright || "");
       } catch (err) {
-        console.error("[BibleModal] Erro ao carregar conteúdo:", err);
-        setError("Não foi possível carregar o texto. Tente novamente.");
+        const msg = err instanceof Error ? err.message : "Erro desconhecido";
+        console.error("[BibleModal] Erro ao carregar conteúdo:", msg);
+        setError(msg);
       } finally {
         setIsLoading(false);
       }
@@ -117,15 +120,11 @@ export function BibleModal({
     if (!isOpen || !selectedVersion) return;
 
     async function loadAudio() {
-      if (!selectedVersion!.audioAvailable || !selectedVersion!.audioBibleId) {
-        setAudioUrl(null);
-        setAudioAvailable(false);
-        return;
-      }
-
       const chapterId = `${bookCode}.${chapter}`;
+      // Usar audioBibleId da versão se disponível, senão passar o versionId para fallback no server
+      const audioId = selectedVersion!.audioBibleId || selectedVersion!.id;
       try {
-        const res = await fetch(`/api/bible/audio/${selectedVersion!.audioBibleId}/${chapterId}`);
+        const res = await fetch(`/api/bible/audio/${audioId}/${chapterId}`);
         const data = await res.json();
         setAudioUrl(data.audioUrl || null);
         setAudioAvailable(data.available || false);

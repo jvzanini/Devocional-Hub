@@ -58,7 +58,8 @@ export async function PUT(req: NextRequest) {
 
     const ext = photo.name.split(".").pop() || "jpg";
     const filename = `${session.user.id}.${ext}`;
-    const dir = path.join(process.cwd(), "storage", "photos");
+    const storageRoot = process.env.STORAGE_PATH || path.join(process.cwd(), "data");
+    const dir = path.join(storageRoot, "user-photos");
     await mkdir(dir, { recursive: true });
 
     // Clean up old photo files

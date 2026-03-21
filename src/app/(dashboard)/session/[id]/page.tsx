@@ -129,23 +129,75 @@ export default async function SessionPage({ params }: { params: Promise<{ id: st
   const aiSummaryDoc = s.documents.find(d => d.type === "AI_SUMMARY");
   const summaryText = s.summary || null;
 
-  // Preparar participantes para ParticipantLog
-  const participantsForLog = s.participants.map(p => {
+  // Preparar participantes para ParticipantLog — deduplicar por email/nome
+  const participantMap = new Map<string, {
+    id: string;
+    displayName: string;
+    isMember: boolean;
+    duration: number;
+    totalDuration: number;
+    entries: { id: string; joinTime: string; leaveTime: string; duration: number }[];
+  }>();
+
+  for (const p of s.participants) {
     const { displayName, isMember } = getParticipantDisplay(p.name, p.email);
-    return {
-      id: p.id,
-      displayName,
-      isMember,
-      duration: p.duration,
-      totalDuration: p.totalDuration || p.duration,
-      entries: (p.entries || []).map(e => ({
-        id: e.id,
-        joinTime: e.joinTime.toISOString(),
-        leaveTime: e.leaveTime.toISOString(),
-        duration: e.duration,
-      })),
-    };
-  });
+    const key = (p.email || displayName).toLowerCase();
+
+    const existing = participantMap.get(key);
+    if (existing) {
+      // Somar durações e merge entries
+      existing.totalDuration += p.totalDuration || p.duration;
+      existing.duration += p.duration;
+      if (p.entries && p.entries.length > 0) {
+        existing.entries.push(...p.entries.map(e => ({
+          id: e.id,
+          joinTime: e.joinTime.toISOString(),
+          leaveTime: e.leaveTime.toISOString(),
+          duration: e.duration,
+        })));
+      } else {
+        // Sem entries detalhadas — criar uma entry sintética
+        existing.entries.push({
+          id: p.id,
+          joinTime: p.joinTime.toISOString(),
+          leaveTime: p.leaveTime.toISOString(),
+          duration: p.duration,
+        });
+      }
+      // Promover para membro se qualquer registro for membro
+      if (isMember) existing.isMember = true;
+    } else {
+      const entries = (p.entries && p.entries.length > 0)
+        ? p.entries.map(e => ({
+            id: e.id,
+            joinTime: e.joinTime.toISOString(),
+            leaveTime: e.leaveTime.toISOString(),
+            duration: e.duration,
+          }))
+        : [{
+            id: p.id,
+            joinTime: p.joinTime.toISOString(),
+            leaveTime: p.leaveTime.toISOString(),
+            duration: p.duration,
+          }];
+
+      participantMap.set(key, {
+        id: p.id,
+        displayName,
+        isMember,
+        duration: p.duration,
+        totalDuration: p.totalDuration || p.duration,
+        entries,
+      });
+    }
+  }
+
+  // Ordenar entries por joinTime em cada participante
+  for (const p of participantMap.values()) {
+    p.entries.sort((a, b) => new Date(a.joinTime).getTime() - new Date(b.joinTime).getTime());
+  }
+
+  const participantsForLog = Array.from(participantMap.values());
 
   const formattedDate = formatSessionDate(s.date, s.startTime);
   const bookName = s.chapterRef ? `Livro de ${s.chapterRef.split(/\s+\d/)[0]}` : null;

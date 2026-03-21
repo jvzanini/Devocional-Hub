@@ -1561,8 +1561,10 @@ select.input-field {
   position: fixed;
   bottom: 28px;
   right: 28px;
-  z-index: 50;
+  z-index: 9999;
   width: 56px;
+  cursor: pointer;
+  pointer-events: auto;
   height: 56px;
   border-radius: 50%;
   background: var(--accent);

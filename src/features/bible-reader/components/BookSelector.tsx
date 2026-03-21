@@ -64,10 +64,22 @@ export function BookSelector({
     onClose();
   }
 
-  function renderBookList(books: typeof BIBLE_BOOKS, label: string) {
+  function renderBookList(books: typeof BIBLE_BOOKS, label: string, isFirst: boolean) {
     return (
-      <div className="bible-book-section">
-        <h4 className="bible-book-section-title">{label}</h4>
+      <div className="bible-book-section" style={{
+        marginBottom: 24,
+        paddingTop: isFirst ? 0 : 20,
+        borderTop: isFirst ? "none" : "2px solid var(--border, rgba(128,128,128,0.2))",
+      }}>
+        <h4 className="bible-book-section-title" style={{
+          fontSize: 14,
+          fontWeight: 700,
+          letterSpacing: "0.08em",
+          marginBottom: 12,
+          padding: "6px 10px",
+          borderRadius: 6,
+          background: "var(--surface-hover, rgba(128,128,128,0.08))",
+        }}>{label}</h4>
         {books.map((book) => {
           const isExpanded = expandedBook === book.code;
           const isSelected = book.code === selectedBookCode;
@@ -82,9 +94,10 @@ export function BookSelector({
                 onClick={() => handleBookClick(book.code)}
                 aria-expanded={isExpanded}
                 aria-label={`${book.name} — ${book.chapters} capítulos`}
+                style={{ fontSize: 15, padding: "10px 12px" }}
               >
                 <span className="bible-book-name">{book.name}</span>
-                <span className="bible-book-chapters-count">{book.chapters} cap.</span>
+                <span className="bible-book-chapters-count" style={{ fontSize: 13 }}>{book.chapters} cap.</span>
                 <svg
                   className={`bible-book-chevron ${isExpanded ? "bible-book-chevron--open" : ""}`}
                   width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
@@ -92,7 +105,11 @@ export function BookSelector({
                   <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
                 </svg>
               </button>
-              {isExpanded && (
+              <div style={{
+                overflow: "hidden",
+                maxHeight: isExpanded ? 500 : 0,
+                transition: "max-height 0.3s ease-in-out",
+              }}>
                 <div className="bible-book-chapters">
                   <ChapterSelector
                     totalChapters={book.chapters}
@@ -100,7 +117,7 @@ export function BookSelector({
                     onSelect={(ch) => handleChapterSelect(book.code, ch)}
                   />
                 </div>
-              )}
+              </div>
             </div>
           );
         })}
@@ -128,8 +145,8 @@ export function BookSelector({
           </button>
         </div>
         <div className="bible-selector-list bible-selector-list--books">
-          {renderBookList(atBooks, "Antigo Testamento")}
-          {renderBookList(ntBooks, "Novo Testamento")}
+          {renderBookList(atBooks, "Antigo Testamento", true)}
+          {renderBookList(ntBooks, "Novo Testamento", false)}
         </div>
       </div>
     </div>

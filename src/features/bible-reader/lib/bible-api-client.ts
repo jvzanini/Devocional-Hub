@@ -20,6 +20,8 @@ function getHeaders(): HeadersInit {
 
 async function apiFetch<T>(path: string): Promise<T> {
   const url = `${BIBLE_API_BASE}${path}`;
+  console.log(`[API.Bible] Requisição: ${url}`);
+
   const response = await fetch(url, {
     headers: getHeaders(),
     next: { revalidate: 86400 }, // cache 24h
@@ -31,6 +33,7 @@ async function apiFetch<T>(path: string): Promise<T> {
 
   if (!response.ok) {
     const body = await response.text().catch(() => "");
+    console.error(`[API.Bible] Erro ${response.status} para ${path}: ${body}`);
     throw new Error(`API.Bible erro ${response.status}: ${body}`);
   }
 

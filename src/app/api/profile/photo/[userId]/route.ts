@@ -6,7 +6,8 @@ import { existsSync } from "fs";
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ userId: string }> }) {
   const { userId } = await params;
 
-  const dir = path.join(process.cwd(), "storage", "photos");
+  const storageRoot = process.env.STORAGE_PATH || path.join(process.cwd(), "data");
+  const dir = path.join(storageRoot, "user-photos");
 
   // Procurar arquivo com qualquer extensão
   const extensions = ["jpg", "jpeg", "png", "webp", "gif"];
