@@ -148,7 +148,12 @@ export class AudioManager {
   setSpeed(speed: PlaybackSpeed): void {
     this.currentSpeed = speed;
     if (this.audio) {
-      this.audio.playbackRate = speed;
+      // On mobile, changing playbackRate can cause a brief stutter
+      // Use a microtask to let the browser settle
+      const audio = this.audio;
+      queueMicrotask(() => {
+        audio.playbackRate = speed;
+      });
     }
     try { localStorage.setItem("devhub-bible-speed", String(speed)); } catch {}
     this.notifyListeners();

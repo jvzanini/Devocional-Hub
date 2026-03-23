@@ -50,16 +50,52 @@ function normalizeForSearch(text: string): string {
  * Filtrar versículos: ocultar os que não contêm o texto e destacar os que contêm
  * Trabalha com span.bible-verse[data-verse] individuais
  */
+/**
+ * Remove todas as notas de rodapé (bible-footnote spans) do HTML.
+ * Usa parsing iterativo para lidar com spans aninhados corretamente.
+ */
+function stripFootnotes(html: string): string {
+  const pattern = /<span class="bible-footnote"[^>]*>/g;
+  let result = "";
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = pattern.exec(html)) !== null) {
+    result += html.slice(lastIndex, match.index);
+    // Contar spans aninhados para encontrar o </span> de fechamento correto
+    let depth = 1;
+    let pos = match.index + match[0].length;
+    while (depth > 0 && pos < html.length) {
+      const nextOpen = html.indexOf("<span", pos);
+      const nextClose = html.indexOf("</span>", pos);
+      if (nextClose === -1) break;
+      if (nextOpen !== -1 && nextOpen < nextClose) {
+        depth++;
+        pos = nextOpen + 5;
+      } else {
+        depth--;
+        pos = nextClose + 7;
+      }
+    }
+    lastIndex = pos;
+    pattern.lastIndex = pos;
+  }
+
+  result += html.slice(lastIndex);
+  return result;
+}
+
 function filterAndHighlight(html: string, query: string): string {
   if (!query || query.length < 2) return html;
 
   const normalizedQuery = normalizeForSearch(query);
   if (!normalizedQuery) return html;
 
+  // 1. Strip footnotes e section titles ANTES de qualquer matching
+  //    Isso impede que texto de footnotes polua a busca
   let processed = html;
-
-  // Remover títulos de seção durante busca
-  processed = processed.replace(/<h3 class="bible-section-title">[^<]*<\/h3>/g, "");
+  processed = stripFootnotes(processed);
+  processed = processed.replace(/<h3 class="bible-section-title">[\s\S]*?<\/h3>/g, "");
 
   const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const highlightRegex = new RegExp(`(${escaped})`, "gi");
@@ -71,9 +107,8 @@ function filterAndHighlight(html: string, query: string): string {
   let hasVisible = false;
 
   processed = processed.replace(verseRegex, (match, verseNum, innerContent) => {
-    // Extrair texto puro do versículo — remover footnotes antes de extrair texto
-    const withoutFootnotes = innerContent.replace(/<span class="bible-footnote"[\s\S]*?<\/span><\/span>/g, "");
-    const plainText = withoutFootnotes.replace(/<[^>]+>/g, "").replace(/\u00A0/g, " ");
+    // Extrair texto puro do versículo (footnotes já foram removidos)
+    const plainText = innerContent.replace(/<[^>]+>/g, "").replace(/\u00A0/g, " ");
     const normalizedPlain = normalizeForSearch(plainText);
 
     if (!normalizedPlain.includes(normalizedQuery)) {
@@ -81,13 +116,8 @@ function filterAndHighlight(html: string, query: string): string {
     }
 
     hasVisible = true;
-    // Ocultar footnotes em versículos visíveis durante busca
-    let highlighted = innerContent.replace(
-      /<span class="bible-footnote"[^>]*>[\s\S]*?<\/span><\/span>/g,
-      (footnoteMatch: string) => footnoteMatch.replace('class="bible-footnote"', 'class="bible-footnote" style="display:none"')
-    );
     // Destacar — aplicar apenas no texto fora de tags HTML
-    highlighted = highlighted.replace(/>([^<]+)/g, (_m: string, text: string) => {
+    const highlighted = innerContent.replace(/>([^<]+)/g, (_m: string, text: string) => {
       const h = text.replace(highlightRegex, '<mark style="background:var(--accent);color:#000;border-radius:2px;padding:0 2px">$1</mark>');
       return `>${h}`;
     });

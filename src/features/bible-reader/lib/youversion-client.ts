@@ -310,21 +310,22 @@ function transformYouVersionHtml(rawHtml: string): string {
     (_match, classStr: string) => {
       const classes = classStr.split(/\s+/);
       const semanticClasses = classes.filter((cls: string) =>
-        /^(s[0-9]|p|q[0-9]|m|ms[0-9]?|d|verse|label|content|heading|chapter-num|b|r|sp|li[0-9]?|bible-.+)$/.test(cls)
+        /^(s[0-9]?|p|q[0-9]?|m|ms[0-9]?|d|verse|label|content|heading|chapter-num|b|r|sp|li[0-9]?|note|f|bible-.+)$/.test(cls)
       );
       return `class="${semanticClasses.join(" ")}"`;
     }
   );
 
-  // 3. Transformar section headings: div.s1 → h3
+  // 3. Transformar section headings: div.s1 ou div.s → h3
+  //    NVT usa class="s" (sem número), outras versões usam class="s1"
   html = html.replace(
-    /<div\s+class="s[0-9]"[^>]*>\s*<span\s+class="heading"[^>]*>([\s\S]*?)<\/span>\s*<\/div>/gi,
+    /<div\s+class="s[0-9]?"[^>]*>\s*<span\s+class="heading"[^>]*>([\s\S]*?)<\/span>\s*<\/div>/gi,
     '<h3 class="bible-section-title">$1</h3>'
   );
 
   // Heading alternativo sem span.heading
   html = html.replace(
-    /<div\s+class="s[0-9]"[^>]*>([\s\S]*?)<\/div>/gi,
+    /<div\s+class="s[0-9]?"[^>]*>([\s\S]*?)<\/div>/gi,
     (_match, content: string) => {
       // Se já foi transformado em h3, pular
       if (content.includes("bible-section-title")) return content;
@@ -339,8 +340,9 @@ function transformYouVersionHtml(rawHtml: string): string {
   html = html.replace(/<div\s+class="p">/g, '<div class="bible-paragraph">');
   html = html.replace(/<div\s+class="m">/g, '<div class="bible-paragraph">');
 
-  // 5. Transformar poesia
+  // 5. Transformar poesia (q1 ou q sem número = nível 1, q2 = nível 2)
   html = html.replace(/<div\s+class="q1">/g, '<div class="bible-poetry-1">');
+  html = html.replace(/<div\s+class="q">/g, '<div class="bible-poetry-1">');
   html = html.replace(/<div\s+class="q2">/g, '<div class="bible-poetry-2">');
 
   // 6. Transformar verse spans: extrair número do versículo de data-usfm (ex: "ROM.12.1" → 1)

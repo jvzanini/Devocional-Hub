@@ -1,5 +1,38 @@
 # Devocional Hub — Diretrizes do Projeto
 
+## Bible Bubble v5.3 — Side Nav + Mobile Fixes (CONCLUÍDO — 2026-03-23)
+
+### Floating Side Navigation
+- Botões de navegação flutuantes (prev/next capítulo) nos lados esquerdo/direito do texto
+- Posicionados absolutamente no centro vertical do modal
+- Estilo circular com borda, hover opacity, desabilitado no primeiro/último capítulo
+- Coexistem com os botões de navegação do footer
+- Escondidos em mobile (< 768px) via CSS — tela muito estreita
+
+### Search Fix — Footnotes e Orphan Text
+- `filterAndHighlight` agora remove footnotes ANTES de fazer matching de versículos
+- Nova função `stripFootnotes()` com parsing iterativo para spans aninhados
+- Elimina textos órfãos de notas de rodapé ("sua fé;", "diz o Senhor.") nos resultados de busca
+- Também remove títulos de seção durante busca
+
+### Footnote UI Improvements
+- Ícone de footnote aumentado de 16x16 para 18x18
+- Adicionado margin-left: 4px para espaçamento do texto anterior
+- Tooltip agora abre ABAIXO do ícone (top: calc(100% + 4px)) ao invés de acima
+- max-width: min(300px, calc(100vw - 48px)) para prevenir overflow horizontal
+- Alinhado à esquerda (left: 0) ao invés de centralizado para evitar overflow
+
+### NVT Section Titles Fix
+- NVT usa class="s" (sem número) ao invés de class="s1" para headings
+- Regex de transformação atualizado: `s[0-9]` → `s[0-9]?` para aceitar ambos
+- Também tratado class="q" (poesia sem número) como bible-poetry-1
+
+### Mobile Fixes
+- Pinch-to-zoom desabilitado no modal (touch-action: pan-y)
+- Seletores centralizados em mobile (padding-left: 0, justify-content: center)
+- Audio speed stutter: usa queueMicrotask para mudar playbackRate
+- Body padding horizontal do modal removido em mobile (< 768px)
+
 ## Bible Bubble v5 — YouVersion + AA + Audio Fix (CONCLUÍDO — 2026-03-23)
 
 ### Formatação YouVersion (sem IA)

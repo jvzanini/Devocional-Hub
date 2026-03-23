@@ -1712,11 +1712,47 @@ select.input-field {
   flex: 1;
   overflow-y: auto;
   scroll-behavior: smooth;
+  padding-left: 48px;
+  padding-right: 48px;
+}
+
+/* ─── Side Navigation Buttons ───────────────────── */
+.bible-side-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 5;
+  background: var(--surface);
+  border: 1px solid var(--border, rgba(128,128,128,0.15));
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+  color: var(--text-secondary);
+}
+.bible-side-nav:hover {
+  opacity: 1;
+  color: var(--text);
+}
+.bible-side-nav--left {
+  left: 8px;
+}
+.bible-side-nav--right {
+  right: 8px;
+}
+.bible-side-nav:disabled {
+  opacity: 0.2;
+  cursor: not-allowed;
 }
 
 /* ─── Content ────────────────────────────────────── */
 .bible-content {
-  padding: 24px 32px;
+  padding: 24px 8px;
   min-height: 200px;
 }
 .bible-content-title {
@@ -1831,20 +1867,25 @@ select.input-field {
 .bible-footnote-icon {
   display: inline-flex;
   align-items: center;
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   color: var(--text-secondary);
   opacity: 0.6;
   vertical-align: middle;
-  margin: 0 2px;
+  margin-left: 4px;
+  margin-right: 2px;
   cursor: pointer;
+}
+.bible-footnote-icon svg {
+  width: 18px;
+  height: 18px;
 }
 .bible-footnote-content {
   display: none;
   position: absolute;
-  bottom: calc(100% + 6px);
-  left: 50%;
-  transform: translateX(-50%);
+  top: calc(100% + 4px);
+  left: 0;
+  right: auto;
   background: var(--surface);
   color: var(--text);
   border: 1px solid var(--border);
@@ -1853,7 +1894,7 @@ select.input-field {
   font-size: 13px;
   font-weight: 400;
   line-height: 1.5;
-  max-width: 300px;
+  max-width: min(300px, calc(100vw - 48px));
   min-width: 120px;
   width: max-content;
   z-index: 100;
@@ -2774,6 +2815,21 @@ select.input-field {
   }
   .bible-modal-body {
     -webkit-overflow-scrolling: touch;
+    padding-left: 0;
+    padding-right: 0;
+  }
+  .bible-content {
+    padding: 20px 16px;
+  }
+  .bible-side-nav {
+    display: none;
+  }
+  .bible-selector-overlay {
+    padding-left: 0;
+    justify-content: center;
+  }
+  .bible-selector-overlay--version {
+    padding-left: 0;
   }
   .day-summary-popover {
     z-index: 60;
