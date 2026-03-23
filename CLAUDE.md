@@ -151,7 +151,20 @@ SUBSCRIBER (40) — Assinante (futuro)
 MEMBER (20) — Participante regular
 ```
 
-## Rotina de Desenvolvimento (OBRIGATÓRIO)
+## Processo de Desenvolvimento (OBRIGATÓRIO)
+
+### Fluxo padrão
+1. Receber demanda → Planejar (Etapa → Sub-etapa → Tasks)
+2. Implementar tasks de uma sub-etapa
+3. **Testar com Playwright** ao final de cada etapa:
+   - Login na plataforma com credenciais do .env (ADMIN_EMAIL/ADMIN_PASSWORD)
+   - Navegar até a feature implementada
+   - Verificar visualmente (screenshots) se está conforme solicitado
+   - Testar interações (cliques, hover, scroll)
+4. Se testes falharem → corrigir antes de avançar
+5. **Commit por etapa** (não por task individual)
+6. **Deploy SOMENTE ao final de TODAS as etapas**
+7. Deploy assistido: acompanhar CI/CD, verificar HTTP 200, só chamar o usuário quando tudo estiver OK
 
 ### Estrutura de toda demanda
 Toda solicitação deve ser organizada antes de implementar:
@@ -161,19 +174,11 @@ Etapa (agrupamento macro)
        └── Tasks (tarefas individuais implementáveis)
 ```
 
-### Ciclo de implementação
-1. **Planejar** — Organizar em Etapas → Sub-etapas → Tasks
-2. **Implementar** — Executar tasks de uma sub-etapa
-3. **Testar** — Ao finalizar cada etapa:
-   - Backend: `tsc --noEmit` + testes via curl
-   - Frontend: Playwright (`npx playwright test`) para validar navegação e UI
-4. **Corrigir** — Se testes falharem, corrigir antes de avançar
-5. **Deploy** — Commit + push + acompanhar CI/CD até sucesso
-6. **Documentar** — Atualizar CLAUDE.md, GitHub, PRD
-
 ### Testes com Playwright (https://github.com/microsoft/playwright)
 - Usado para testes de frontend automatizados
 - Validar: navegação, componentes, interações do usuário
+- Login com credenciais do .env (ADMIN_EMAIL/ADMIN_PASSWORD)
+- Screenshots para validação visual
 - Rodar antes de cada deploy de features de frontend
 - Configuração: `npx playwright install` + `npx playwright test`
 

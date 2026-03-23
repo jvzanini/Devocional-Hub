@@ -1720,7 +1720,7 @@ select.input-field {
   min-height: 200px;
 }
 .bible-content-title {
-  font-size: 26px;
+  font-size: 28px;
   font-weight: 700;
   color: var(--accent);
   margin: 0 0 20px;
@@ -1755,8 +1755,8 @@ select.input-field {
 .bible-content-text .bible-section-title {
   display: block;
   font-weight: 700;
-  font-size: 20px;
-  color: var(--text-secondary);
+  font-size: 22px;
+  color: #000000;
   margin: 32px 0 10px;
   line-height: 1.4;
 }
@@ -1829,12 +1829,15 @@ select.input-field {
   cursor: pointer;
 }
 .bible-footnote-icon {
-  font-size: 7px;
+  display: inline-flex;
+  align-items: center;
+  width: 16px;
+  height: 16px;
   color: var(--text-secondary);
-  vertical-align: super;
-  line-height: 1;
   opacity: 0.6;
-  margin: 0 1px;
+  vertical-align: middle;
+  margin: 0 2px;
+  cursor: pointer;
 }
 .bible-footnote-content {
   display: none;
@@ -1842,19 +1845,19 @@ select.input-field {
   bottom: calc(100% + 6px);
   left: 50%;
   transform: translateX(-50%);
-  background: var(--surface, #1a1a1c);
+  background: var(--surface);
   color: var(--text);
-  border: 1px solid var(--border, rgba(128,128,128,0.2));
+  border: 1px solid var(--border);
   border-radius: 8px;
-  padding: 8px 12px;
+  padding: 10px 14px;
   font-size: 13px;
   font-weight: 400;
   line-height: 1.5;
-  max-width: 280px;
+  max-width: 300px;
   min-width: 120px;
   width: max-content;
   z-index: 100;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.2);
   white-space: normal;
   pointer-events: none;
 }
@@ -1898,7 +1901,7 @@ select.input-field {
 .bible-navigation {
   display: flex;
   justify-content: space-between;
-  padding: 8px 10px;
+  padding: 4px 10px;
   border-top: 1px solid var(--border, rgba(128,128,128,0.15));
 }
 .bible-nav-btn {
@@ -1931,7 +1934,7 @@ select.input-field {
 
 /* ─── Audio Player ───────────────────────────────── */
 .bible-player {
-  padding: 10px 10px 24px;
+  padding: 4px 10px 24px;
 }
 .bible-player--disabled {
   padding: 10px 16px;
@@ -2982,6 +2985,11 @@ select.input-field {
 [data-theme="dark"] .planning-theme-group-header {
   background: var(--surface-hover);
   border-left-color: var(--accent);
+}
+
+/* Bible section title em dark */
+[data-theme="dark"] .bible-content-text .bible-section-title {
+  color: #ffffff;
 }
 
 /* Bible selector backdrop em dark */

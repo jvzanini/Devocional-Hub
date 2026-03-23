@@ -278,7 +278,7 @@ function transformFootnotes(html: string): string {
           const noteText = withoutLabel.replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
 
           if (noteText) {
-            result += `<span class="bible-footnote" tabindex="0"><span class="bible-footnote-icon">&#9679;</span><span class="bible-footnote-content">${noteText}</span></span>`;
+            result += `<span class="bible-footnote" tabindex="0"><span class="bible-footnote-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14l4 4V4c0-1.1-.9-2-2-2zm0 15.17L18.83 16H4V4h16v13.17z"/><circle cx="8" cy="10" r="1"/><circle cx="12" cy="10" r="1"/><circle cx="16" cy="10" r="1"/></svg></span><span class="bible-footnote-content">${noteText}</span></span>`;
           }
           pos = nextClose + 7; // length of "</span>"
         } else {

@@ -56,6 +56,11 @@ function filterAndHighlight(html: string, query: string): string {
   const normalizedQuery = normalizeForSearch(query);
   if (!normalizedQuery) return html;
 
+  let processed = html;
+
+  // Remover títulos de seção durante busca
+  processed = processed.replace(/<h3 class="bible-section-title">[^<]*<\/h3>/g, "");
+
   const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const highlightRegex = new RegExp(`(${escaped})`, "gi");
 
@@ -65,9 +70,10 @@ function filterAndHighlight(html: string, query: string): string {
   const verseRegex = /<span class="bible-verse" data-verse="(\d+)"[^>]*>((?:(?!<span class="bible-verse")[\s\S])*?)<\/span>/g;
   let hasVisible = false;
 
-  const processed = html.replace(verseRegex, (match, verseNum, innerContent) => {
-    // Extrair texto puro do versículo
-    const plainText = innerContent.replace(/<[^>]+>/g, "").replace(/\u00A0/g, " ");
+  processed = processed.replace(verseRegex, (match, verseNum, innerContent) => {
+    // Extrair texto puro do versículo — remover footnotes antes de extrair texto
+    const withoutFootnotes = innerContent.replace(/<span class="bible-footnote"[\s\S]*?<\/span><\/span>/g, "");
+    const plainText = withoutFootnotes.replace(/<[^>]+>/g, "").replace(/\u00A0/g, " ");
     const normalizedPlain = normalizeForSearch(plainText);
 
     if (!normalizedPlain.includes(normalizedQuery)) {
@@ -75,8 +81,13 @@ function filterAndHighlight(html: string, query: string): string {
     }
 
     hasVisible = true;
+    // Ocultar footnotes em versículos visíveis durante busca
+    let highlighted = innerContent.replace(
+      /<span class="bible-footnote"[^>]*>[\s\S]*?<\/span><\/span>/g,
+      (footnoteMatch: string) => footnoteMatch.replace('class="bible-footnote"', 'class="bible-footnote" style="display:none"')
+    );
     // Destacar — aplicar apenas no texto fora de tags HTML
-    const highlighted = innerContent.replace(/>([^<]+)/g, (_m: string, text: string) => {
+    highlighted = highlighted.replace(/>([^<]+)/g, (_m: string, text: string) => {
       const h = text.replace(highlightRegex, '<mark style="background:var(--accent);color:#000;border-radius:2px;padding:0 2px">$1</mark>');
       return `>${h}`;
     });
