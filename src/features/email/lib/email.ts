@@ -5,14 +5,22 @@
 import nodemailer from "nodemailer";
 
 function getTransporter() {
+  const host = process.env.SMTP_HOST || "smtp.gmail.com";
+  const port = Number(process.env.SMTP_PORT || 587);
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASS;
+
+  console.log(`[Email] SMTP config: host=${host}, port=${port}, user=${user ? user.slice(0, 4) + "***" : "NÃO DEFINIDO"}, pass=${pass ? "***configurado***" : "NÃO DEFINIDO"}`);
+
+  if (!user || !pass) {
+    console.error("[Email] ATENÇÃO: SMTP_USER ou SMTP_PASS não configurados! Emails não serão enviados.");
+  }
+
   return nodemailer.createTransport({
-    host: process.env.SMTP_HOST || "smtp.gmail.com",
-    port: Number(process.env.SMTP_PORT || 587),
-    secure: false,
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
-    },
+    host,
+    port,
+    secure: port === 465,
+    auth: { user, pass },
   });
 }
 
@@ -79,12 +87,14 @@ export async function sendInviteEmail(params: {
     </p>
   `;
 
-  await transporter.sendMail({
+  console.log(`[Email] Enviando convite para ${params.to}...`);
+  const info = await transporter.sendMail({
     from: `"Devocional Hub" <${process.env.SMTP_USER}>`,
     to: params.to,
     subject: "Convite para o Devocional Hub",
     html: EMAIL_WRAPPER(content),
   });
+  console.log(`[Email] Convite enviado com sucesso para ${params.to}. MessageId: ${info.messageId}`);
 }
 
 export async function sendPasswordResetEmail(params: {
@@ -117,10 +127,12 @@ export async function sendPasswordResetEmail(params: {
     </p>
   `;
 
-  await transporter.sendMail({
+  console.log(`[Email] Enviando redefinição de senha para ${params.to}...`);
+  const info = await transporter.sendMail({
     from: `"Devocional Hub" <${process.env.SMTP_USER}>`,
     to: params.to,
     subject: "Redefinição de Senha — Devocional Hub",
     html: EMAIL_WRAPPER(content),
   });
+  console.log(`[Email] Redefinição de senha enviada com sucesso para ${params.to}. MessageId: ${info.messageId}`);
 }

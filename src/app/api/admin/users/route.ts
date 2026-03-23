@@ -36,8 +36,8 @@ export async function POST(request: Request) {
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) return NextResponse.json({ error: "Email já cadastrado" }, { status: 409 });
 
-  // Validar role
-  const validRoles = ["SUPER_ADMIN", "ADMIN", "SUBSCRIBER_VIP", "SUBSCRIBER", "MEMBER"];
+  // Validar role (SUPER_ADMIN não pode ser criado pelo formulário)
+  const validRoles = ["ADMIN", "SUBSCRIBER_VIP", "SUBSCRIBER", "MEMBER"];
   const userRole = role && validRoles.includes(role) ? role : "MEMBER";
 
   // Modo 1: Criação com senha (sem envio de convite)
@@ -97,15 +97,23 @@ export async function PUT(request: Request) {
   if (!(await isAdmin())) return NextResponse.json({ error: "Acesso negado" }, { status: 403 });
 
   const body = await request.json();
-  const { id, name, church, team, subTeam, active } = body;
+  const { id, name, church, team, subTeam, active, role, email, newPassword } = body;
   if (!id) return NextResponse.json({ error: "id obrigatório" }, { status: 400 });
 
   const data: Record<string, unknown> = {};
   if (name !== undefined) data.name = name;
+  if (email !== undefined) data.email = email;
   if (church !== undefined) data.church = church;
   if (team !== undefined) data.team = team;
   if (subTeam !== undefined) data.subTeam = subTeam;
   if (active !== undefined) data.active = active;
+  if (role !== undefined) data.role = role;
+
+  // Redefinir senha (admin)
+  if (newPassword) {
+    if (newPassword.length < 6) return NextResponse.json({ error: "Senha deve ter no mínimo 6 caracteres" }, { status: 400 });
+    data.password = await bcrypt.hash(newPassword, 12);
+  }
 
   const user = await prisma.user.update({
     where: { id },

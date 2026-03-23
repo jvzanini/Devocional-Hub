@@ -144,6 +144,8 @@ export default function AdminPage() {
   const [editingUser, setEditingUser] = useState<string | null>(null);
   const [editUserData, setEditUserData] = useState<Partial<User & { role: string; email: string }>>({});
   const [newZoomId, setNewZoomId] = useState("");
+  const [resetPassword, setResetPassword] = useState("");
+  const [resetPasswordConfirm, setResetPasswordConfirm] = useState("");
 
   // Reading plan form
   const [selectedBook, setSelectedBook] = useState<string>("");
@@ -302,7 +304,7 @@ export default function AdminPage() {
       team: inviteTeam, subTeam: inviteSubTeam, zoomIdentifiers,
       role: inviteRole,
     };
-    if (hasPassword) body.password = invitePassword;
+    if (hasPassword) { body.password = invitePassword; body.confirmPassword = invitePasswordConfirm; }
     if (inviteWhatsApp) body.whatsapp = inviteWhatsApp.replace(/\D/g, "");
 
     const res = await fetch("/api/admin/users", {
@@ -323,8 +325,11 @@ export default function AdminPage() {
   }
 
   async function saveUserEdit(id: string) {
-    await fetch("/api/admin/users", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, ...editUserData }) });
-    setEditingUser(null); setEditUserData({});
+    if (resetPassword && resetPassword !== resetPasswordConfirm) { showMsg("As senhas não coincidem"); return; }
+    const payload: Record<string, unknown> = { id, ...editUserData };
+    if (resetPassword) payload.newPassword = resetPassword;
+    await fetch("/api/admin/users", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+    setEditingUser(null); setEditUserData({}); setResetPassword(""); setResetPasswordConfirm("");
     loadData(); showMsg("Usuário atualizado!");
   }
 
@@ -772,7 +777,7 @@ export default function AdminPage() {
                 <input className="input-field" value={inviteTeam} onChange={e => setInviteTeam(e.target.value)} placeholder="Equipe" />
                 <input className="input-field" value={inviteSubTeam} onChange={e => setInviteSubTeam(e.target.value)} placeholder="SubEquipe" />
                 <select className="input-field" value={inviteRole} onChange={e => setInviteRole(e.target.value)} style={{ cursor: "pointer" }}>
-                  {ALL_ROLES.map(r => (
+                  {ALL_ROLES.filter(r => r.value !== "SUPER_ADMIN").map(r => (
                     <option key={r.value} value={r.value}>{r.label}</option>
                   ))}
                 </select>
@@ -879,8 +884,19 @@ export default function AdminPage() {
                           <IconPlus size={14} />
                         </button>
                       </div>
+                      {/* Redefinir senha */}
+                      <div style={{ marginTop: 4 }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", marginBottom: 6 }}>Redefinir Senha</div>
+                        <div className="admin-grid-2">
+                          <input className="input-field" type="password" value={resetPassword} onChange={e => setResetPassword(e.target.value)} placeholder="Nova senha" />
+                          <input className="input-field" type="password" value={resetPasswordConfirm} onChange={e => setResetPasswordConfirm(e.target.value)} placeholder="Confirmar nova senha" />
+                        </div>
+                        {resetPassword && resetPasswordConfirm && resetPassword !== resetPasswordConfirm && (
+                          <div style={{ fontSize: 13, color: "var(--error)", marginTop: 4 }}>As senhas não coincidem</div>
+                        )}
+                      </div>
                       <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-                        <button className="btn-ghost" onClick={() => { setEditingUser(null); setEditUserData({}); }}>Cancelar</button>
+                        <button className="btn-ghost" onClick={() => { setEditingUser(null); setEditUserData({}); setResetPassword(""); setResetPasswordConfirm(""); }}>Cancelar</button>
                         <button className="btn-primary" onClick={() => saveUserEdit(u.id)}>Salvar</button>
                       </div>
                     </div>
