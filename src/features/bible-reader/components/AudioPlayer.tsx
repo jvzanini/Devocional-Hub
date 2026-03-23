@@ -13,6 +13,8 @@ interface AudioPlayerProps {
   onCollapse?: () => void;
   pendingSeekTime?: number | null;
   onSeekHandled?: () => void;
+  autoPlay?: boolean;
+  onAutoPlayHandled?: () => void;
 }
 
 function formatTime(seconds: number): string {
@@ -30,6 +32,8 @@ export function AudioPlayer({
   onCollapse,
   pendingSeekTime,
   onSeekHandled,
+  autoPlay,
+  onAutoPlayHandled,
 }: AudioPlayerProps) {
   const [state, setState] = useState<AudioState>({
     isPlaying: false, isPaused: true, currentTime: 0,
@@ -47,12 +51,17 @@ export function AudioPlayer({
     return () => { unsub(); unsubEnd(); };
   }, [onNext]);
 
-  // Carregar áudio SEM autoplay
+  // Carregar áudio (autoplay quando vindo de transição contínua)
   useEffect(() => {
     if (!audioUrl || audioUrl === loadedUrlRef.current) return;
     loadedUrlRef.current = audioUrl;
-    managerRef.current.loadOnly(audioUrl);
-  }, [audioUrl]);
+    if (autoPlay) {
+      managerRef.current.loadAndPlay(audioUrl);
+      onAutoPlayHandled?.();
+    } else {
+      managerRef.current.loadOnly(audioUrl);
+    }
+  }, [audioUrl, autoPlay, onAutoPlayHandled]);
 
   // Seek para posição salva
   useEffect(() => {

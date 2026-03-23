@@ -4,6 +4,8 @@ export type FontSizeLevel = "normal" | "medium" | "large";
 
 interface BibleHeaderProps {
   bookName: string;
+  bookAbbr?: string;
+  isMobile?: boolean;
   chapter: number;
   versionAbbr: string;
   onBookClick: () => void;
@@ -16,6 +18,8 @@ interface BibleHeaderProps {
 
 export function BibleHeader({
   bookName,
+  bookAbbr,
+  isMobile,
   chapter,
   versionAbbr,
   onBookClick,
@@ -25,6 +29,9 @@ export function BibleHeader({
   fontSize = "normal",
   onFontSizeToggle,
 }: BibleHeaderProps) {
+  const displayBookName = isMobile && bookName.length > 12 ? (bookAbbr || bookName.substring(0, 3)) : bookName;
+  const displayVersion = isMobile && versionAbbr.length > 6 ? versionAbbr.substring(0, 5) : versionAbbr;
+
   return (
     <div className="bible-header">
       <div className="bible-header-left">
@@ -33,8 +40,10 @@ export function BibleHeader({
           onClick={onBookClick}
           aria-label={`${bookName} ${chapter} — clique para trocar`}
         >
-          {bookName} {chapter}
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {displayBookName} {chapter}
+          </span>
+          <svg style={{ flexShrink: 0 }} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
           </svg>
         </button>
@@ -44,8 +53,10 @@ export function BibleHeader({
           onClick={onVersionClick}
           aria-label={`Versão ${versionAbbr} — clique para trocar`}
         >
-          {versionAbbr}
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {displayVersion}
+          </span>
+          <svg style={{ flexShrink: 0 }} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
           </svg>
         </button>

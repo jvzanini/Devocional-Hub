@@ -105,6 +105,9 @@ export function BibleModal({
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [pendingSeekTime, setPendingSeekTime] = useState<number | null>(null);
   const [fontSize, setFontSize] = useState<FontSizeLevel>("normal");
+  const [autoPlayNext, setAutoPlayNext] = useState(false);
+
+  const preloadCacheRef = useRef<Record<string, { text?: string; audioUrl?: string }>>({});
 
   // Restaurar tamanho da fonte salvo
   useEffect(() => {
@@ -175,6 +178,12 @@ export function BibleModal({
       setHtmlContent(null);
 
       const chapterId = `${bookCode}.${chapter}`;
+      const cached = preloadCacheRef.current[chapterId];
+      if (cached?.text) {
+        setHtmlContent(cached.text);
+        setIsLoading(false);
+        return;
+      }
       try {
         const res = await fetch(`/api/bible/content/${selectedVersion!.id}/${chapterId}`);
         const data = await res.json();
@@ -211,6 +220,11 @@ export function BibleModal({
 
     async function loadAudio() {
       const chapterId = `${bookCode}.${chapter}`;
+      const cached = preloadCacheRef.current[chapterId];
+      if (cached?.audioUrl) {
+        setAudioUrl(cached.audioUrl);
+        return;
+      }
       try {
         const res = await fetch(`/api/bible/audio/${selectedVersion!.id}/${chapterId}`);
         const data = await res.json();
@@ -222,6 +236,47 @@ export function BibleModal({
 
     loadAudio();
   }, [isOpen, selectedVersion, bookCode, chapter]);
+
+  // Preload adjacent chapters
+  useEffect(() => {
+    if (!isOpen || !selectedVersion || isLoading) return;
+
+    const preload = async (bc: string, ch: number) => {
+      const key = `${bc}.${ch}`;
+      if (preloadCacheRef.current[key]) return;
+      preloadCacheRef.current[key] = {};
+      try {
+        const [textRes, audioRes] = await Promise.allSettled([
+          fetch(`/api/bible/content/${selectedVersion.id}/${key}`),
+          selectedVersion.audioAvailable ? fetch(`/api/bible/audio/${selectedVersion.id}/${key}`) : Promise.resolve(null),
+        ]);
+        if (textRes.status === "fulfilled" && textRes.value?.ok) {
+          const data = await textRes.value.json();
+          preloadCacheRef.current[key].text = data.content?.content;
+        }
+        if (audioRes.status === "fulfilled" && audioRes.value?.ok) {
+          const data = await (audioRes.value as Response).json();
+          preloadCacheRef.current[key].audioUrl = data.audioUrl;
+        }
+      } catch {}
+    };
+
+    const currentBook = findBookByCode(bookCode);
+    const currentBookIndex = BIBLE_BOOKS.findIndex((b) => b.code === bookCode);
+
+    if (currentBook && chapter < currentBook.chapters) {
+      preload(bookCode, chapter + 1);
+    } else if (currentBookIndex < BIBLE_BOOKS.length - 1) {
+      preload(BIBLE_BOOKS[currentBookIndex + 1].code, 1);
+    }
+
+    if (chapter > 1) {
+      preload(bookCode, chapter - 1);
+    } else if (currentBookIndex > 0) {
+      const prevBook = BIBLE_BOOKS[currentBookIndex - 1];
+      preload(prevBook.code, prevBook.chapters);
+    }
+  }, [isOpen, selectedVersion, bookCode, chapter, isLoading]);
 
   // Monitorar estado do áudio (playing + speed + loading)
   const [audioSpeed, setAudioSpeed] = useState(1);
@@ -365,6 +420,11 @@ export function BibleModal({
     }
   }, [bookCode, chapter]);
 
+  const handleChapterEndAutoPlay = useCallback(() => {
+    setAutoPlayNext(true);
+    handleNextChapter();
+  }, [handleNextChapter]);
+
   if (!isOpen) return null;
 
   const currentBook = findBookByCode(bookCode);
@@ -422,6 +482,8 @@ export function BibleModal({
 
         <BibleHeader
           bookName={bookName}
+          bookAbbr={currentBook?.abbr}
+          isMobile={isMobile}
           chapter={chapter}
           versionAbbr={selectedVersion?.abbreviation || "..."}
           onBookClick={() => setActiveSelector(activeSelector === "book" ? null : "book")}
@@ -512,10 +574,12 @@ export function BibleModal({
                 audioAvailable={audioAvailable}
                 copyright={copyright}
                 onPrevious={handlePreviousChapter}
-                onNext={handleNextChapter}
+                onNext={handleChapterEndAutoPlay}
                 onCollapse={() => setIsPlayerCollapsed(true)}
                 pendingSeekTime={pendingSeekTime}
                 onSeekHandled={() => setPendingSeekTime(null)}
+                autoPlay={autoPlayNext}
+                onAutoPlayHandled={() => setAutoPlayNext(false)}
               />
             </div>
           )}

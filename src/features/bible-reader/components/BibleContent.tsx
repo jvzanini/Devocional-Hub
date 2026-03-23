@@ -129,55 +129,89 @@ function extractVerses(html: string): Map<string, { originalHtml: string; cleanT
   return verses;
 }
 
+const ACCENT_VARIANTS: Record<string, string> = {
+  'a': 'aàáâãäåā', 'e': 'eèéêëē', 'i': 'iìíîïī',
+  'o': 'oòóôõöō', 'u': 'uùúûüū', 'c': 'cç', 'n': 'nñ',
+};
+
+function buildAccentInsensitiveRegex(query: string): RegExp {
+  const pattern = query.split('').map(ch => {
+    const lower = ch.toLowerCase();
+    const variants = ACCENT_VARIANTS[lower];
+    if (variants) return `[${variants}${variants.toUpperCase()}]`;
+    return ch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }).join('');
+  return new RegExp(`(${pattern})`, 'gi');
+}
+
 function filterAndHighlight(html: string, query: string): string {
   if (!query || query.length < 2) return html;
 
   const normalizedQuery = normalizeForSearch(query);
   if (!normalizedQuery) return html;
 
-  const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const highlightRegex = new RegExp(`(${escaped})`, "gi");
-
-  // Extrair todos os versículos do HTML original
   const verses = extractVerses(html);
-
   if (verses.size === 0) return html;
 
-  // Filtrar e destacar versículos que correspondem à busca
-  let hasVisible = false;
-  const resultParts: string[] = [];
-
-  verses.forEach(({ originalHtml, cleanText }, verseNum) => {
-    const normalizedPlain = normalizeForSearch(cleanText);
-
-    if (!normalizedPlain.includes(normalizedQuery)) {
-      // Ocultar versículo — usar o HTML original mas com display:none
-      resultParts.push(
-        originalHtml.replace(
-          /^<span class="bible-verse"/,
-          '<span class="bible-verse" style="display:none"'
-        )
-      );
-    } else {
-      hasVisible = true;
-      // Destacar — aplicar highlight no texto fora de tags HTML
-      // Usar o HTML original (com footnotes visíveis)
-      const highlighted = originalHtml.replace(/>([^<]+)/g, (_m: string, text: string) => {
-        const h = text.replace(
-          highlightRegex,
-          '<mark style="background:var(--accent);color:#000;border-radius:2px;padding:0 2px">$1</mark>'
-        );
-        return `>${h}`;
-      });
-      resultParts.push(highlighted);
+  const matchingVerses = new Set<string>();
+  verses.forEach(({ cleanText }, verseNum) => {
+    if (normalizeForSearch(cleanText).includes(normalizedQuery)) {
+      matchingVerses.add(verseNum);
     }
   });
 
-  if (!hasVisible) {
+  if (matchingVerses.size === 0) {
     return '<p style="color:var(--text-secondary);text-align:center;padding:20px 0">Nenhum versículo encontrado.</p>';
   }
 
-  return resultParts.join("");
+  const highlightRegex = buildAccentInsensitiveRegex(query);
+  const openTagPattern = /<span class="bible-verse" data-verse="(\d+)"([^>]*)>/g;
+  let result = "";
+  let lastIndex = 0;
+  let m: RegExpExecArray | null;
+
+  while ((m = openTagPattern.exec(html)) !== null) {
+    const verseNum = m[1];
+    const spanStart = m.index;
+    const afterOpenTag = m.index + m[0].length;
+
+    let depth = 1;
+    let pos = afterOpenTag;
+    while (depth > 0 && pos < html.length) {
+      const nextOpen = html.indexOf("<span", pos);
+      const nextClose = html.indexOf("</span>", pos);
+      if (nextClose === -1) break;
+      if (nextOpen !== -1 && nextOpen < nextClose) {
+        depth++;
+        pos = nextOpen + 5;
+      } else {
+        depth--;
+        if (depth === 0) {
+          const spanEnd = nextClose + 7;
+          const fullVerse = html.slice(spanStart, spanEnd);
+
+          result += html.slice(lastIndex, spanStart);
+
+          if (matchingVerses.has(verseNum)) {
+            const highlighted = fullVerse.replace(/>([^<]+)/g, (_, text) => {
+              return `>${text.replace(highlightRegex, '<mark style="background:var(--accent);color:#000;border-radius:2px;padding:0 2px">$1</mark>')}`;
+            });
+            result += highlighted;
+          } else {
+            result += fullVerse.replace(
+              '<span class="bible-verse"',
+              '<span class="bible-verse" style="display:none"'
+            );
+          }
+          lastIndex = spanEnd;
+        }
+        pos = nextClose + 7;
+      }
+    }
+  }
+
+  result += html.slice(lastIndex);
+  return result;
 }
 
 export function BibleContent({

@@ -46,9 +46,10 @@ export default async function DashboardPage() {
   const zoomMeetingId = settingsMap.zoomMeetingId || "";
   const zoomLink = settingsMap.zoomLink || (zoomMeetingId ? `https://zoom.us/j/${zoomMeetingId}` : "");
 
-  const userName = session.user?.name || "usuário";
-  const greetingName = getGreetingName(userName);
   const userId = (session.user as { id?: string })?.id;
+  const dbUser = userId ? await prisma.user.findUnique({ where: { id: userId }, select: { name: true } }) : null;
+  const userName = dbUser?.name || session.user?.name || "usuário";
+  const greetingName = getGreetingName(userName);
 
   const recentCompleted = sessions.find(s =>
     s.status === "COMPLETED" &&

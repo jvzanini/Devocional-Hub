@@ -1790,9 +1790,9 @@ select.input-field {
 .bible-footnote-content {
   display: none;
   position: absolute;
-  top: calc(100% + 4px);
-  left: auto;
-  right: 0;
+  bottom: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
   background: var(--surface);
   color: var(--text);
   border: 1px solid var(--border);
@@ -2122,7 +2122,12 @@ select.input-field {
   padding-left: 200px;
 }
 .bible-selector-overlay--mobile {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
   align-items: flex-end;
+  justify-content: center;
 }
 .bible-selector-backdrop {
   position: absolute;
@@ -2148,7 +2153,11 @@ select.input-field {
   width: 100%;
   border-radius: var(--radius-xl) var(--radius-xl) 0 0;
   max-height: 80vh;
+  max-height: 80dvh;
   border-bottom: 3px solid var(--border, rgba(128,128,128,0.2));
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 .bible-selector--books.bible-selector--dropdown {
   width: 420px;
@@ -2184,10 +2193,16 @@ select.input-field {
 }
 .bible-selector-list {
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   flex: 1;
+  min-height: 0;
   padding: 8px;
 }
 .bible-selector-list--books {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  flex: 1;
+  min-height: 0;
   padding: 8px 12px;
 }
 
@@ -2578,21 +2593,34 @@ select.input-field {
     font-size: 16px;
     line-height: 1.75;
   }
+  .bible-header {
+    padding: 10px 12px;
+    gap: 4px;
+  }
+  .bible-header-left {
+    flex: 1;
+    min-width: 0;
+    gap: 4px;
+  }
+  .bible-header-right {
+    gap: 2px;
+  }
+  .bible-header-icon-btn {
+    width: 32px;
+    height: 32px;
+  }
   .bible-header-btn {
     font-size: 13px;
     padding: 5px 10px;
   }
   .bible-header-btn--book {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    max-width: 140px;
+    max-width: none;
+    flex: 1;
+    min-width: 0;
   }
   .bible-header-btn--version {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    max-width: 80px;
+    max-width: none;
+    flex-shrink: 0;
   }
   .bible-chapter-grid {
     grid-template-columns: repeat(5, 1fr);
