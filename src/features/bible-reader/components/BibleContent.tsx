@@ -23,6 +23,7 @@ interface BibleContentProps {
   error: string | null;
   searchQuery?: string;
   fontSize?: FontSizeLevel;
+  currentVerse?: number | null;
 }
 
 function LoadingSkeleton() {
@@ -114,10 +115,40 @@ export function BibleContent({
   error,
   searchQuery,
   fontSize = "normal",
+  currentVerse,
 }: BibleContentProps) {
   const contentRef = useRef<HTMLDivElement>(null);
+  const indicatorRef = useRef<HTMLDivElement>(null);
   const [noResults, setNoResults] = useState(false);
   const [activeFootnote, setActiveFootnote] = useState<HTMLElement | null>(null);
+
+  // ─── Posicionar indicador de leitura acompanhada ───────────────────────────
+  useEffect(() => {
+    const container = contentRef.current;
+    const indicator = indicatorRef.current;
+    if (!container || !indicator) return;
+
+    if (!currentVerse) {
+      indicator.style.opacity = "0";
+      return;
+    }
+
+    const verseEl = container.querySelector(`[data-verse="${currentVerse}"]`);
+    if (!verseEl) {
+      indicator.style.opacity = "0";
+      return;
+    }
+
+    // Posicionar relativo a .bible-content (offsetParent do indicador)
+    const wrapper = indicator.parentElement;
+    if (!wrapper) return;
+    const wrapperRect = wrapper.getBoundingClientRect();
+    const verseRect = verseEl.getBoundingClientRect();
+
+    indicator.style.top = `${verseRect.top - wrapperRect.top}px`;
+    indicator.style.height = `${verseRect.height}px`;
+    indicator.style.opacity = "1";
+  }, [currentVerse, htmlContent]);
 
   const processSearch = useCallback(() => {
     const container = contentRef.current;
@@ -302,13 +333,17 @@ export function BibleContent({
   const footnoteSize = FOOTNOTE_SIZE_MAP[fontSize];
 
   return (
-    <div className="bible-content">
+    <div className="bible-content" style={{ position: "relative" }}>
       <h2 className="bible-content-title">{reference}</h2>
       {noResults && (
         <p style={{ color: "var(--text-secondary)", textAlign: "center", padding: "20px 0" }}>
           Nenhum versículo encontrado.
         </p>
       )}
+      <div
+        ref={indicatorRef}
+        className="bible-verse-indicator"
+      />
       <div
         ref={contentRef}
         className="bible-content-text"

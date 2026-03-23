@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/features/auth/lib/auth";
-import { getBibleIsAudioUrl } from "@/features/bible-reader/lib/bible-is-audio";
+import { getBibleIsAudioUrl, getBibleIsTimestamps } from "@/features/bible-reader/lib/bible-is-audio";
 
 export async function GET(
   _request: Request,
@@ -21,9 +21,16 @@ export async function GET(
     }
 
     // Bible.is (áudio versão-específico: NVI, NAA, NTLH, NVT)
-    const result = await getBibleIsAudioUrl(versionId, bookCode, chapter);
+    const [result, timestamps] = await Promise.all([
+      getBibleIsAudioUrl(versionId, bookCode, chapter),
+      getBibleIsTimestamps(versionId, bookCode, chapter),
+    ]);
     if (result) {
-      return NextResponse.json({ audioUrl: result.url, available: true });
+      return NextResponse.json({
+        audioUrl: result.url,
+        available: true,
+        timestamps, // [] se indisponível (NAA, AT)
+      });
     }
 
     // Sem áudio para esta versão

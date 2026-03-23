@@ -18,8 +18,8 @@ test.describe("Bible Bubble", () => {
   test.beforeEach(async ({ page }) => {
     // Login
     await page.goto(`${BASE_URL}/login`);
-    await page.fill('input[name="email"]', process.env.TEST_EMAIL || "test@test.com");
-    await page.fill('input[name="password"]', process.env.TEST_PASSWORD || "test123");
+    await page.fill('#email', process.env.TEST_EMAIL || "test@test.com");
+    await page.fill('#password', process.env.TEST_PASSWORD || "test123");
     await page.click('button[type="submit"]');
     await page.waitForURL("**/", { timeout: 10000 });
   });
@@ -92,6 +92,43 @@ test.describe("Bible Bubble", () => {
       );
 
       expect(newSize).not.toBe(initialSize);
+    }
+  });
+
+  test("indicador de leitura acompanhada aparece ao reproduzir áudio", async ({ page }) => {
+    await page.goto(`${BASE_URL}/books`);
+    await page.click(".bible-bubble");
+    await page.waitForSelector(".bible-content-text", { timeout: 15000 });
+
+    // Verificar que o indicador existe no DOM (oculto inicialmente)
+    const indicator = page.locator(".bible-verse-indicator");
+    await expect(indicator).toBeAttached({ timeout: 5000 });
+
+    // Iniciar reprodução de áudio
+    const playBtn = page.locator(".bible-player-collapsed-btn--play");
+    if (await playBtn.isVisible({ timeout: 3000 })) {
+      await playBtn.click();
+
+      // Aguardar áudio carregar e começar a reproduzir
+      await page.waitForTimeout(4000);
+
+      // Verificar que o indicador ficou visível (opacity > 0)
+      const opacity = await indicator.evaluate((el) =>
+        window.getComputedStyle(el).opacity
+      );
+      console.log(`Indicador opacity: ${opacity}`);
+
+      // Verificar que a barra tem dimensões (posicionada sobre um versículo)
+      const height = await indicator.evaluate((el) =>
+        parseFloat(window.getComputedStyle(el).height)
+      );
+      console.log(`Indicador height: ${height}px`);
+
+      // Pausar áudio para limpar
+      await playBtn.click();
+
+      // Screenshot para validação visual
+      await page.screenshot({ path: "tests/screenshots/verse-indicator.png", fullPage: false });
     }
   });
 

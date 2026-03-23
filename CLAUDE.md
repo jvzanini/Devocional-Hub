@@ -1,8 +1,8 @@
 # Devocional Hub — Diretrizes do Projeto
 
-## Bible Bubble v5.3 — Biblia Interativa Completa (CONCLUIDO — 2026-03-23)
+## Bible Bubble v5.7 — Leitura Acompanhada + Player Melhorado (CONCLUIDO — 2026-03-23)
 
-O Bible Bubble e o modulo de leitura biblica interativa do DevocionalHub. Todas as versoes anteriores (v4, v4.1, v5, v5.1, v5.2, v5.3) foram consolidadas aqui.
+O Bible Bubble e o modulo de leitura biblica interativa do DevocionalHub. Todas as versoes anteriores (v4, v4.1, v5, v5.1, v5.2, v5.3, v5.4-v5.6) foram consolidadas aqui.
 
 ### Fontes de dados
 - **Texto:** Holy Bible API (holy-bible-api.com) — 12 versoes PT, gratuita, sem API key
@@ -39,9 +39,13 @@ O Bible Bubble e o modulo de leitura biblica interativa do DevocionalHub. Todas 
 ARC (637), Almeida (636), ARA (635), NBV (642), OL (646), TB (647), CAP (640), BPT (639)
 
 ### Features UX
+- **Leitura acompanhada (v5.7):** barra lateral esquerda (3px) acompanha o versiculo sendo lido no audio, auto-scroll inteligente (puxa versiculo para topo quando sai da tela, respeita limites), pausa auto-scroll 4s se usuario rolar manualmente
+- **Timestamps Bible.is:** API `live.bible.is/api/timestamps/{fileset}/{book}/{ch}?v=4` — disponivel para NVI, NTLH, NVT (NT); fallback proporcional (duracao/versiculos) para NAA e AT
+- **Progress ring (v5.7):** barra de progresso circular no botao play colapsado, estilo relogio (topo→sentido horario), branca, para dentro do botao, SVG com stroke-dasharray/offset, atualiza via DOM direto (sem re-render)
+- **Player colapsado (v5.7):** botao play 52x52 (antes 40x40), botoes nav maiores (font 13px, padding 6px 10px), icones 24px/16px, gap 14px
 - **Bubble:** 15% maior que padrao, label "Abrir Biblia", esconde quando modal aberto, z-index 9999, subido 20px, anti-zoom iOS
 - **Player:** inicia colapsado/pausado, sem autoplay, drag-to-seek (mouse+touch), cache de posicao (localStorage 24h)
-- **Audio speed:** pause → alterar playbackRate → seek posicao exata → requestAnimationFrame → resume (fix stutter mobile)
+- **Audio speed:** pause → alterar playbackRate → seek posicao exata → requestAnimationFrame → resume (fix stutter mobile). Timestamps funcionam independente de velocidade (currentTime e sempre tempo-arquivo)
 - **Busca:** lupa no header, client-side no capitulo com highlight, filtra versiculos, ignora acentos/pontuacao, remove footnotes antes do matching
 - **Footnotes:** icone 18x18 com margin-left 4px, tooltip abre abaixo, max-width responsivo
 - **Botao AA:** ciclo normal (17px) → medio (20px) → grande (24px), persistencia via localStorage
@@ -62,7 +66,7 @@ ARC (637), Almeida (636), ARA (635), NBV (642), OL (646), TB (647), CAP (640), B
 Frontend → /api/bible/versions           → version-discovery.ts → 12 versoes PT (4 com audio)
 Frontend → /api/bible/content/[v]/[ch]   → holy-bible-client.ts → holy-bible-api.com (texto)
                                           → bible-formatter.ts  → youversion-client.ts (formatacao)
-Frontend → /api/bible/audio/[v]/[ch]     → bible-is-audio.ts    → live.bible.is (NVI/NAA/NTLH/NVT)
+Frontend → /api/bible/audio/[v]/[ch]     → bible-is-audio.ts    → live.bible.is (audio + timestamps)
 Frontend → /api/bible/context            → devocional-context.ts → Prisma (plano de leitura ativo)
 ```
 
@@ -70,6 +74,7 @@ Frontend → /api/bible/context            → devocional-context.ts → Prisma 
 - Texto: `https://holy-bible-api.com/bibles/{id}/books/{book}/chapters/{ch}/verses`
 - Formatacao: `https://www.bible.com/bible/{youVersionId}/{BOOK}.{CH}.{ABBR}` (scraping __NEXT_DATA__)
 - Audio Bible.is: `https://live.bible.is/api/bibles/filesets/{FILESET}/{BOOK_CODE}/{CH}?v=4`
+- Timestamps Bible.is: `https://live.bible.is/api/timestamps/{FILESET}/{BOOK_CODE}/{CH}?v=4` (NVI/NTLH/NVT NT apenas)
 
 ## Hotfix v2.1 — Correcoes pos-deploy (CONCLUIDO — 2026-03-21)
 

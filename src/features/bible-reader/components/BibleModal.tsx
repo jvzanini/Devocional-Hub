@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { BIBLE_BOOKS, findBookByCode } from "@/features/bible/lib/bible-books";
 import { getAudioManager } from "../lib/audio-manager";
+import type { VerseTimestamp } from "../lib/bible-is-audio";
 import type { DiscoveredVersion } from "../lib/version-discovery";
 import { BibleHeader } from "./BibleHeader";
 import type { FontSizeLevel } from "./BibleHeader";
@@ -11,6 +12,9 @@ import { BookSelector } from "./BookSelector";
 import { BibleContent } from "./BibleContent";
 import { BibleNavigation } from "./BibleNavigation";
 import { AudioPlayer } from "./AudioPlayer";
+
+const RING_RADIUS = 23;
+const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS; // ≈ 144.51
 
 const FONT_SIZE_KEY = "devhub-bible-fontsize";
 const FONT_SIZE_CYCLE: FontSizeLevel[] = ["normal", "medium", "large"];
@@ -106,8 +110,14 @@ export function BibleModal({
   const [pendingSeekTime, setPendingSeekTime] = useState<number | null>(null);
   const [fontSize, setFontSize] = useState<FontSizeLevel>("normal");
   const [autoPlayNext, setAutoPlayNext] = useState(false);
+  const [verseTimestamps, setVerseTimestamps] = useState<VerseTimestamp[]>([]);
+  const [currentVerse, setCurrentVerse] = useState<number | null>(null);
 
-  const preloadCacheRef = useRef<Record<string, { text?: string; audioUrl?: string }>>({});
+  const preloadCacheRef = useRef<Record<string, { text?: string; audioUrl?: string; timestamps?: VerseTimestamp[] }>>({});
+  const userScrollingRef = useRef(false);
+  const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const lastVerseRef = useRef<number | null>(null);
+  const progressRingRef = useRef<SVGCircleElement>(null);
 
   // Restaurar tamanho da fonte salvo
   useEffect(() => {
@@ -212,23 +222,30 @@ export function BibleModal({
     }
   }, [selectedVersion]);
 
-  // Carregar URL do áudio (em background, não bloqueia texto nem afeta audioAvailable)
+  // Carregar URL do áudio + timestamps (em background, não bloqueia texto nem afeta audioAvailable)
   useEffect(() => {
     if (!isOpen || !selectedVersion || !selectedVersion.audioAvailable) return;
 
     setAudioUrl(null); // limpar URL anterior enquanto carrega nova
+    setVerseTimestamps([]);
+    setCurrentVerse(null);
+    lastVerseRef.current = null;
 
     async function loadAudio() {
       const chapterId = `${bookCode}.${chapter}`;
       const cached = preloadCacheRef.current[chapterId];
       if (cached?.audioUrl) {
         setAudioUrl(cached.audioUrl);
+        if (cached.timestamps) setVerseTimestamps(cached.timestamps);
         return;
       }
       try {
         const res = await fetch(`/api/bible/audio/${selectedVersion!.id}/${chapterId}`);
         const data = await res.json();
         setAudioUrl(data.audioUrl || null);
+        if (data.timestamps?.length) {
+          setVerseTimestamps(data.timestamps);
+        }
       } catch {
         setAudioUrl(null);
       }
@@ -257,6 +274,9 @@ export function BibleModal({
         if (audioRes.status === "fulfilled" && audioRes.value?.ok) {
           const data = await (audioRes.value as Response).json();
           preloadCacheRef.current[key].audioUrl = data.audioUrl;
+          if (data.timestamps?.length) {
+            preloadCacheRef.current[key].timestamps = data.timestamps;
+          }
         }
       } catch {}
     };
@@ -308,6 +328,121 @@ export function BibleModal({
     return () => clearInterval(interval);
   }, [isOpen, audioAvailable, bookCode, chapter, selectedVersion]);
 
+  // ─── Verse Tracking: determinar versículo atual pelo currentTime do áudio ───
+  useEffect(() => {
+    const manager = getAudioManager();
+
+    const unsub = manager.subscribe((state) => {
+      // Sem timestamps e sem duração → sem tracking
+      if (!state.isPlaying && !state.isPaused) {
+        // Áudio parado completamente → limpar
+        if (lastVerseRef.current !== null) {
+          lastVerseRef.current = null;
+          setCurrentVerse(null);
+        }
+        return;
+      }
+
+      if (!state.isPlaying) return; // pausado → manter versículo atual
+
+      // Gerar fallback proporcional se não houver timestamps da API
+      let ts = verseTimestamps;
+      if (ts.length === 0 && state.duration > 0 && contentRef.current) {
+        const verseEls = contentRef.current.querySelectorAll("[data-verse]");
+        const count = verseEls.length;
+        if (count > 0) {
+          const interval = state.duration / count;
+          ts = Array.from({ length: count }, (_, i) => ({
+            verse: parseInt(verseEls[i].getAttribute("data-verse") || String(i + 1), 10),
+            timestamp: i * interval,
+          }));
+        }
+      }
+
+      if (ts.length === 0) return;
+
+      // Busca binária: último timestamp <= currentTime
+      let verse = ts[0].verse;
+      for (let i = ts.length - 1; i >= 0; i--) {
+        if (ts[i].timestamp <= state.currentTime) {
+          verse = ts[i].verse;
+          break;
+        }
+      }
+
+      if (verse !== lastVerseRef.current) {
+        lastVerseRef.current = verse;
+        setCurrentVerse(verse);
+      }
+    });
+
+    return unsub;
+  }, [verseTimestamps]);
+
+  // ─── Auto-scroll ao mudar de versículo ────────────────────────────────────
+  useEffect(() => {
+    if (currentVerse === null || !contentRef.current) return;
+    if (userScrollingRef.current) return; // usuário está rolando manualmente
+
+    const scrollContainer = contentRef.current; // .bible-modal-body
+    const verseEl = scrollContainer.querySelector(`[data-verse="${currentVerse}"]`);
+    if (!verseEl) return;
+
+    const containerRect = scrollContainer.getBoundingClientRect();
+    const verseRect = verseEl.getBoundingClientRect();
+
+    // Verificar se o versículo está fora da área visível
+    const padding = 80; // espaço do topo
+    const isAbove = verseRect.top < containerRect.top;
+    const isBelow = verseRect.bottom > containerRect.bottom - 20;
+
+    if (isAbove || isBelow) {
+      const targetScrollTop =
+        verseRect.top - containerRect.top + scrollContainer.scrollTop - padding;
+      scrollContainer.scrollTo({
+        top: Math.max(0, targetScrollTop),
+        behavior: "smooth",
+      });
+    }
+  }, [currentVerse]);
+
+  // ─── Progress ring circular no botão play colapsado (DOM direto, sem re-render) ─
+  useEffect(() => {
+    if (!isPlayerCollapsed) return;
+    const manager = getAudioManager();
+
+    const unsub = manager.subscribe((state) => {
+      const ring = progressRingRef.current;
+      if (!ring) return;
+      const progress = state.duration > 0 ? state.currentTime / state.duration : 0;
+      ring.style.strokeDashoffset = String(RING_CIRCUMFERENCE * (1 - progress));
+    });
+
+    return unsub;
+  }, [isPlayerCollapsed]);
+
+  // ─── Detectar scroll manual do usuário (para pausar auto-scroll) ──────────
+  useEffect(() => {
+    const scrollEl = contentRef.current;
+    if (!scrollEl) return;
+
+    function handleUserScroll() {
+      userScrollingRef.current = true;
+      clearTimeout(scrollTimeoutRef.current);
+      scrollTimeoutRef.current = setTimeout(() => {
+        userScrollingRef.current = false;
+      }, 4000); // pausa auto-scroll por 4s após última interação
+    }
+
+    scrollEl.addEventListener("wheel", handleUserScroll, { passive: true });
+    scrollEl.addEventListener("touchmove", handleUserScroll, { passive: true });
+    return () => {
+      scrollEl.removeEventListener("wheel", handleUserScroll);
+      scrollEl.removeEventListener("touchmove", handleUserScroll);
+      clearTimeout(scrollTimeoutRef.current);
+    };
+  }, [isOpen]);
+
   // ESC para fechar
   useEffect(() => {
     if (!isOpen) return;
@@ -338,6 +473,8 @@ export function BibleModal({
         });
       }
       manager.stop();
+      setCurrentVerse(null);
+      lastVerseRef.current = null;
       setIsSearchOpen(false);
       setSearchQuery("");
     }
@@ -555,6 +692,7 @@ export function BibleModal({
             error={error}
             searchQuery={searchQuery}
             fontSize={fontSize}
+            currentVerse={currentVerse}
           />
         </div>
 
@@ -601,7 +739,7 @@ export function BibleModal({
                 onClick={handlePreviousChapter}
                 disabled={isFirst}
               >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
                 </svg>
                 <span>{prevLabel ? `${currentBook?.abbr || bookName} ${chapter > 1 ? chapter - 1 : ""}` : ""}</span>
@@ -612,18 +750,29 @@ export function BibleModal({
                 onClick={handleAudioToggle}
                 aria-label={isAudioLoading ? "Carregando" : isAudioPlaying ? "Pausar" : "Reproduzir"}
               >
+                {/* Progress ring circular (só no colapsado) */}
+                <svg className="bible-player-progress-ring" viewBox="0 0 52 52">
+                  <circle className="bible-player-progress-ring-track" cx="26" cy="26" r="23" />
+                  <circle
+                    ref={progressRingRef}
+                    className="bible-player-progress-ring-fill"
+                    cx="26" cy="26" r="23"
+                    strokeDasharray={RING_CIRCUMFERENCE}
+                    strokeDashoffset={RING_CIRCUMFERENCE}
+                  />
+                </svg>
                 {isAudioLoading ? (
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <circle cx="12" cy="12" r="10" strokeDasharray="31.4 31.4" strokeLinecap="round">
                       <animateTransform attributeName="transform" type="rotate" values="0 12 12;360 12 12" dur="1s" repeatCount="indefinite" />
                     </circle>
                   </svg>
                 ) : isAudioPlaying ? (
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
                   </svg>
                 ) : (
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M8 5v14l11-7z" />
                   </svg>
                 )}
@@ -635,7 +784,7 @@ export function BibleModal({
                 disabled={isLast}
               >
                 <span>{nextLabel ? `${currentBook && chapter < currentBook.chapters ? currentBook.abbr : (BIBLE_BOOKS[currentBookIndex + 1]?.abbr || "")} ${currentBook && chapter < currentBook.chapters ? chapter + 1 : 1}` : ""}</span>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                 </svg>
               </button>

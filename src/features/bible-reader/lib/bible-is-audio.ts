@@ -49,6 +49,59 @@ function getTestament(bookCode: string): "AT" | "NT" {
   return book?.testament || "NT";
 }
 
+// ─── Timestamps por versículo ────────────────────────────────────────────────
+
+export interface VerseTimestamp {
+  verse: number;
+  timestamp: number; // segundos no áudio (independe de playbackRate)
+}
+
+const BIBLE_IS_TIMESTAMPS_API = "https://live.bible.is/api/timestamps";
+
+/**
+ * Buscar timestamps de cada versículo no áudio via Bible.is
+ *
+ * Disponível para NVI, NTLH, NVT (NT apenas).
+ * NAA e AT não possuem timestamps — retorna array vazio.
+ *
+ * @returns Array de {verse, timestamp} ordenado por versículo
+ */
+export async function getBibleIsTimestamps(
+  versionId: string,
+  bookCode: string,
+  chapter: number
+): Promise<VerseTimestamp[]> {
+  const filesets = VERSION_FILESET_MAP[versionId];
+  if (!filesets) return [];
+
+  const testament = getTestament(bookCode);
+  const filesetId = testament === "AT" ? filesets.ot : filesets.nt;
+
+  try {
+    const response = await fetch(
+      `${BIBLE_IS_TIMESTAMPS_API}/${filesetId}/${bookCode.toUpperCase()}/${chapter}?v=4`
+    );
+
+    if (!response.ok) return [];
+
+    const data = await response.json();
+    const items = data?.data;
+
+    if (!items || items.length === 0) return [];
+
+    return items
+      .filter((item: { verse_start: string }) => item.verse_start !== "0")
+      .map((item: { verse_start: string; timestamp: number }) => ({
+        verse: parseInt(item.verse_start, 10),
+        timestamp: item.timestamp,
+      }));
+  } catch {
+    return [];
+  }
+}
+
+// ─── URL de áudio ────────────────────────────────────────────────────────────
+
 /**
  * Buscar URL de áudio versão-específico via Bible.is
  *
