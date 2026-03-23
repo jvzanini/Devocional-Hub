@@ -156,7 +156,9 @@ export function BibleContent({
 
     clearHighlights(container);
 
-    container.querySelectorAll<HTMLElement>(".bible-verse").forEach((el) => {
+    container.querySelectorAll<HTMLElement>(
+      ".bible-verse, .bible-section-title, .bible-description, .bible-reference, .bible-break, .bible-paragraph, .bible-poetry-1, .bible-poetry-2, .bible-footnote"
+    ).forEach((el) => {
       el.style.display = "";
     });
     setNoResults(false);
@@ -199,6 +201,29 @@ export function BibleContent({
         highlightTextInElement(span, searchQuery);
       } else {
         span.style.display = "none";
+      }
+    });
+
+    // Esconder títulos de seção, descrições, referências e breaks
+    container.querySelectorAll<HTMLElement>(
+      ".bible-section-title, .bible-description, .bible-reference, .bible-break"
+    ).forEach((el) => { el.style.display = "none"; });
+
+    // Esconder containers que não têm versículo visível
+    container.querySelectorAll<HTMLElement>(
+      ".bible-paragraph, .bible-poetry-1, .bible-poetry-2"
+    ).forEach((el) => {
+      const hasVisibleVerse = Array.from(el.querySelectorAll(".bible-verse")).some(
+        (v) => (v as HTMLElement).style.display !== "none"
+      );
+      if (!hasVisibleVerse) el.style.display = "none";
+    });
+
+    // Esconder footnotes órfãos (fora de versículos visíveis)
+    container.querySelectorAll<HTMLElement>(".bible-footnote").forEach((el) => {
+      const parentVerse = el.closest(".bible-verse") as HTMLElement | null;
+      if (!parentVerse || parentVerse.style.display === "none") {
+        el.style.display = "none";
       }
     });
 

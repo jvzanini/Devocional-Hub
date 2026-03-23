@@ -111,7 +111,7 @@ export function BookSelector({
                 aria-label={`${book.name} — ${book.chapters} capítulos`}
                 style={{ fontSize: 15, padding: "10px 12px" }}
               >
-                <span className="bible-book-name">{book.name}</span>
+                <span className="bible-book-name" style={{ fontSize: 16 }}>{book.name}</span>
                 <span className="bible-book-chapters-count" style={{ fontSize: 13 }}>{book.chapters} cap.</span>
                 <svg
                   className={`bible-book-chevron ${isExpanded ? "bible-book-chevron--open" : ""}`}

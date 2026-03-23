@@ -115,7 +115,7 @@ export function VersionSelector({
               >
                 <span className="bible-version-abbr">{version.abbreviation}</span>
                 <div className="bible-version-details">
-                  <span className="bible-version-name">{version.nameLocal || version.name}</span>
+                  <span className="bible-version-name" style={{ fontSize: 15 }}>{version.nameLocal || version.name}</span>
                   {version.audioAvailable && (
                     <span className="bible-version-audio-badge">
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">

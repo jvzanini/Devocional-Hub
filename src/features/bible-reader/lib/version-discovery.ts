@@ -71,7 +71,7 @@ const PORTUGUESE_VERSIONS: DiscoveredVersion[] = [
   },
   {
     id: "636",
-    abbreviation: "ALMEIDA",
+    abbreviation: "AC",
     name: "Almeida Clássica",
     nameLocal: "Almeida Clássica",
     language: "por",

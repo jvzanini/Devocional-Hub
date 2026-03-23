@@ -1818,7 +1818,10 @@ select.input-field {
 }
 .bible-footnote-content {
   display: none;
-  position: fixed;
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
   background: var(--surface);
   color: var(--text);
   border: 1px solid var(--border);
@@ -1827,7 +1830,7 @@ select.input-field {
   font-size: var(--footnote-size, 13px);
   font-weight: 400;
   line-height: 1.5;
-  max-width: min(300px, calc(100vw - 32px));
+  max-width: min(280px, calc(100vw - 32px));
   min-width: 120px;
   width: max-content;
   z-index: 200;
@@ -1835,10 +1838,17 @@ select.input-field {
   white-space: normal;
   overflow-wrap: break-word;
   word-break: break-word;
+  pointer-events: none;
+}
+.bible-footnote:hover > .bible-footnote-content,
+.bible-footnote:focus > .bible-footnote-content,
+.bible-footnote:focus-within > .bible-footnote-content {
+  display: block;
   pointer-events: auto;
 }
 .bible-footnote--active > .bible-footnote-content {
   display: block;
+  pointer-events: auto;
 }
 
 /* Skeleton */
@@ -2163,10 +2173,10 @@ select.input-field {
   display: flex;
   align-items: flex-start;
   justify-content: flex-start;
-  padding-left: 24px;
+  padding-left: 16px;
 }
 .bible-selector-overlay--version {
-  padding-left: 200px;
+  padding-left: 180px;
 }
 .bible-selector-overlay--mobile {
   position: fixed;
@@ -2175,6 +2185,7 @@ select.input-field {
   display: flex;
   align-items: flex-start;
   justify-content: center;
+  padding: 48px 10px 0;
 }
 .bible-selector-backdrop {
   position: absolute;
@@ -2190,18 +2201,18 @@ select.input-field {
   max-height: 80%;
 }
 .bible-selector--dropdown {
-  margin-top: 56px;
+  margin-top: 52px;
   border-radius: var(--radius-lg);
   box-shadow: 0 8px 32px rgba(0,0,0,0.3);
   width: 360px;
-  max-height: calc(85vh - 120px);
+  max-height: calc(85vh - 100px);
 }
 .bible-selector--sheet {
   width: 100%;
-  border-radius: 0 0 var(--radius-xl) var(--radius-xl);
-  max-height: 85vh;
-  max-height: 85dvh;
-  border-top: 3px solid var(--border, rgba(128,128,128,0.2));
+  border-radius: var(--radius-xl);
+  max-height: calc(100vh - 60px);
+  max-height: calc(100dvh - 60px);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -2658,15 +2669,14 @@ select.input-field {
   }
   .bible-header-btn {
     font-size: 13px;
-    padding: 5px 10px;
+    padding: 5px 8px;
+    gap: 3px;
   }
   .bible-header-btn--book {
-    max-width: none;
-    flex: 1;
     min-width: 0;
+    flex-shrink: 1;
   }
   .bible-header-btn--version {
-    max-width: none;
     flex-shrink: 0;
   }
   .bible-chapter-grid {
