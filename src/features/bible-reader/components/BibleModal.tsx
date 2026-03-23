@@ -482,8 +482,6 @@ export function BibleModal({
 
         <BibleHeader
           bookName={bookName}
-          bookAbbr={currentBook?.abbr}
-          isMobile={isMobile}
           chapter={chapter}
           versionAbbr={selectedVersion?.abbreviation || "..."}
           onBookClick={() => setActiveSelector(activeSelector === "book" ? null : "book")}

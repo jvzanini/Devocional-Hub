@@ -1584,9 +1584,20 @@ select.input-field {
   cursor: pointer;
   transition: background 0.15s, border-color 0.15s;
   white-space: nowrap;
+  min-width: 0;
 }
 .bible-header-btn:hover {
   background: var(--surface-hover);
+}
+.bible-header-btn-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bible-header-btn-chevron {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
 }
 .bible-header-btn svg {
   width: 14px;
@@ -1789,33 +1800,27 @@ select.input-field {
 }
 .bible-footnote-content {
   display: none;
-  position: absolute;
-  bottom: calc(100% + 4px);
-  left: 50%;
-  transform: translateX(-50%);
+  position: fixed;
   background: var(--surface);
   color: var(--text);
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 10px 14px;
-  font-size: 13px;
+  font-size: var(--footnote-size, 13px);
   font-weight: 400;
   line-height: 1.5;
-  max-width: min(280px, calc(100vw - 32px));
+  max-width: min(300px, calc(100vw - 32px));
   min-width: 120px;
   width: max-content;
-  z-index: 100;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+  z-index: 200;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.25);
   white-space: normal;
   overflow-wrap: break-word;
   word-break: break-word;
-  pointer-events: none;
-}
-.bible-footnote:hover .bible-footnote-content,
-.bible-footnote:focus .bible-footnote-content,
-.bible-footnote:focus-within .bible-footnote-content {
-  display: block;
   pointer-events: auto;
+}
+.bible-footnote--active > .bible-footnote-content {
+  display: block;
 }
 
 /* Skeleton */
@@ -2126,7 +2131,7 @@ select.input-field {
   inset: 0;
   z-index: 20;
   display: flex;
-  align-items: flex-end;
+  align-items: flex-start;
   justify-content: center;
 }
 .bible-selector-backdrop {
@@ -2151,10 +2156,10 @@ select.input-field {
 }
 .bible-selector--sheet {
   width: 100%;
-  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
-  max-height: 80vh;
-  max-height: 80dvh;
-  border-bottom: 3px solid var(--border, rgba(128,128,128,0.2));
+  border-radius: 0 0 var(--radius-xl) var(--radius-xl);
+  max-height: 85vh;
+  max-height: 85dvh;
+  border-top: 3px solid var(--border, rgba(128,128,128,0.2));
   overflow: hidden;
   display: flex;
   flex-direction: column;

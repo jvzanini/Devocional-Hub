@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 
 type FontSizeLevel = "normal" | "medium" | "large";
 
@@ -8,6 +8,12 @@ const FONT_SIZE_MAP: Record<FontSizeLevel, number> = {
   normal: 17,
   medium: 20,
   large: 24,
+};
+
+const FOOTNOTE_SIZE_MAP: Record<FontSizeLevel, number> = {
+  normal: 13,
+  medium: 14,
+  large: 16,
 };
 
 interface BibleContentProps {
@@ -33,185 +39,72 @@ function LoadingSkeleton() {
   );
 }
 
-/**
- * Normalizar texto para busca: remove acentos, pontuação, lowercase
- */
 function normalizeForSearch(text: string): string {
   return text
     .toLowerCase()
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "") // remove acentos
-    .replace(/[^\w\s]/g, "")         // remove pontuação
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^\w\s]/g, "")
     .replace(/\s+/g, " ")
     .trim();
 }
 
-/**
- * Remove um tipo de span (por classe) do HTML, incluindo spans aninhados.
- * Usa parsing iterativo para lidar com spans aninhados corretamente.
- */
-function stripSpansByClass(html: string, className: string): string {
-  const pattern = new RegExp(`<span class="${className}"[^>]*>`, "g");
-  let result = "";
-  let lastIndex = 0;
-  let match: RegExpExecArray | null;
-
-  while ((match = pattern.exec(html)) !== null) {
-    result += html.slice(lastIndex, match.index);
-    // Contar spans aninhados para encontrar o </span> de fechamento correto
-    let depth = 1;
-    let pos = match.index + match[0].length;
-    while (depth > 0 && pos < html.length) {
-      const nextOpen = html.indexOf("<span", pos);
-      const nextClose = html.indexOf("</span>", pos);
-      if (nextClose === -1) break;
-      if (nextOpen !== -1 && nextOpen < nextClose) {
-        depth++;
-        pos = nextOpen + 5;
-      } else {
-        depth--;
-        pos = nextClose + 7;
-      }
-    }
-    lastIndex = pos;
-    pattern.lastIndex = pos;
-  }
-
-  result += html.slice(lastIndex);
-  return result;
-}
-
-/**
- * Extrai todos os versículos (bible-verse spans) do HTML original.
- * Retorna um Map de verseNum → { original HTML, texto limpo (sem footnotes) }.
- * Texto fora de spans bible-verse é ignorado (footnotes órfãos, etc).
- */
-function extractVerses(html: string): Map<string, { originalHtml: string; cleanText: string }> {
-  const verses = new Map<string, { originalHtml: string; cleanText: string }>();
-
-  // Find each bible-verse span and capture its content (handling nested spans)
-  const openTag = /<span class="bible-verse" data-verse="(\d+)"[^>]*>/g;
-  let m: RegExpExecArray | null;
-
-  while ((m = openTag.exec(html)) !== null) {
-    const verseNum = m[1];
-    const startAfterTag = m.index + m[0].length;
-
-    // Find the closing </span> for this verse span (handle nesting)
-    let depth = 1;
-    let pos = startAfterTag;
-    while (depth > 0 && pos < html.length) {
-      const nextOpen = html.indexOf("<span", pos);
-      const nextClose = html.indexOf("</span>", pos);
-      if (nextClose === -1) break;
-      if (nextOpen !== -1 && nextOpen < nextClose) {
-        depth++;
-        pos = nextOpen + 5;
-      } else {
-        depth--;
-        if (depth === 0) {
-          const innerContent = html.slice(startAfterTag, nextClose);
-          const fullSpan = html.slice(m.index, nextClose + 7);
-          // Strip footnotes from inner content for text matching only
-          const cleanInner = stripSpansByClass(innerContent, "bible-footnote");
-          const plainText = cleanInner.replace(/<[^>]+>/g, "").replace(/\u00A0/g, " ");
-
-          verses.set(verseNum, {
-            originalHtml: fullSpan,
-            cleanText: plainText,
-          });
-        }
-        pos = nextClose + 7;
-      }
-    }
-  }
-
-  return verses;
-}
-
-const ACCENT_VARIANTS: Record<string, string> = {
-  'a': 'aàáâãäåā', 'e': 'eèéêëē', 'i': 'iìíîïī',
-  'o': 'oòóôõöō', 'u': 'uùúûüū', 'c': 'cç', 'n': 'nñ',
-};
-
-function buildAccentInsensitiveRegex(query: string): RegExp {
-  const pattern = query.split('').map(ch => {
-    const lower = ch.toLowerCase();
-    const variants = ACCENT_VARIANTS[lower];
-    if (variants) return `[${variants}${variants.toUpperCase()}]`;
-    return ch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  }).join('');
-  return new RegExp(`(${pattern})`, 'gi');
-}
-
-function filterAndHighlight(html: string, query: string): string {
-  if (!query || query.length < 2) return html;
-
-  const normalizedQuery = normalizeForSearch(query);
-  if (!normalizedQuery) return html;
-
-  const verses = extractVerses(html);
-  if (verses.size === 0) return html;
-
-  const matchingVerses = new Set<string>();
-  verses.forEach(({ cleanText }, verseNum) => {
-    if (normalizeForSearch(cleanText).includes(normalizedQuery)) {
-      matchingVerses.add(verseNum);
+function clearHighlights(container: HTMLElement) {
+  container.querySelectorAll("mark[data-search-hl]").forEach((mark) => {
+    const parent = mark.parentNode;
+    if (parent) {
+      parent.replaceChild(document.createTextNode(mark.textContent || ""), mark);
+      parent.normalize();
     }
   });
+}
 
-  if (matchingVerses.size === 0) {
-    return '<p style="color:var(--text-secondary);text-align:center;padding:20px 0">Nenhum versículo encontrado.</p>';
+function highlightTextInElement(element: Element, query: string) {
+  const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const regex = new RegExp(`(${escaped})`, "gi");
+
+  const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+  const textNodes: Text[] = [];
+  while (walker.nextNode()) {
+    const node = walker.currentNode as Text;
+    if (node.parentElement?.closest(".bible-footnote-content")) continue;
+    if (node.parentElement?.closest("sup.v")) continue;
+    if (node.parentElement?.tagName === "MARK") continue;
+    textNodes.push(node);
   }
 
-  const highlightRegex = buildAccentInsensitiveRegex(query);
-  const openTagPattern = /<span class="bible-verse" data-verse="(\d+)"([^>]*)>/g;
-  let result = "";
-  let lastIndex = 0;
-  let m: RegExpExecArray | null;
+  for (const textNode of textNodes) {
+    const text = textNode.textContent || "";
+    if (!regex.test(text)) continue;
+    regex.lastIndex = 0;
 
-  while ((m = openTagPattern.exec(html)) !== null) {
-    const verseNum = m[1];
-    const spanStart = m.index;
-    const afterOpenTag = m.index + m[0].length;
+    const fragment = document.createDocumentFragment();
+    let lastIdx = 0;
+    let match: RegExpExecArray | null;
 
-    let depth = 1;
-    let pos = afterOpenTag;
-    while (depth > 0 && pos < html.length) {
-      const nextOpen = html.indexOf("<span", pos);
-      const nextClose = html.indexOf("</span>", pos);
-      if (nextClose === -1) break;
-      if (nextOpen !== -1 && nextOpen < nextClose) {
-        depth++;
-        pos = nextOpen + 5;
-      } else {
-        depth--;
-        if (depth === 0) {
-          const spanEnd = nextClose + 7;
-          const fullVerse = html.slice(spanStart, spanEnd);
-
-          result += html.slice(lastIndex, spanStart);
-
-          if (matchingVerses.has(verseNum)) {
-            const highlighted = fullVerse.replace(/>([^<]+)/g, (_, text) => {
-              return `>${text.replace(highlightRegex, '<mark style="background:var(--accent);color:#000;border-radius:2px;padding:0 2px">$1</mark>')}`;
-            });
-            result += highlighted;
-          } else {
-            result += fullVerse.replace(
-              '<span class="bible-verse"',
-              '<span class="bible-verse" style="display:none"'
-            );
-          }
-          lastIndex = spanEnd;
-        }
-        pos = nextClose + 7;
+    while ((match = regex.exec(text)) !== null) {
+      if (match.index > lastIdx) {
+        fragment.appendChild(document.createTextNode(text.slice(lastIdx, match.index)));
       }
+      const mark = document.createElement("mark");
+      mark.setAttribute("data-search-hl", "1");
+      mark.style.background = "var(--accent)";
+      mark.style.color = "#000";
+      mark.style.borderRadius = "2px";
+      mark.style.padding = "0 2px";
+      mark.textContent = match[1];
+      fragment.appendChild(mark);
+      lastIdx = match.index + match[0].length;
+    }
+
+    if (lastIdx < text.length) {
+      fragment.appendChild(document.createTextNode(text.slice(lastIdx)));
+    }
+
+    if (lastIdx > 0) {
+      textNode.parentNode?.replaceChild(fragment, textNode);
     }
   }
-
-  result += html.slice(lastIndex);
-  return result;
 }
 
 export function BibleContent({
@@ -222,13 +115,154 @@ export function BibleContent({
   searchQuery,
   fontSize = "normal",
 }: BibleContentProps) {
-  const processedHtml = useMemo(() => {
-    if (!htmlContent) return null;
-    if (searchQuery && searchQuery.length >= 2) {
-      return filterAndHighlight(htmlContent, searchQuery);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [noResults, setNoResults] = useState(false);
+  const [activeFootnote, setActiveFootnote] = useState<HTMLElement | null>(null);
+
+  const processSearch = useCallback(() => {
+    const container = contentRef.current;
+    if (!container) return;
+
+    clearHighlights(container);
+
+    container.querySelectorAll<HTMLElement>(".bible-verse").forEach((el) => {
+      el.style.display = "";
+    });
+    setNoResults(false);
+
+    if (!searchQuery || searchQuery.length < 2) return;
+
+    const normalizedQuery = normalizeForSearch(searchQuery);
+    if (!normalizedQuery) return;
+
+    const verseSpans = container.querySelectorAll<HTMLElement>(".bible-verse");
+    if (verseSpans.length === 0) return;
+
+    let hasVisible = false;
+
+    verseSpans.forEach((span) => {
+      const footnotes = span.querySelectorAll(".bible-footnote-content");
+      const textsWithoutFootnotes: string[] = [];
+
+      const walker = document.createTreeWalker(span, NodeFilter.SHOW_TEXT);
+      while (walker.nextNode()) {
+        const node = walker.currentNode as Text;
+        let isInsideFootnoteContent = false;
+        for (let i = 0; i < footnotes.length; i++) {
+          if (footnotes[i].contains(node)) {
+            isInsideFootnoteContent = true;
+            break;
+          }
+        }
+        if (!isInsideFootnoteContent) {
+          textsWithoutFootnotes.push(node.textContent || "");
+        }
+      }
+
+      const fullText = textsWithoutFootnotes.join(" ");
+      const normalizedText = normalizeForSearch(fullText);
+
+      if (normalizedText.includes(normalizedQuery)) {
+        span.style.display = "";
+        hasVisible = true;
+        highlightTextInElement(span, searchQuery);
+      } else {
+        span.style.display = "none";
+      }
+    });
+
+    setNoResults(!hasVisible);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    if (!contentRef.current || !htmlContent) return;
+    const timer = requestAnimationFrame(() => processSearch());
+    return () => cancelAnimationFrame(timer);
+  }, [searchQuery, htmlContent, processSearch]);
+
+  const handleFootnoteClick = useCallback((e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+    const footnoteIcon = target.closest(".bible-footnote-icon");
+    const footnoteEl = target.closest(".bible-footnote");
+
+    if (!footnoteIcon || !footnoteEl) {
+      if (activeFootnote) {
+        activeFootnote.classList.remove("bible-footnote--active");
+        setActiveFootnote(null);
+      }
+      return;
     }
-    return htmlContent;
-  }, [htmlContent, searchQuery]);
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (activeFootnote && activeFootnote !== footnoteEl) {
+      activeFootnote.classList.remove("bible-footnote--active");
+    }
+
+    const content = footnoteEl.querySelector(".bible-footnote-content") as HTMLElement;
+    if (!content) return;
+
+    const isActive = footnoteEl.classList.contains("bible-footnote--active");
+    if (isActive) {
+      footnoteEl.classList.remove("bible-footnote--active");
+      setActiveFootnote(null);
+      return;
+    }
+
+    footnoteEl.classList.add("bible-footnote--active");
+    setActiveFootnote(footnoteEl as HTMLElement);
+
+    const modal = footnoteEl.closest(".bible-modal") || document.body;
+    const modalRect = modal.getBoundingClientRect();
+    const iconRect = footnoteIcon.getBoundingClientRect();
+
+    content.style.position = "fixed";
+    content.style.display = "block";
+
+    const contentRect = content.getBoundingClientRect();
+    const tooltipW = contentRect.width;
+    const tooltipH = contentRect.height;
+
+    let top = iconRect.top - tooltipH - 8;
+    if (top < modalRect.top + 8) {
+      top = iconRect.bottom + 8;
+    }
+    if (top + tooltipH > modalRect.bottom - 8) {
+      top = modalRect.bottom - tooltipH - 8;
+    }
+
+    let left = iconRect.left + iconRect.width / 2 - tooltipW / 2;
+    if (left < modalRect.left + 8) {
+      left = modalRect.left + 8;
+    }
+    if (left + tooltipW > modalRect.right - 8) {
+      left = modalRect.right - tooltipW - 8;
+    }
+
+    content.style.top = `${Math.round(top)}px`;
+    content.style.left = `${Math.round(left)}px`;
+    content.style.right = "auto";
+    content.style.bottom = "auto";
+    content.style.transform = "none";
+    content.style.zIndex = "200";
+  }, [activeFootnote]);
+
+  useEffect(() => {
+    if (!activeFootnote) return;
+    function handleOutsideClick(e: MouseEvent) {
+      if (activeFootnote && !activeFootnote.contains(e.target as Node)) {
+        activeFootnote.classList.remove("bible-footnote--active");
+        setActiveFootnote(null);
+      }
+    }
+    document.addEventListener("mousedown", handleOutsideClick);
+    document.addEventListener("touchstart", handleOutsideClick as EventListener);
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+      document.removeEventListener("touchstart", handleOutsideClick as EventListener);
+    };
+  }, [activeFootnote]);
 
   if (isLoading) {
     return (
@@ -254,7 +288,7 @@ export function BibleContent({
     );
   }
 
-  if (!processedHtml) {
+  if (!htmlContent) {
     return (
       <div className="bible-content">
         <p style={{ color: "var(--text-secondary)", textAlign: "center", padding: "40px 0" }}>
@@ -265,14 +299,26 @@ export function BibleContent({
   }
 
   const textSize = FONT_SIZE_MAP[fontSize];
+  const footnoteSize = FOOTNOTE_SIZE_MAP[fontSize];
 
   return (
     <div className="bible-content">
       <h2 className="bible-content-title">{reference}</h2>
+      {noResults && (
+        <p style={{ color: "var(--text-secondary)", textAlign: "center", padding: "20px 0" }}>
+          Nenhum versículo encontrado.
+        </p>
+      )}
       <div
+        ref={contentRef}
         className="bible-content-text"
-        style={{ fontSize: `${textSize}px`, lineHeight: `${textSize * 1.7}px` }}
-        dangerouslySetInnerHTML={{ __html: processedHtml }}
+        style={{
+          fontSize: `${textSize}px`,
+          lineHeight: `${textSize * 1.7}px`,
+          ["--footnote-size" as string]: `${footnoteSize}px`,
+        }}
+        onClick={handleFootnoteClick}
+        dangerouslySetInnerHTML={{ __html: htmlContent }}
       />
     </div>
   );
