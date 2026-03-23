@@ -1670,7 +1670,7 @@ select.input-field {
 
 /* ─── Content ────────────────────────────────────── */
 .bible-content {
-  padding: 24px 8px;
+  padding: 24px 20px;
   min-height: 200px;
 }
 .bible-content-title {
@@ -1776,12 +1776,12 @@ select.input-field {
   height: 12px;
 }
 
-/* ─── Verse Reading Indicator (leitura acompanhada) ───── */
+/* ─── Verse Reading Indicator (guia de leitura) ───── */
 .bible-verse-indicator {
   position: absolute;
-  left: 0;
-  width: 3px;
-  border-radius: 2px;
+  left: 6px;
+  width: 4px;
+  border-radius: 3px;
   background: #1a1a1a;
   opacity: 0;
   pointer-events: none;
@@ -1947,8 +1947,8 @@ select.input-field {
   background: var(--surface-hover);
 }
 .bible-player-btn--main {
-  width: 44px;
-  height: 44px;
+  width: 48px;
+  height: 48px;
   background: var(--accent);
   color: #fff;
 }
@@ -2041,7 +2041,7 @@ select.input-field {
   cursor: pointer;
   transition: background 0.15s, border-color 0.15s;
   flex-shrink: 0;
-  min-width: 32px;
+  min-width: 46px;
   height: 28px;
 }
 .bible-player-pill-btn:hover {
@@ -2085,8 +2085,8 @@ select.input-field {
   cursor: not-allowed;
 }
 .bible-player-collapsed-btn--play {
-  width: 52px;
-  height: 52px;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
   border: none;
   background: var(--accent);
@@ -2115,13 +2115,13 @@ select.input-field {
 }
 .bible-player-progress-ring-track {
   fill: none;
-  stroke: rgba(255,255,255,0.2);
-  stroke-width: 3;
+  stroke: rgba(255,255,255,0.15);
+  stroke-width: 2;
 }
 .bible-player-progress-ring-fill {
   fill: none;
   stroke: #fff;
-  stroke-width: 3;
+  stroke-width: 2;
   stroke-linecap: round;
   transition: stroke-dashoffset 0.3s ease;
 }
@@ -2642,7 +2642,10 @@ select.input-field {
     bottom: -18px;
   }
   .bible-content {
-    padding: 16px 18px;
+    padding: 16px 24px;
+  }
+  .bible-verse-indicator {
+    left: 8px;
   }
   .bible-content-title {
     font-size: 22px;
@@ -2821,7 +2824,7 @@ select.input-field {
     padding-right: 0;
   }
   .bible-content {
-    padding: 20px 16px;
+    padding: 20px 24px;
   }
   .bible-side-nav {
     display: none;

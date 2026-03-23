@@ -139,16 +139,27 @@ export function BibleContent({
       return;
     }
 
-    // Posicionar relativo a .bible-content (offsetParent do indicador)
+    // Usar getClientRects para inline elements que quebram linha
+    // getBoundingClientRect pode dar altura errada em elementos inline multi-linha
     const wrapper = indicator.parentElement;
     if (!wrapper) return;
     const wrapperRect = wrapper.getBoundingClientRect();
-    const verseRect = verseEl.getBoundingClientRect();
+    const rects = verseEl.getClientRects();
 
-    indicator.style.top = `${verseRect.top - wrapperRect.top}px`;
-    indicator.style.height = `${verseRect.height}px`;
+    if (rects.length === 0) {
+      indicator.style.opacity = "0";
+      return;
+    }
+
+    const firstRect = rects[0];
+    const lastRect = rects[rects.length - 1];
+    const top = firstRect.top - wrapperRect.top;
+    const height = (lastRect.top + lastRect.height) - firstRect.top;
+
+    indicator.style.top = `${top}px`;
+    indicator.style.height = `${Math.max(height, 8)}px`;
     indicator.style.opacity = "1";
-  }, [currentVerse, htmlContent]);
+  }, [currentVerse, htmlContent, fontSize]);
 
   const processSearch = useCallback(() => {
     const container = contentRef.current;

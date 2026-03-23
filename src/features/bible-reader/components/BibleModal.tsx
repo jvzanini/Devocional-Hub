@@ -13,8 +13,8 @@ import { BibleContent } from "./BibleContent";
 import { BibleNavigation } from "./BibleNavigation";
 import { AudioPlayer } from "./AudioPlayer";
 
-const RING_RADIUS = 23;
-const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS; // ≈ 144.51
+const RING_RADIUS = 22;
+const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS; // ≈ 138.23
 
 const FONT_SIZE_KEY = "devhub-bible-fontsize";
 const FONT_SIZE_CYCLE: FontSizeLevel[] = ["normal", "medium", "large"];
@@ -351,10 +351,14 @@ export function BibleModal({
         const verseEls = contentRef.current.querySelectorAll("[data-verse]");
         const count = verseEls.length;
         if (count > 0) {
-          const interval = state.duration / count;
+          // Reservar ~8% do início para intro/silêncio da narração,
+          // distribuir o resto igualmente entre os versículos
+          const introOffset = state.duration * 0.08;
+          const usableDuration = state.duration - introOffset;
+          const interval = usableDuration / count;
           ts = Array.from({ length: count }, (_, i) => ({
             verse: parseInt(verseEls[i].getAttribute("data-verse") || String(i + 1), 10),
-            timestamp: i * interval,
+            timestamp: introOffset + i * interval,
           }));
         }
       }
@@ -389,22 +393,31 @@ export function BibleModal({
     if (!verseEl) return;
 
     const containerRect = scrollContainer.getBoundingClientRect();
-    const verseRect = verseEl.getBoundingClientRect();
+    const rects = verseEl.getClientRects();
+    if (rects.length === 0) return;
+    const firstRect = rects[0];
+    const lastRect = rects[rects.length - 1];
+    const verseTop = firstRect.top;
+    const verseBottom = lastRect.top + lastRect.height;
 
-    // Verificar se o versículo está fora da área visível
+    // Considerar o footer/player que pode cobrir texto
+    const footer = scrollContainer.parentElement?.querySelector(".bible-modal-footer");
+    const footerHeight = footer ? footer.getBoundingClientRect().height : 0;
+    const visibleBottom = containerRect.bottom - footerHeight;
+
     const padding = 80; // espaço do topo
-    const isAbove = verseRect.top < containerRect.top;
-    const isBelow = verseRect.bottom > containerRect.bottom - 20;
+    const isAbove = verseTop < containerRect.top;
+    const isBelow = verseBottom > visibleBottom - 20;
 
     if (isAbove || isBelow) {
       const targetScrollTop =
-        verseRect.top - containerRect.top + scrollContainer.scrollTop - padding;
+        verseTop - containerRect.top + scrollContainer.scrollTop - padding;
       scrollContainer.scrollTo({
         top: Math.max(0, targetScrollTop),
         behavior: "smooth",
       });
     }
-  }, [currentVerse]);
+  }, [currentVerse, isPlayerCollapsed]);
 
   // ─── Progress ring circular no botão play colapsado (DOM direto, sem re-render) ─
   useEffect(() => {
@@ -751,12 +764,12 @@ export function BibleModal({
                 aria-label={isAudioLoading ? "Carregando" : isAudioPlaying ? "Pausar" : "Reproduzir"}
               >
                 {/* Progress ring circular (só no colapsado) */}
-                <svg className="bible-player-progress-ring" viewBox="0 0 52 52">
-                  <circle className="bible-player-progress-ring-track" cx="26" cy="26" r="23" />
+                <svg className="bible-player-progress-ring" viewBox="0 0 48 48">
+                  <circle className="bible-player-progress-ring-track" cx="24" cy="24" r={RING_RADIUS} />
                   <circle
                     ref={progressRingRef}
                     className="bible-player-progress-ring-fill"
-                    cx="26" cy="26" r="23"
+                    cx="24" cy="24" r={RING_RADIUS}
                     strokeDasharray={RING_CIRCUMFERENCE}
                     strokeDashoffset={RING_CIRCUMFERENCE}
                   />
