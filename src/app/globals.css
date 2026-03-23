@@ -1720,7 +1720,7 @@ select.input-field {
   min-height: 200px;
 }
 .bible-content-title {
-  font-size: 20px;
+  font-size: 26px;
   font-weight: 700;
   color: var(--accent);
   margin: 0 0 20px;
@@ -1732,8 +1732,8 @@ select.input-field {
 }
 .bible-content-text .v {
   font-size: 12px;
-  font-weight: 700;
-  color: var(--accent);
+  font-weight: 400;
+  color: var(--text-secondary);
   vertical-align: super;
   margin-right: 2px;
 }
@@ -1755,9 +1755,9 @@ select.input-field {
 .bible-content-text .bible-section-title {
   display: block;
   font-weight: 700;
-  font-size: 15px;
+  font-size: 20px;
   color: var(--text-secondary);
-  margin: 24px 0 10px;
+  margin: 32px 0 10px;
   line-height: 1.4;
 }
 .bible-content-text .bible-section-title:first-child {
@@ -1822,6 +1822,49 @@ select.input-field {
   height: 12px;
 }
 
+/* YouVersion footnotes — tooltip */
+.bible-footnote {
+  position: relative;
+  display: inline;
+  cursor: pointer;
+}
+.bible-footnote-icon {
+  font-size: 7px;
+  color: var(--text-secondary);
+  vertical-align: super;
+  line-height: 1;
+  opacity: 0.6;
+  margin: 0 1px;
+}
+.bible-footnote-content {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--surface, #1a1a1c);
+  color: var(--text);
+  border: 1px solid var(--border, rgba(128,128,128,0.2));
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.5;
+  max-width: 280px;
+  min-width: 120px;
+  width: max-content;
+  z-index: 100;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+  white-space: normal;
+  pointer-events: none;
+}
+.bible-footnote:hover .bible-footnote-content,
+.bible-footnote:focus .bible-footnote-content,
+.bible-footnote:focus-within .bible-footnote-content {
+  display: block;
+  pointer-events: auto;
+}
+
 /* Skeleton */
 .bible-content-skeleton {
   display: flex;
@@ -1855,7 +1898,7 @@ select.input-field {
 .bible-navigation {
   display: flex;
   justify-content: space-between;
-  padding: 8px 16px;
+  padding: 8px 10px;
   border-top: 1px solid var(--border, rgba(128,128,128,0.15));
 }
 .bible-nav-btn {
@@ -1888,7 +1931,7 @@ select.input-field {
 
 /* ─── Audio Player ───────────────────────────────── */
 .bible-player {
-  padding: 10px 16px 16px;
+  padding: 10px 10px 24px;
 }
 .bible-player--disabled {
   padding: 10px 16px;
@@ -2119,7 +2162,11 @@ select.input-field {
   z-index: 10;
   display: flex;
   align-items: flex-start;
-  justify-content: center;
+  justify-content: flex-start;
+  padding-left: 24px;
+}
+.bible-selector-overlay--version {
+  padding-left: 200px;
 }
 .bible-selector-overlay--mobile {
   align-items: flex-end;
@@ -2572,7 +2619,7 @@ select.input-field {
     padding: 16px 18px;
   }
   .bible-content-title {
-    font-size: 18px;
+    font-size: 22px;
   }
   .bible-content-text {
     font-size: 16px;

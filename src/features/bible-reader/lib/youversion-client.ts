@@ -194,9 +194,11 @@ function extractChapterContent(pageHtml: string): string | null {
     const nextData = JSON.parse(nextDataMatch[1]);
 
     // Navegar até o conteúdo do capítulo
+    // Diferentes versões do YouVersion podem armazenar em paths diferentes
     const content =
       nextData?.props?.pageProps?.chapterInfo?.content ||
       nextData?.props?.pageProps?.chapter?.content ||
+      nextData?.props?.pageProps?.chapterInfo?.chapter?.content ||
       null;
 
     if (!content || typeof content !== "string") {
@@ -206,6 +208,11 @@ function extractChapterContent(pageHtml: string): string | null {
       const pageProps = nextData?.props?.pageProps;
       if (pageProps) {
         console.log("[YouVersion] Chaves em pageProps:", Object.keys(pageProps).join(", "));
+        // Deep search para encontrar o campo content em qualquer nível
+        const chapterInfo = pageProps.chapterInfo;
+        if (chapterInfo) {
+          console.log("[YouVersion] Chaves em chapterInfo:", Object.keys(chapterInfo).join(", "));
+        }
       }
 
       return null;
@@ -233,13 +240,68 @@ function extractChapterContent(pageHtml: string): string | null {
  * - span.verse → span.bible-verse (mantido)
  * - span.label → sup.v (número do versículo)
  * - span.content → texto inline
- * - span.note → removido (footnotes)
+ * - span.note → span.bible-footnote (tooltip com conteúdo da nota)
  */
+/**
+ * Transforma footnotes (span.note com spans aninhados) em tooltips inline.
+ * Usa parsing manual para lidar corretamente com spans aninhados.
+ */
+function transformFootnotes(html: string): string {
+  const noteStart = /(<span\s+class="[^"]*\bnote\b[^"]*"[^>]*>)/gi;
+  let result = "";
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = noteStart.exec(html)) !== null) {
+    // Adicionar texto antes do match
+    result += html.slice(lastIndex, match.index);
+
+    // Contar spans abertos/fechados para encontrar o </span> correto
+    let depth = 1;
+    let pos = match.index + match[0].length;
+    while (depth > 0 && pos < html.length) {
+      const nextOpen = html.indexOf("<span", pos);
+      const nextClose = html.indexOf("</span>", pos);
+
+      if (nextClose === -1) break; // malformado
+
+      if (nextOpen !== -1 && nextOpen < nextClose) {
+        depth++;
+        pos = nextOpen + 5; // avançar além de "<span"
+      } else {
+        depth--;
+        if (depth === 0) {
+          // Encontramos o </span> que fecha o note
+          const innerHtml = html.slice(match.index + match[0].length, nextClose);
+          // Remover o span.label (contém "#" ou "*")
+          const withoutLabel = innerHtml.replace(/<span\s+class="[^"]*\blabel\b[^"]*"[^>]*>[^<]*<\/span>/gi, "");
+          const noteText = withoutLabel.replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
+
+          if (noteText) {
+            result += `<span class="bible-footnote" tabindex="0"><span class="bible-footnote-icon">&#9679;</span><span class="bible-footnote-content">${noteText}</span></span>`;
+          }
+          pos = nextClose + 7; // length of "</span>"
+        } else {
+          pos = nextClose + 7;
+        }
+      }
+    }
+
+    lastIndex = pos;
+    noteStart.lastIndex = pos; // atualizar posição do regex
+  }
+
+  result += html.slice(lastIndex);
+  return result;
+}
+
 function transformYouVersionHtml(rawHtml: string): string {
   let html = rawHtml;
 
-  // 1. Remover footnotes (span.note e todo conteúdo dentro)
-  html = html.replace(/<span\s+class="[^"]*\bnote\b[^"]*"[^>]*>[\s\S]*?<\/span>/gi, "");
+  // 1. Transformar footnotes (span.note) em tooltips inline
+  //    Estrutura: <span class="note f"><span class="label">#</span><span class="body"><span class="fr">12.6 </span><span class="ft">Ou </span>...</span></span>
+  //    As notas podem conter 4-5 spans aninhados, então usamos abordagem iterativa
+  html = transformFootnotes(html);
 
   // 2. Remover classes CSS module do YouVersion (ex: ChapterContent_xxx__yyy)
   //    Preservar apenas as classes semânticas (s1, p, q1, q2, m, verse, label, content, heading)
@@ -248,7 +310,7 @@ function transformYouVersionHtml(rawHtml: string): string {
     (_match, classStr: string) => {
       const classes = classStr.split(/\s+/);
       const semanticClasses = classes.filter((cls: string) =>
-        /^(s[0-9]|p|q[0-9]|m|ms[0-9]?|d|verse|label|content|heading|chapter-num|b|r|sp|li[0-9]?)$/.test(cls)
+        /^(s[0-9]|p|q[0-9]|m|ms[0-9]?|d|verse|label|content|heading|chapter-num|b|r|sp|li[0-9]?|bible-.+)$/.test(cls)
       );
       return `class="${semanticClasses.join(" ")}"`;
     }
@@ -323,6 +385,12 @@ function transformYouVersionHtml(rawHtml: string): string {
   // 11. Limpar div.chapter-num (número do capítulo grande — remover pois já temos no header)
   html = html.replace(/<div\s+class="chapter-num"[^>]*>[\s\S]*?<\/div>/gi, "");
   html = html.replace(/<span\s+class="chapter-num"[^>]*>[\s\S]*?<\/span>/gi, "");
+
+  // 11b. Remover chapter label: <div class="label">NUMBER</div> que aparece
+  //      como primeiro elemento visível (número do capítulo grande do YouVersion)
+  //      Após step 7, verse labels já foram convertidos para sup.v,
+  //      então qualquer <div class="label">NÚMERO</div> restante é o chapter label
+  html = html.replace(/<div\s+class="label"[^>]*>\s*\d+\s*<\/div>/gi, "");
 
   // 12. Limpar atributos data-* desnecessários (exceto data-usfm e data-verse)
   html = html.replace(/\s+data-(?!usfm|verse)[a-z-]+="[^"]*"/g, "");

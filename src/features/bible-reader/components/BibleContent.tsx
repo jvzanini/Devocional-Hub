@@ -60,8 +60,9 @@ function filterAndHighlight(html: string, query: string): string {
   const highlightRegex = new RegExp(`(${escaped})`, "gi");
 
   // Separar os spans de versículos usando split/rejoin
-  // Cada versículo: <span class="bible-verse" data-verse="N">...</span>
-  const verseRegex = /<span class="bible-verse" data-verse="(\d+)">((?:(?!<span class="bible-verse")[\s\S])*?)<\/span>/g;
+  // Cada versículo: <span class="bible-verse" data-verse="N" ...>...</span>
+  // Permite atributos extras como data-usfm="ROM.12.1"
+  const verseRegex = /<span class="bible-verse" data-verse="(\d+)"[^>]*>((?:(?!<span class="bible-verse")[\s\S])*?)<\/span>/g;
   let hasVisible = false;
 
   const processed = html.replace(verseRegex, (match, verseNum, innerContent) => {

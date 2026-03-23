@@ -49,7 +49,7 @@ export function VersionSelector({
   }, [isMobile, onClose]);
 
   return (
-    <div className={`bible-selector-overlay ${isMobile ? "bible-selector-overlay--mobile" : ""}`}>
+    <div className={`bible-selector-overlay bible-selector-overlay--version ${isMobile ? "bible-selector-overlay--mobile" : ""}`}>
       {isMobile && (
         <div className="bible-selector-backdrop" onClick={onClose} aria-hidden="true" />
       )}

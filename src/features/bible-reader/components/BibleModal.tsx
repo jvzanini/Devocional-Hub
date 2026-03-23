@@ -223,13 +223,15 @@ export function BibleModal({
     loadAudio();
   }, [isOpen, selectedVersion, bookCode, chapter]);
 
-  // Monitorar estado do áudio (playing + speed)
+  // Monitorar estado do áudio (playing + speed + loading)
   const [audioSpeed, setAudioSpeed] = useState(1);
+  const [isAudioLoading, setIsAudioLoading] = useState(false);
   useEffect(() => {
     const manager = getAudioManager();
     const unsub = manager.subscribe((state) => {
       setIsAudioPlaying(state.isPlaying);
       setAudioSpeed(state.speed);
+      setIsAudioLoading(state.isLoading);
     });
     return unsub;
   }, []);
@@ -512,9 +514,15 @@ export function BibleModal({
               <button
                 className="bible-player-collapsed-btn--play"
                 onClick={handleAudioToggle}
-                aria-label={isAudioPlaying ? "Pausar" : "Reproduzir"}
+                aria-label={isAudioLoading ? "Carregando" : isAudioPlaying ? "Pausar" : "Reproduzir"}
               >
-                {isAudioPlaying ? (
+                {isAudioLoading ? (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="10" strokeDasharray="31.4 31.4" strokeLinecap="round">
+                      <animateTransform attributeName="transform" type="rotate" values="0 12 12;360 12 12" dur="1s" repeatCount="indefinite" />
+                    </circle>
+                  </svg>
+                ) : isAudioPlaying ? (
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
                   </svg>
