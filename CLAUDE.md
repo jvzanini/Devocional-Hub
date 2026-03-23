@@ -1,5 +1,32 @@
 # Devocional Hub — Diretrizes do Projeto
 
+## Bible Bubble v5 — YouVersion + AA + Audio Fix (CONCLUÍDO — 2026-03-23)
+
+### Formatação YouVersion (sem IA)
+- Títulos de seção, parágrafos e poesia agora vêm **direto do YouVersion (bible.com)**
+- Eliminada dependência de IA (GPT) para formatação de texto bíblico
+- Scraping via `__NEXT_DATA__` do bible.com (JSON embeddido no HTML)
+- Novo módulo: `youversion-client.ts` — fetch + parse + transform + cache 24h
+- Mapeamento de versões: Holy Bible API → YouVersion (NVI=129, ARA=1608, ARC=212, NAA=1840, NVT=1930, NTLH=211)
+- Classes CSS: `.bible-section-title`, `.bible-paragraph`, `.bible-poetry-1`, `.bible-poetry-2`
+- Fallback: se YouVersion falhar, usa Holy Bible API (texto sem títulos de seção)
+
+### Fix áudio speed mobile
+- Problema: ao mudar velocidade no mobile, áudio engasgava ~1 segundo
+- Solução: pause → alterar playbackRate → seek posição exata → requestAnimationFrame → resume
+- Aplicado universalmente (não só mobile)
+
+### Botão AA (tamanho da fonte)
+- Botão "Aa" no header da Bíblia, à direita da lupa
+- Ciclo: normal (17px) → médio (20px) → grande (24px)
+- Persistência via localStorage (`devhub-bible-fontsize`)
+
+### Testes Playwright
+- Configuração: `playwright.config.ts` + `tests/e2e/bible-bubble.spec.ts`
+- Usando: https://github.com/microsoft/playwright
+- Projetos: Desktop Chrome + Mobile Chrome (Pixel 7)
+- Rodar: `npx playwright test`
+
 ## Bible Bubble v4.1 — Refinamentos UX + Cache (CONCLUÍDO — 2026-03-21)
 
 - **Removido:** Word Project (fallback), ícone de volume do header
@@ -123,6 +150,32 @@ SUBSCRIBER_VIP (60) — Assinante VIP (futuro)
 SUBSCRIBER (40) — Assinante (futuro)
 MEMBER (20) — Participante regular
 ```
+
+## Rotina de Desenvolvimento (OBRIGATÓRIO)
+
+### Estrutura de toda demanda
+Toda solicitação deve ser organizada antes de implementar:
+```
+Etapa (agrupamento macro)
+  └── Sub-etapa (agrupamento funcional)
+       └── Tasks (tarefas individuais implementáveis)
+```
+
+### Ciclo de implementação
+1. **Planejar** — Organizar em Etapas → Sub-etapas → Tasks
+2. **Implementar** — Executar tasks de uma sub-etapa
+3. **Testar** — Ao finalizar cada etapa:
+   - Backend: `tsc --noEmit` + testes via curl
+   - Frontend: Playwright (`npx playwright test`) para validar navegação e UI
+4. **Corrigir** — Se testes falharem, corrigir antes de avançar
+5. **Deploy** — Commit + push + acompanhar CI/CD até sucesso
+6. **Documentar** — Atualizar CLAUDE.md, GitHub, PRD
+
+### Testes com Playwright (https://github.com/microsoft/playwright)
+- Usado para testes de frontend automatizados
+- Validar: navegação, componentes, interações do usuário
+- Rodar antes de cada deploy de features de frontend
+- Configuração: `npx playwright install` + `npx playwright test`
 
 ## Build & Deploy
 - Build: `npm run build` (APENAS na VPS/Docker — ver nota abaixo)

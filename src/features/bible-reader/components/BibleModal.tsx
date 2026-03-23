@@ -5,11 +5,27 @@ import { BIBLE_BOOKS, findBookByCode } from "@/features/bible/lib/bible-books";
 import { getAudioManager } from "../lib/audio-manager";
 import type { DiscoveredVersion } from "../lib/version-discovery";
 import { BibleHeader } from "./BibleHeader";
+import type { FontSizeLevel } from "./BibleHeader";
 import { VersionSelector } from "./VersionSelector";
 import { BookSelector } from "./BookSelector";
 import { BibleContent } from "./BibleContent";
 import { BibleNavigation } from "./BibleNavigation";
 import { AudioPlayer } from "./AudioPlayer";
+
+const FONT_SIZE_KEY = "devhub-bible-fontsize";
+const FONT_SIZE_CYCLE: FontSizeLevel[] = ["normal", "medium", "large"];
+
+function loadFontSize(): FontSizeLevel {
+  try {
+    const val = localStorage.getItem(FONT_SIZE_KEY) as FontSizeLevel;
+    if (val && FONT_SIZE_CYCLE.includes(val)) return val;
+  } catch {}
+  return "normal";
+}
+
+function saveFontSize(size: FontSizeLevel) {
+  try { localStorage.setItem(FONT_SIZE_KEY, size); } catch {}
+}
 
 const CACHE_KEY = "devhub-bible-position";
 const SPEED_KEY = "devhub-bible-speed";
@@ -88,6 +104,12 @@ export function BibleModal({
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [pendingSeekTime, setPendingSeekTime] = useState<number | null>(null);
+  const [fontSize, setFontSize] = useState<FontSizeLevel>("normal");
+
+  // Restaurar tamanho da fonte salvo
+  useEffect(() => {
+    setFontSize(loadFontSize());
+  }, []);
 
   const contentRef = useRef<HTMLDivElement>(null);
 
@@ -297,6 +319,15 @@ export function BibleModal({
     getAudioManager().togglePlayPause();
   }, []);
 
+  const handleFontSizeToggle = useCallback(() => {
+    setFontSize((prev) => {
+      const idx = FONT_SIZE_CYCLE.indexOf(prev);
+      const next = FONT_SIZE_CYCLE[(idx + 1) % FONT_SIZE_CYCLE.length];
+      saveFontSize(next);
+      return next;
+    });
+  }, []);
+
   const handlePreviousChapter = useCallback(() => {
     const currentBookIndex = BIBLE_BOOKS.findIndex((b) => b.code === bookCode);
     if (chapter > 1) {
@@ -364,6 +395,8 @@ export function BibleModal({
             setIsSearchOpen(!isSearchOpen);
             if (isSearchOpen) setSearchQuery("");
           }}
+          fontSize={fontSize}
+          onFontSizeToggle={handleFontSizeToggle}
         />
 
         {/* Busca no capítulo — T2 */}
@@ -425,6 +458,7 @@ export function BibleModal({
             isLoading={isLoading}
             error={error}
             searchQuery={searchQuery}
+            fontSize={fontSize}
           />
         </div>
 

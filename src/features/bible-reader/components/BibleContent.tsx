@@ -2,12 +2,21 @@
 
 import { useMemo } from "react";
 
+type FontSizeLevel = "normal" | "medium" | "large";
+
+const FONT_SIZE_MAP: Record<FontSizeLevel, number> = {
+  normal: 17,
+  medium: 20,
+  large: 24,
+};
+
 interface BibleContentProps {
   reference: string;
   htmlContent: string | null;
   isLoading: boolean;
   error: string | null;
   searchQuery?: string;
+  fontSize?: FontSizeLevel;
 }
 
 function LoadingSkeleton() {
@@ -87,6 +96,7 @@ export function BibleContent({
   isLoading,
   error,
   searchQuery,
+  fontSize = "normal",
 }: BibleContentProps) {
   const processedHtml = useMemo(() => {
     if (!htmlContent) return null;
@@ -130,11 +140,14 @@ export function BibleContent({
     );
   }
 
+  const textSize = FONT_SIZE_MAP[fontSize];
+
   return (
     <div className="bible-content">
       <h2 className="bible-content-title">{reference}</h2>
       <div
         className="bible-content-text"
+        style={{ fontSize: `${textSize}px`, lineHeight: `${textSize * 1.7}px` }}
         dangerouslySetInnerHTML={{ __html: processedHtml }}
       />
     </div>

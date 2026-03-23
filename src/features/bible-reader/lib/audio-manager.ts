@@ -148,9 +148,25 @@ export class AudioManager {
   setSpeed(speed: PlaybackSpeed): void {
     this.currentSpeed = speed;
     if (this.audio) {
+      const wasPlaying = !this.audio.paused;
+      const pos = this.audio.currentTime;
+
+      // Pausar antes de trocar a taxa para evitar gap audível no mobile
+      // (browsers mobile re-decodificam o buffer ao mudar playbackRate enquanto toca)
+      if (wasPlaying) {
+        this.audio.pause();
+      }
+
       this.audio.playbackRate = speed;
+      this.audio.currentTime = pos;
+
+      if (wasPlaying) {
+        // Aguardar um frame para o browser processar a nova taxa antes de retomar
+        requestAnimationFrame(() => {
+          this.audio?.play().catch(() => {});
+        });
+      }
     }
-    // Persistir velocidade
     try { localStorage.setItem("devhub-bible-speed", String(speed)); } catch {}
     this.notifyListeners();
   }

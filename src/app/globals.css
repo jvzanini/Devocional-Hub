@@ -1751,6 +1751,77 @@ select.input-field {
   margin: 20px 0 8px;
 }
 
+/* YouVersion section titles */
+.bible-content-text .bible-section-title {
+  display: block;
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--text-secondary);
+  margin: 24px 0 10px;
+  line-height: 1.4;
+}
+.bible-content-text .bible-section-title:first-child {
+  margin-top: 0;
+}
+
+/* YouVersion paragraphs */
+.bible-content-text .bible-paragraph {
+  margin: 0 0 12px;
+  display: block;
+}
+.bible-content-text .bible-paragraph .bible-verse {
+  display: inline;
+}
+
+/* YouVersion poetry */
+.bible-content-text .bible-poetry-1 {
+  display: block;
+  padding-left: 24px;
+  margin: 2px 0;
+}
+.bible-content-text .bible-poetry-2 {
+  display: block;
+  padding-left: 48px;
+  margin: 2px 0;
+}
+.bible-content-text .bible-poetry-1 .bible-verse,
+.bible-content-text .bible-poetry-2 .bible-verse {
+  display: inline;
+}
+
+/* YouVersion description and reference */
+.bible-content-text .bible-description {
+  display: block;
+  font-style: italic;
+  color: var(--text-secondary);
+  margin: 8px 0;
+}
+.bible-content-text .bible-reference {
+  display: block;
+  font-style: italic;
+  font-size: 14px;
+  color: var(--text-muted, var(--text-secondary));
+  margin: 4px 0 8px;
+}
+
+/* YouVersion lists */
+.bible-content-text .bible-list-1 {
+  display: block;
+  padding-left: 24px;
+  margin: 2px 0;
+}
+.bible-content-text .bible-list-2 {
+  display: block;
+  padding-left: 48px;
+  margin: 2px 0;
+}
+
+/* YouVersion break */
+.bible-content-text .bible-break {
+  display: block;
+  height: 12px;
+}
+
 /* Skeleton */
 .bible-content-skeleton {
   display: flex;

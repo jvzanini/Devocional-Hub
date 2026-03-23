@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/features/auth/lib/auth";
 import { getChapterContentHtml } from "@/features/bible-reader/lib/holy-bible-client";
+import { formatBibleContent } from "@/features/bible-reader/lib/bible-formatter";
+import { fetchYouVersionContent, isYouVersionAvailable } from "@/features/bible-reader/lib/youversion-client";
 
 export async function GET(
   _request: Request,
@@ -12,7 +14,6 @@ export async function GET(
   try {
     const { versionId, chapterId } = await params;
 
-    // chapterId vem como "ROM.13" do BibleModal
     const [bookCode, chapterStr] = chapterId.split(".");
     const chapter = parseInt(chapterStr, 10);
 
@@ -31,11 +32,40 @@ export async function GET(
       );
     }
 
+    // Estratégia: tentar YouVersion primeiro (conteúdo formatado completo)
+    // Se falhar, buscar da Holy Bible API + texto sem formatação extra
+    if (isYouVersionAvailable(versionId)) {
+      try {
+        const yvResult = await fetchYouVersionContent(versionId, bookCode, chapter);
+        if (yvResult && yvResult.content) {
+          return NextResponse.json({
+            content: {
+              content: yvResult.content,
+              copyright: yvResult.copyright,
+              reference: yvResult.reference,
+            },
+          });
+        }
+      } catch (yvErr) {
+        console.warn(`[API /bible/content] YouVersion falhou, tentando Holy Bible API:`, yvErr);
+      }
+    }
+
+    // Fallback: Holy Bible API (texto sem títulos de seção)
     const result = await getChapterContentHtml(bibleId, bookCode, chapter);
+
+    // Tentar formatar com YouVersion mesmo como fallback
+    const formattedContent = await formatBibleContent(
+      result.content,
+      result.reference,
+      versionId,
+      bookCode,
+      chapter
+    );
 
     return NextResponse.json({
       content: {
-        content: result.content,
+        content: formattedContent,
         copyright: result.copyright,
         reference: result.reference,
       },

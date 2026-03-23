@@ -1,5 +1,7 @@
 "use client";
 
+export type FontSizeLevel = "normal" | "medium" | "large";
+
 interface BibleHeaderProps {
   bookName: string;
   chapter: number;
@@ -8,6 +10,8 @@ interface BibleHeaderProps {
   onVersionClick: () => void;
   onClose: () => void;
   onSearchToggle?: () => void;
+  fontSize?: FontSizeLevel;
+  onFontSizeToggle?: () => void;
 }
 
 export function BibleHeader({
@@ -18,6 +22,8 @@ export function BibleHeader({
   onVersionClick,
   onClose,
   onSearchToggle,
+  fontSize = "normal",
+  onFontSizeToggle,
 }: BibleHeaderProps) {
   return (
     <div className="bible-header">
@@ -56,6 +62,24 @@ export function BibleHeader({
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
             </svg>
+          </button>
+        )}
+
+        {/* Tamanho da fonte — ciclo: normal → médio → grande */}
+        {onFontSizeToggle && (
+          <button
+            className="bible-header-icon-btn"
+            onClick={onFontSizeToggle}
+            aria-label={`Tamanho da fonte: ${fontSize === "normal" ? "normal" : fontSize === "medium" ? "médio" : "grande"}`}
+            style={{
+              fontWeight: 700,
+              fontSize: fontSize === "large" ? 16 : fontSize === "medium" ? 14 : 12,
+              letterSpacing: "-0.5px",
+              minWidth: 32,
+              textAlign: "center",
+            }}
+          >
+            Aa
           </button>
         )}
 
