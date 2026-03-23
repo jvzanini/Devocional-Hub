@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { DiscoveredVersion } from "../lib/version-discovery";
 
 interface VersionSelectorProps {
@@ -18,6 +18,7 @@ export function VersionSelector({
   onClose,
   isMobile,
 }: VersionSelectorProps) {
+  const [searchFilter, setSearchFilter] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
   const selectedRef = useRef<HTMLButtonElement>(null);
 
@@ -67,8 +68,38 @@ export function VersionSelector({
             </svg>
           </button>
         </div>
+        <div style={{
+          padding: "8px 16px",
+          position: "sticky",
+          top: 0,
+          zIndex: 10,
+          background: "var(--surface)",
+        }}>
+          <input
+            type="text"
+            placeholder="Buscar versão..."
+            value={searchFilter}
+            onChange={(e) => setSearchFilter(e.target.value)}
+            style={{
+              width: "100%",
+              background: "var(--surface-hover, rgba(128,128,128,0.1))",
+              border: "1px solid var(--border, rgba(128,128,128,0.2))",
+              borderRadius: 8,
+              padding: "8px 12px",
+              color: "var(--text)",
+              fontSize: 16,
+              outline: "none",
+            }}
+          />
+        </div>
         <div className="bible-selector-list">
-          {versions.map((version) => {
+          {versions.filter((version) => {
+            if (!searchFilter) return true;
+            const q = searchFilter.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            const abbr = version.abbreviation.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            const name = (version.nameLocal || version.name).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            return abbr.includes(q) || name.includes(q);
+          }).map((version) => {
             const isSelected = version.id === selectedId;
             return (
               <button

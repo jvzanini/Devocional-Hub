@@ -1884,8 +1884,8 @@ select.input-field {
   display: none;
   position: absolute;
   top: calc(100% + 4px);
-  left: 0;
-  right: auto;
+  left: auto;
+  right: 0;
   background: var(--surface);
   color: var(--text);
   border: 1px solid var(--border);
@@ -1894,12 +1894,14 @@ select.input-field {
   font-size: 13px;
   font-weight: 400;
   line-height: 1.5;
-  max-width: min(300px, calc(100vw - 48px));
+  max-width: min(280px, calc(100vw - 32px));
   min-width: 120px;
   width: max-content;
   z-index: 100;
   box-shadow: 0 4px 16px rgba(0,0,0,0.2);
   white-space: normal;
+  overflow-wrap: break-word;
+  word-break: break-word;
   pointer-events: none;
 }
 .bible-footnote:hover .bible-footnote-content,
@@ -2672,6 +2674,18 @@ select.input-field {
   .bible-header-btn {
     font-size: 13px;
     padding: 5px 10px;
+  }
+  .bible-header-btn--book {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 140px;
+  }
+  .bible-header-btn--version {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 80px;
   }
   .bible-chapter-grid {
     grid-template-columns: repeat(5, 1fr);

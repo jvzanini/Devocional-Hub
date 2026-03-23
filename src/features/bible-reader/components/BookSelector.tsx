@@ -20,6 +20,7 @@ export function BookSelector({
   isMobile,
 }: BookSelectorProps) {
   const [expandedBook, setExpandedBook] = useState<string | null>(selectedBookCode);
+  const [searchFilter, setSearchFilter] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
   const selectedBookRef = useRef<HTMLDivElement>(null);
 
@@ -52,8 +53,22 @@ export function BookSelector({
     return () => document.removeEventListener("mousedown", handleClick);
   }, [isMobile, onClose]);
 
-  const atBooks = BIBLE_BOOKS.filter((b) => b.testament === "AT");
-  const ntBooks = BIBLE_BOOKS.filter((b) => b.testament === "NT");
+  const normalizedFilter = searchFilter
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
+  const filterBooks = (books: typeof BIBLE_BOOKS) => {
+    if (!normalizedFilter) return books;
+    return books.filter((b) => {
+      const name = b.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      const abbr = b.abbr.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      return name.includes(normalizedFilter) || abbr.includes(normalizedFilter);
+    });
+  };
+
+  const atBooks = filterBooks(BIBLE_BOOKS.filter((b) => b.testament === "AT"));
+  const ntBooks = filterBooks(BIBLE_BOOKS.filter((b) => b.testament === "NT"));
 
   function handleBookClick(code: string) {
     setExpandedBook(expandedBook === code ? null : code);
@@ -143,6 +158,30 @@ export function BookSelector({
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
+        </div>
+        <div style={{
+          padding: "8px 16px",
+          position: "sticky",
+          top: 0,
+          zIndex: 10,
+          background: "var(--surface)",
+        }}>
+          <input
+            type="text"
+            placeholder="Buscar livro..."
+            value={searchFilter}
+            onChange={(e) => setSearchFilter(e.target.value)}
+            style={{
+              width: "100%",
+              background: "var(--surface-hover, rgba(128,128,128,0.1))",
+              border: "1px solid var(--border, rgba(128,128,128,0.2))",
+              borderRadius: 8,
+              padding: "8px 12px",
+              color: "var(--text)",
+              fontSize: 16,
+              outline: "none",
+            }}
+          />
         </div>
         <div className="bible-selector-list bible-selector-list--books">
           {renderBookList(atBooks, "Antigo Testamento", true)}

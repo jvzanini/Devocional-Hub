@@ -288,6 +288,18 @@ export function BibleModal({
     }
   }, [isOpen]);
 
+  // Prevenir pinch-to-zoom no modal (mobile)
+  useEffect(() => {
+    if (!isOpen) return;
+    function preventZoom(e: TouchEvent) {
+      if (e.touches.length > 1) {
+        e.preventDefault();
+      }
+    }
+    document.addEventListener("touchmove", preventZoom, { passive: false });
+    return () => document.removeEventListener("touchmove", preventZoom);
+  }, [isOpen]);
+
   // Travar scroll do body (mobile)
   useEffect(() => {
     if (isOpen) {

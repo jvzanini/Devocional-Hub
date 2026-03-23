@@ -47,15 +47,11 @@ function normalizeForSearch(text: string): string {
 }
 
 /**
- * Filtrar versículos: ocultar os que não contêm o texto e destacar os que contêm
- * Trabalha com span.bible-verse[data-verse] individuais
- */
-/**
- * Remove todas as notas de rodapé (bible-footnote spans) do HTML.
+ * Remove um tipo de span (por classe) do HTML, incluindo spans aninhados.
  * Usa parsing iterativo para lidar com spans aninhados corretamente.
  */
-function stripFootnotes(html: string): string {
-  const pattern = /<span class="bible-footnote"[^>]*>/g;
+function stripSpansByClass(html: string, className: string): string {
+  const pattern = new RegExp(`<span class="${className}"[^>]*>`, "g");
   let result = "";
   let lastIndex = 0;
   let match: RegExpExecArray | null;
@@ -85,51 +81,103 @@ function stripFootnotes(html: string): string {
   return result;
 }
 
+/**
+ * Extrai todos os versículos (bible-verse spans) do HTML original.
+ * Retorna um Map de verseNum → { original HTML, texto limpo (sem footnotes) }.
+ * Texto fora de spans bible-verse é ignorado (footnotes órfãos, etc).
+ */
+function extractVerses(html: string): Map<string, { originalHtml: string; cleanText: string }> {
+  const verses = new Map<string, { originalHtml: string; cleanText: string }>();
+
+  // Find each bible-verse span and capture its content (handling nested spans)
+  const openTag = /<span class="bible-verse" data-verse="(\d+)"[^>]*>/g;
+  let m: RegExpExecArray | null;
+
+  while ((m = openTag.exec(html)) !== null) {
+    const verseNum = m[1];
+    const startAfterTag = m.index + m[0].length;
+
+    // Find the closing </span> for this verse span (handle nesting)
+    let depth = 1;
+    let pos = startAfterTag;
+    while (depth > 0 && pos < html.length) {
+      const nextOpen = html.indexOf("<span", pos);
+      const nextClose = html.indexOf("</span>", pos);
+      if (nextClose === -1) break;
+      if (nextOpen !== -1 && nextOpen < nextClose) {
+        depth++;
+        pos = nextOpen + 5;
+      } else {
+        depth--;
+        if (depth === 0) {
+          const innerContent = html.slice(startAfterTag, nextClose);
+          const fullSpan = html.slice(m.index, nextClose + 7);
+          // Strip footnotes from inner content for text matching only
+          const cleanInner = stripSpansByClass(innerContent, "bible-footnote");
+          const plainText = cleanInner.replace(/<[^>]+>/g, "").replace(/\u00A0/g, " ");
+
+          verses.set(verseNum, {
+            originalHtml: fullSpan,
+            cleanText: plainText,
+          });
+        }
+        pos = nextClose + 7;
+      }
+    }
+  }
+
+  return verses;
+}
+
 function filterAndHighlight(html: string, query: string): string {
   if (!query || query.length < 2) return html;
 
   const normalizedQuery = normalizeForSearch(query);
   if (!normalizedQuery) return html;
 
-  // 1. Strip footnotes e section titles ANTES de qualquer matching
-  //    Isso impede que texto de footnotes polua a busca
-  let processed = html;
-  processed = stripFootnotes(processed);
-  processed = processed.replace(/<h3 class="bible-section-title">[\s\S]*?<\/h3>/g, "");
-
   const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const highlightRegex = new RegExp(`(${escaped})`, "gi");
 
-  // Separar os spans de versículos usando split/rejoin
-  // Cada versículo: <span class="bible-verse" data-verse="N" ...>...</span>
-  // Permite atributos extras como data-usfm="ROM.12.1"
-  const verseRegex = /<span class="bible-verse" data-verse="(\d+)"[^>]*>((?:(?!<span class="bible-verse")[\s\S])*?)<\/span>/g;
-  let hasVisible = false;
+  // Extrair todos os versículos do HTML original
+  const verses = extractVerses(html);
 
-  processed = processed.replace(verseRegex, (match, verseNum, innerContent) => {
-    // Extrair texto puro do versículo (footnotes já foram removidos)
-    const plainText = innerContent.replace(/<[^>]+>/g, "").replace(/\u00A0/g, " ");
-    const normalizedPlain = normalizeForSearch(plainText);
+  if (verses.size === 0) return html;
+
+  // Filtrar e destacar versículos que correspondem à busca
+  let hasVisible = false;
+  const resultParts: string[] = [];
+
+  verses.forEach(({ originalHtml, cleanText }, verseNum) => {
+    const normalizedPlain = normalizeForSearch(cleanText);
 
     if (!normalizedPlain.includes(normalizedQuery)) {
-      return `<span class="bible-verse" data-verse="${verseNum}" style="display:none">${innerContent}</span>`;
+      // Ocultar versículo — usar o HTML original mas com display:none
+      resultParts.push(
+        originalHtml.replace(
+          /^<span class="bible-verse"/,
+          '<span class="bible-verse" style="display:none"'
+        )
+      );
+    } else {
+      hasVisible = true;
+      // Destacar — aplicar highlight no texto fora de tags HTML
+      // Usar o HTML original (com footnotes visíveis)
+      const highlighted = originalHtml.replace(/>([^<]+)/g, (_m: string, text: string) => {
+        const h = text.replace(
+          highlightRegex,
+          '<mark style="background:var(--accent);color:#000;border-radius:2px;padding:0 2px">$1</mark>'
+        );
+        return `>${h}`;
+      });
+      resultParts.push(highlighted);
     }
-
-    hasVisible = true;
-    // Destacar — aplicar apenas no texto fora de tags HTML
-    const highlighted = innerContent.replace(/>([^<]+)/g, (_m: string, text: string) => {
-      const h = text.replace(highlightRegex, '<mark style="background:var(--accent);color:#000;border-radius:2px;padding:0 2px">$1</mark>');
-      return `>${h}`;
-    });
-
-    return `<span class="bible-verse" data-verse="${verseNum}">${highlighted}</span>`;
   });
 
   if (!hasVisible) {
     return '<p style="color:var(--text-secondary);text-align:center;padding:20px 0">Nenhum versículo encontrado.</p>';
   }
 
-  return processed;
+  return resultParts.join("");
 }
 
 export function BibleContent({
