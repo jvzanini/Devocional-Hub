@@ -29,6 +29,7 @@ interface BookData {
 
 interface BooksPageClientProps {
   books: BookData[];
+  userRole?: string;
 }
 
 interface SearchResult {
@@ -82,8 +83,35 @@ function useGlobalSearch(query: string, delay = 300) {
   return { results, isSearching };
 }
 
-export function BooksPageClient({ books }: BooksPageClientProps) {
-  const booksWithSessions = useMemo(() => books.filter((b) => b.sessionCount > 0), [books]);
+export function BooksPageClient({ books, userRole }: BooksPageClientProps) {
+  const isAdmin = userRole === "ADMIN" || userRole === "SUPER_ADMIN";
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [localBooks, setLocalBooks] = useState(books);
+
+  const handleDeleteSession = useCallback(async (e: React.MouseEvent, sessionId: string, chapterRef: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!confirm(`Excluir o devocional "${chapterRef || "Devocional"}"? Esta ação não pode ser desfeita.`)) return;
+    setDeletingId(sessionId);
+    try {
+      const res = await fetch(`/api/sessions/${sessionId}`, { method: "DELETE" });
+      if (res.ok) {
+        setLocalBooks(prev => prev.map(book => ({
+          ...book,
+          sessions: book.sessions.filter(s => s.id !== sessionId),
+          sessionCount: book.sessions.filter(s => s.id !== sessionId).length,
+        })));
+      } else {
+        alert("Erro ao excluir devocional.");
+      }
+    } catch {
+      alert("Erro ao excluir devocional.");
+    } finally {
+      setDeletingId(null);
+    }
+  }, []);
+
+  const booksWithSessions = useMemo(() => localBooks.filter((b) => b.sessionCount > 0), [localBooks]);
 
   const [selectedBookCode, setSelectedBookCode] = useState<string>(booksWithSessions[0]?.code || books[0]?.code || "");
   const [search, setSearch] = useState("");
@@ -95,8 +123,8 @@ export function BooksPageClient({ books }: BooksPageClientProps) {
   const { results: globalResults, isSearching } = useGlobalSearch(globalSearch);
 
   const selectedBook = useMemo(
-    () => books.find((b) => b.code === selectedBookCode) || booksWithSessions[0] || books[0],
-    [books, booksWithSessions, selectedBookCode]
+    () => localBooks.find((b) => b.code === selectedBookCode) || booksWithSessions[0] || localBooks[0],
+    [localBooks, booksWithSessions, selectedBookCode]
   );
 
   const filteredSessions = useMemo(() => {
@@ -434,17 +462,48 @@ export function BooksPageClient({ books }: BooksPageClientProps) {
         ) : (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 16 }}>
             {filteredSessions.map((s) => (
-              <Link key={s.id} href={`/session/${s.id}`} className="book-card">
+              <Link key={s.id} href={`/session/${s.id}`} className="book-card" style={{ position: "relative" }}>
                 <div className="book-card-header">
                   <span style={{ fontSize: 16, fontWeight: 700, lineHeight: 1.3 }}>{s.chapterRef || "Devocional"}</span>
-                  {s.status === "COMPLETED" && (
-                    <div style={{ width: 22, height: 22, borderRadius: "50%", backgroundColor: "rgba(16,185,129,0.15)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                      <svg width={14} height={14} fill="none" viewBox="0 0 24 24" stroke="#10b981" strokeWidth={2.5}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                      </svg>
-                    </div>
-                  )}
-                  {s.status === "RUNNING" && <span className="badge badge-warning" style={{ fontSize: 11 }}>Processando</span>}
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    {s.status === "COMPLETED" && (
+                      <div style={{ width: 22, height: 22, borderRadius: "50%", backgroundColor: "rgba(16,185,129,0.15)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        <svg width={14} height={14} fill="none" viewBox="0 0 24 24" stroke="#10b981" strokeWidth={2.5}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
+                    )}
+                    {s.status === "RUNNING" && <span className="badge badge-warning" style={{ fontSize: 11 }}>Processando</span>}
+                    {isAdmin && (
+                      <button
+                        onClick={(e) => handleDeleteSession(e, s.id, s.chapterRef)}
+                        disabled={deletingId === s.id}
+                        title="Excluir devocional"
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          width: 26,
+                          height: 26,
+                          borderRadius: 6,
+                          border: "none",
+                          background: "transparent",
+                          color: "var(--text-muted)",
+                          cursor: deletingId === s.id ? "wait" : "pointer",
+                          opacity: deletingId === s.id ? 0.4 : 0.5,
+                          transition: "all 0.15s",
+                          padding: 0,
+                          flexShrink: 0,
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.opacity = "1"; e.currentTarget.style.color = "#ef4444"; e.currentTarget.style.background = "rgba(239,68,68,0.1)"; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.opacity = "0.5"; e.currentTarget.style.color = "var(--text-muted)"; e.currentTarget.style.background = "transparent"; }}
+                      >
+                        <svg width={14} height={14} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                        </svg>
+                      </button>
+                    )}
+                  </div>
                 </div>
                 <div className="book-card-body">
                   {s.summary && (

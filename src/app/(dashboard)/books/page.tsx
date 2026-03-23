@@ -15,6 +15,8 @@ export default async function BooksPage() {
   const session = await auth();
   if (!session) redirect("/login");
 
+  const userRole = (session.user as { role?: string }).role || "MEMBER";
+
   const sessions = await prisma.session.findMany({
     where: {
       status: { in: ["COMPLETED", "RUNNING"] },
@@ -89,5 +91,5 @@ export default async function BooksPage() {
     })
     .sort((a, b) => a.order - b.order);
 
-  return <BooksPageClient books={booksData} />;
+  return <BooksPageClient books={booksData} userRole={userRole} />;
 }
