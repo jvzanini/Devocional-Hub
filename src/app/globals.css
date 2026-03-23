@@ -434,19 +434,7 @@ body {
   border-color: var(--accent);
 }
 
-.session-card {
-  background-color: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 18px;
-  box-shadow: var(--shadow-xs);
-  transition: border-color 0.2s;
-  display: flex;
-  gap: 14px;
-}
-.session-card:hover {
-  border-color: var(--accent);
-}
+
 
 /* ═══════════════════════════════════════
    BUTTONS
@@ -712,9 +700,7 @@ select.input-field {
   margin-bottom: 6px;
 }
 
-.text-muted { color: var(--text-muted); }
-.text-secondary { color: var(--text-secondary); }
-.text-error { color: var(--error); }
+
 
 /* ═══════════════════════════════════════
    LOGO & AVATAR
@@ -726,12 +712,7 @@ select.input-field {
   border-radius: var(--radius-xl);
   display: inline-flex; align-items: center; justify-content: center;
 }
-.logo-icon-sm {
-  width: 36px; height: 36px;
-  background: linear-gradient(135deg, var(--accent), var(--accent-hover));
-  border-radius: var(--radius);
-  display: flex; align-items: center; justify-content: center;
-}
+
 
 .avatar-sm {
   width: 32px; height: 32px; border-radius: 50%;
@@ -752,30 +733,7 @@ select.input-field {
   border: 3px dashed var(--accent);
 }
 
-/* ═══════════════════════════════════════
-   DOTS
-   ═══════════════════════════════════════ */
 
-.dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-.dot-success { background-color: var(--success); }
-.dot-error { background-color: var(--error); }
-.dot-warning { background-color: var(--warning); }
-.dot-info { background-color: var(--info); }
-
-/* ═══════════════════════════════════════
-   HERO PANEL (Reading Plan)
-   ═══════════════════════════════════════ */
-
-.hero-panel {
-  background-color: var(--surface);
-  border: 1.5px solid var(--accent);
-  border-radius: var(--radius-xl);
-  padding: 24px;
-  color: var(--text);
-  position: relative;
-  overflow: hidden;
-  box-shadow: 0 0 20px rgba(245,166,35,0.06);
-}
 
 /* ═══════════════════════════════════════
    DASHBOARD
@@ -796,43 +754,7 @@ select.input-field {
   margin-bottom: 24px;
 }
 
-.insights-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
 
-.insight-card {
-  background-color: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-xl);
-  padding: 16px 18px;
-  display: flex;
-  gap: 14px;
-  align-items: flex-start;
-  transition: border-color 0.2s;
-}
-.insight-card:hover {
-  border-color: var(--accent);
-}
-.insight-card-icon {
-  width: 38px;
-  height: 38px;
-  border-radius: var(--radius);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  background-color: var(--accent-subtle);
-}
-
-.zoom-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 16px;
-  align-items: center;
-}
 
 /* ═══════════════════════════════════════
    CALENDAR
@@ -1171,11 +1093,7 @@ select.input-field {
   padding: 14px;
 }
 
-.participant-chip {
-  display: inline-flex; align-items: center; gap: 6px;
-  font-size: 14px; background-color: var(--surface-hover); color: var(--text-secondary);
-  padding: 6px 12px; border-radius: var(--radius); border: 1px solid var(--border); font-weight: 500;
-}
+
 
 /* ═══════════════════════════════════════
    GRIDS (Admin)
@@ -1295,7 +1213,7 @@ select.input-field {
 @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 @keyframes slideInRight { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
-.anim-fade { animation: fadeIn 200ms ease-out both; }
+
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
@@ -1387,10 +1305,6 @@ select.input-field {
     grid-template-columns: 1fr;
   }
 
-  .hero-panel {
-    padding: 18px 16px;
-  }
-
   .calendar-container {
     padding: 14px;
     overflow-x: auto;
@@ -1443,10 +1357,6 @@ select.input-field {
 
   .day-summary-popover {
     max-width: 90vw;
-    padding: 14px;
-  }
-
-  .insight-card {
     padding: 14px;
   }
 
@@ -1531,9 +1441,6 @@ select.input-field {
     grid-template-columns: 1fr;
   }
 
-  .hero-panel {
-    padding: 20px;
-  }
 }
 
 /* Desktop tweaks (1024px - 1279px) */
@@ -2719,10 +2626,6 @@ select.input-field {
     flex-wrap: wrap;
     gap: 8px;
   }
-  .participant-chip {
-    font-size: 13px;
-    padding: 5px 10px;
-  }
 
   /* --- 2. Books / Devocional Page --- */
   .books-layout {
@@ -2926,13 +2829,6 @@ select.input-field {
   color: #1a1a1a;
 }
 
-/* --- 3. Participant Log — dashed borders visíveis no dark mode --- */
-[data-theme="dark"] .participant-chip {
-  background-color: var(--surface-hover);
-  border-color: var(--border);
-  color: var(--text-secondary);
-}
-
 /* --- 4. Session Navigation — botões visíveis no dark mode --- */
 [data-theme="dark"] .btn-outline {
   border-color: var(--border);
@@ -2986,19 +2882,9 @@ select.input-field {
   background-color: var(--surface-hover);
 }
 
-/* Dot indicators — manter visíveis */
-[data-theme="dark"] .dot {
-  opacity: 1;
-}
-
 /* Calendar legend / labels */
 [data-theme="dark"] .calendar-cell-label {
   color: inherit;
-}
-
-/* Hero panel — glow ajustado para dark */
-[data-theme="dark"] .hero-panel {
-  box-shadow: 0 0 20px rgba(245,166,35,0.12);
 }
 
 /* Section card borders — mais visíveis em dark */

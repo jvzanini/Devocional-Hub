@@ -49,15 +49,3 @@ export async function formatBibleContent(
   }
 }
 
-/**
- * @deprecated Use formatBibleContent() — esta função existia para compatibilidade
- * mas a formatação via IA foi substituída pelo YouVersion
- */
-export async function formatBibleTextWithAI(
-  html: string,
-  reference: string,
-  _versionName: string
-): Promise<string> {
-  console.warn("[BibleFormatter] formatBibleTextWithAI está deprecated. Use formatBibleContent()");
-  return html;
-}

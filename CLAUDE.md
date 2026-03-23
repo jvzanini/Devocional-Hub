@@ -1,406 +1,320 @@
 # Devocional Hub — Diretrizes do Projeto
 
-## Bible Bubble v5.3 — Side Nav + Mobile Fixes (CONCLUÍDO — 2026-03-23)
+## Bible Bubble v5.3 — Biblia Interativa Completa (CONCLUIDO — 2026-03-23)
 
-### Floating Side Navigation
-- Botões de navegação flutuantes (prev/next capítulo) nos lados esquerdo/direito do texto
-- Posicionados absolutamente no centro vertical do modal
-- Estilo circular com borda, hover opacity, desabilitado no primeiro/último capítulo
-- Coexistem com os botões de navegação do footer
-- Escondidos em mobile (< 768px) via CSS — tela muito estreita
+O Bible Bubble e o modulo de leitura biblica interativa do DevocionalHub. Todas as versoes anteriores (v4, v4.1, v5, v5.1, v5.2, v5.3) foram consolidadas aqui.
 
-### Search Fix — Footnotes e Orphan Text
-- `filterAndHighlight` agora remove footnotes ANTES de fazer matching de versículos
-- Nova função `stripFootnotes()` com parsing iterativo para spans aninhados
-- Elimina textos órfãos de notas de rodapé ("sua fé;", "diz o Senhor.") nos resultados de busca
-- Também remove títulos de seção durante busca
+### Fontes de dados
+- **Texto:** Holy Bible API (holy-bible-api.com) — 12 versoes PT, gratuita, sem API key
+- **Formatacao:** YouVersion (bible.com) — titulos de secao, paragrafos, poesia via scraping de `__NEXT_DATA__`
+- **Audio:** Bible.is (live.bible.is) — 4 versoes com audio versao-especifico (NVI, NAA, NTLH, NVT)
 
-### Footnote UI Improvements
-- Ícone de footnote aumentado de 16x16 para 18x18
-- Adicionado margin-left: 4px para espaçamento do texto anterior
-- Tooltip agora abre ABAIXO do ícone (top: calc(100% + 4px)) ao invés de acima
-- max-width: min(300px, calc(100vw - 48px)) para prevenir overflow horizontal
-- Alinhado à esquerda (left: 0) ao invés de centralizado para evitar overflow
-
-### NVT Section Titles Fix
-- NVT usa class="s" (sem número) ao invés de class="s1" para headings
-- Regex de transformação atualizado: `s[0-9]` → `s[0-9]?` para aceitar ambos
-- Também tratado class="q" (poesia sem número) como bible-poetry-1
-
-### Mobile Fixes
-- Pinch-to-zoom desabilitado no modal (touch-action: pan-y)
-- Seletores centralizados em mobile (padding-left: 0, justify-content: center)
-- Audio speed stutter: usa queueMicrotask para mudar playbackRate
-- Body padding horizontal do modal removido em mobile (< 768px)
-
-## Bible Bubble v5 — YouVersion + AA + Audio Fix (CONCLUÍDO — 2026-03-23)
-
-### Formatação YouVersion (sem IA)
-- Títulos de seção, parágrafos e poesia agora vêm **direto do YouVersion (bible.com)**
-- Eliminada dependência de IA (GPT) para formatação de texto bíblico
-- Scraping via `__NEXT_DATA__` do bible.com (JSON embeddido no HTML)
-- Novo módulo: `youversion-client.ts` — fetch + parse + transform + cache 24h
-- Mapeamento de versões: Holy Bible API → YouVersion (NVI=129, ARA=1608, ARC=212, NAA=1840, NVT=1930, NTLH=211)
+### Formatacao YouVersion (sem IA)
+- Titulos de secao, paragrafos e poesia vem **direto do YouVersion (bible.com)**
+- Eliminada dependencia de IA (GPT) para formatacao de texto biblico
+- Modulo: `youversion-client.ts` — fetch + parse + transform + cache 24h em memoria
+- Modulo: `bible-formatter.ts` — orquestra YouVersion com fallback para texto puro
 - Classes CSS: `.bible-section-title`, `.bible-paragraph`, `.bible-poetry-1`, `.bible-poetry-2`
-- Fallback: se YouVersion falhar, usa Holy Bible API (texto sem títulos de seção)
+- Fallback: se YouVersion falhar, usa Holy Bible API (texto sem titulos de secao)
 
-### Fix áudio speed mobile
-- Problema: ao mudar velocidade no mobile, áudio engasgava ~1 segundo
-- Solução: pause → alterar playbackRate → seek posição exata → requestAnimationFrame → resume
-- Aplicado universalmente (não só mobile)
+### Mapeamento de versoes (Holy Bible API → YouVersion)
+| Holy Bible ID | YouVersion ID | Abreviacao |
+|---------------|---------------|------------|
+| 644 | 129 | NVI |
+| 635 | 1608 | ARA |
+| 637 | 212 | ARC |
+| 641 | 1840 | NAA |
+| 645 | 1930 | NVT |
+| 643 | 211 | NTLH |
 
-### Botão AA (tamanho da fonte)
-- Botão "Aa" no header da Bíblia, à direita da lupa
-- Ciclo: normal (17px) → médio (20px) → grande (24px)
-- Persistência via localStorage (`devhub-bible-fontsize`)
-
-### Testes Playwright
-- Configuração: `playwright.config.ts` + `tests/e2e/bible-bubble.spec.ts`
-- Usando: https://github.com/microsoft/playwright
-- Projetos: Desktop Chrome + Mobile Chrome (Pixel 7)
-- Rodar: `npx playwright test`
-
-## Bible Bubble v4.1 — Refinamentos UX + Cache (CONCLUÍDO — 2026-03-21)
-
-- **Removido:** Word Project (fallback), ícone de volume do header
-- **Player:** inicia colapsado/pausado, sem autoplay, cache de posição (localStorage 24h)
-- **Busca:** filtra versículos (oculta não-correspondentes), ignora acentos/pontuação
-- **Bubble:** subido 20px, anti-zoom iOS no input de busca
-- **Colapsado:** seta expandir/recolher + labels de capítulo (← Romanos 9 [Play] Romanos 11 →)
-- **Fix:** áudio não reinicia ao colapsar/expandir (loadOnly vs loadAndPlay)
-
-## Bible Bubble v4 — Bible.is Audio Versão-Específico + UX Overhaul (CONCLUÍDO — 2026-03-21)
-
-Áudio versão-específico via Bible.is (FCBH) + overhaul completo de UX:
-- **Texto:** Holy Bible API (holy-bible-api.com) — 12 versões PT, gratuita, sem API key
-- **Áudio:** Bible.is (live.bible.is) — 4 versões com áudio próprio: NVI, NAA, NTLH, NVT
-- **Criados:** bible-is-audio.ts (mapeamento de filesets Bible.is)
-- **UX:** Bubble com label, scroll lock, player colapsável, drag-to-seek, busca no capítulo
-
-### Arquitetura da Bíblia (v4)
-```
-Frontend → /api/bible/versions → version-discovery.ts → 12 versões PT (4 com áudio versão-específico)
-Frontend → /api/bible/content  → holy-bible-client.ts → holy-bible-api.com (texto)
-Frontend → /api/bible/audio    → bible-is-audio.ts → live.bible.is (NVI/NAA/NTLH/NVT)
-                                 → word-project-audio.ts → wordproaudio.org (fallback)
-Frontend → /api/bible/context  → devocional-context.ts → Prisma (plano de leitura ativo)
-```
-
-### Versões PT com áudio versão-específico (Bible.is)
-| Versão | ID | NT Fileset | OT Fileset |
+### Versoes PT com audio versao-especifico (Bible.is)
+| Versao | ID | NT Fileset | OT Fileset |
 |--------|----|-----------|-----------|
 | NVI | 644 | PORNVIN1DA | PORNVIO1DA |
 | NAA | 641 | PORBBSN1DA | PORBBSO1DA |
 | NTLH | 643 | PO1NLHN1DA | PO1NLHO1DA |
 | NVT | 645 | PORTHFN1DA | PORTHFO1DA |
 
-### Versões PT (texto apenas)
+### Versoes PT (texto apenas)
 ARC (637), Almeida (636), ARA (635), NBV (642), OL (646), TB (647), CAP (640), BPT (639)
+
+### Features UX
+- **Bubble:** 15% maior que padrao, label "Abrir Biblia", esconde quando modal aberto, z-index 9999, subido 20px, anti-zoom iOS
+- **Player:** inicia colapsado/pausado, sem autoplay, drag-to-seek (mouse+touch), cache de posicao (localStorage 24h)
+- **Audio speed:** pause → alterar playbackRate → seek posicao exata → requestAnimationFrame → resume (fix stutter mobile)
+- **Busca:** lupa no header, client-side no capitulo com highlight, filtra versiculos, ignora acentos/pontuacao, remove footnotes antes do matching
+- **Footnotes:** icone 18x18 com margin-left 4px, tooltip abre abaixo, max-width responsivo
+- **Botao AA:** ciclo normal (17px) → medio (20px) → grande (24px), persistencia via localStorage
+- **Navegacao lateral:** botoes flutuantes prev/next capitulo nos lados do modal (escondidos em mobile < 768px)
+- **Seletores:** centralizados em mobile, bordas, transicoes suaves, separacao AT/NT
+- **NVT fix:** class="s" (sem numero) tratado como section title alem de class="s1"
+- **Modal:** scroll lock total no mobile, pinch-to-zoom desabilitado (touch-action: pan-y), body padding removido em mobile
+
+### Componentes
+`BibleBubble`, `BibleBubbleWrapper`, `BibleModal`, `BibleContent`, `BibleHeader`, `BibleNavigation`, `AudioPlayer`, `SpeedControl`, `BookSelector`, `ChapterSelector`, `VersionSelector`
+
+### Lib
+`youversion-client.ts`, `bible-formatter.ts`, `holy-bible-client.ts`, `bible-is-audio.ts`, `audio-manager.ts`, `version-discovery.ts`, `devocional-context.ts`
+
+## Arquitetura da Biblia
+
+```
+Frontend → /api/bible/versions           → version-discovery.ts → 12 versoes PT (4 com audio)
+Frontend → /api/bible/content/[v]/[ch]   → holy-bible-client.ts → holy-bible-api.com (texto)
+                                          → bible-formatter.ts  → youversion-client.ts (formatacao)
+Frontend → /api/bible/audio/[v]/[ch]     → bible-is-audio.ts    → live.bible.is (NVI/NAA/NTLH/NVT)
+Frontend → /api/bible/context            → devocional-context.ts → Prisma (plano de leitura ativo)
+```
 
 ### URLs de APIs externas
 - Texto: `https://holy-bible-api.com/bibles/{id}/books/{book}/chapters/{ch}/verses`
-- Áudio Bible.is: `https://live.bible.is/api/bibles/filesets/{FILESET}/{BOOK_CODE}/{CH}?v=4`
-- Áudio Word Project (fallback): `https://www.wordproaudio.org/bibles/app/audio/2_BR/{book}/{ch}.mp3`
+- Formatacao: `https://www.bible.com/bible/{youVersionId}/{BOOK}.{CH}.{ABBR}` (scraping __NEXT_DATA__)
+- Audio Bible.is: `https://live.bible.is/api/bibles/filesets/{FILESET}/{BOOK_CODE}/{CH}?v=4`
 
-### Features UX v4
-- Bubble: 15% maior, label "Abrir Bíblia", esconde quando modal aberto
-- Player: colapsável, drag-to-seek (mouse+touch), prev/next flutuantes
-- Busca: lupa no header, busca client-side no capítulo com highlight
-- Modal: scroll lock total no mobile, bordas nos seletores
+## Hotfix v2.1 — Correcoes pos-deploy (CONCLUIDO — 2026-03-21)
 
-## Hotfix v2.1 — Correções pós-deploy (CONCLUÍDO — 2026-03-21)
+~30 bugs e ajustes de UI/UX corrigidos apos review em producao: z-index do Bubble, deduplicacao de participantes, foto perfil em volume Docker, error handling da Biblia, layout do pizza chart, calendario com cores invertidas, abreviacoes corretas, sidebar renomeada, login com esqueci senha inline, perfil com toast feedback, cores accent goldenrod.
 
-~30 bugs e ajustes de UI/UX corrigidos após review em produção. Executado em 3 terminais paralelos + deploy.
+## Master Update v2 — CONCLUIDO (2026-03-21)
 
-### Correções Realizadas
-- **Bubble Bíblia:** z-index 9999, pointer-events, cursor pointer
-- **Participantes:** deduplicação por email/nome, badge de tempo verde
-- **Foto perfil:** path corrigido para volume Docker persistente (`/app/data/user-photos/`)
-- **Endpoint cleanup:** `POST /api/admin/cleanup` (SUPER_ADMIN)
-- **Bíblia texto:** error handling, logs, verificação de API key
-- **Bíblia áudio:** fallback automático para versão PT com áudio
-- **Seletores:** transições suaves, separação AT/NT, fontes maiores
-- **Pizza:** layout compacto com total no centro e legendas integradas
-- **Calendário:** cores invertidas (passado=âmbar escuro, futuro=vibrante), bolinha hoje
-- **Abreviações:** case correto (Rm, Gn, Mt)
-- **Cards:** check verde SVG, trilha com expand/collapse e horários
-- **Navegação:** Voltar→/books, pular sessões com erro
-- **Planejamento:** markdown renderizado, expand/collapse por livro/capítulo
-- **Relatórios:** filtros em linha horizontal, filtros por role, card Duração Média
-- **Login:** esqueci senha inline (sem modal), logo maior, frase atualizada
-- **Perfil:** feedback como toast (position fixed)
-- **Cores accent:** goldenrod (#daa520 dark, #c7910a light)
-- **Sidebar:** Progresso→Relatórios, logo maior
-- **Limpeza:** 6 componentes órfãos removidos, workflow obsoleto deletado
+Atualizacao master com 22 features em 8 tracks, 7 etapas concluidas. Incluiu: schema Prisma expandido (5 novos models, UserRole com 5 niveis), sistema de permissoes, autenticacao completa, sidebar redesenhada, admin panel, perfil com foto, modulo de planejamento teologico, cards redesenhados, busca inteligente, plano de leitura, relatorios com graficos, dark mode (2042 linhas CSS), responsividade total, seguranca (29 endpoints com requireRole).
 
-## Master Update v2 — CONCLUÍDO
+Documentacao completa em: `docs/PRD.md`
 
-Atualização master com 22 features em 8 tracks. Todas as 7 etapas foram concluídas com sucesso.
+## Processo de Desenvolvimento (OBRIGATORIO)
 
-### Documentação Completa
-- **PRD:** `.context/workflow/docs/prd-devocional-hub-master-update-v2.md`
-- **Tech Spec:** `.context/workflow/docs/tech-spec-devocional-hub-master-update-v2.md`
-- **Plano de Execução:** `.context/plans/devocional-hub-master-update-v2.md`
-
-### Etapa 1 — Fundação (CONCLUÍDA)
-Schema Prisma atualizado (5 novos models, UserRole com 5 níveis), sistema de permissões implementado, endpoints de autenticação criados, sharp instalado, templates de email prontos.
-
-### Etapas 2, 3, 5 — Core Backend + Frontend + Novas Features (CONCLUÍDAS)
-Triagem de transcrições, deduplicação Zoom, multi-sessão, email funcional, sidebar redesenhada, calendário com legendas, admin panel completo, perfil com foto/WhatsApp/apagar conta, Bíblia interativa (bubble + player + seletores), módulo de planejamento teológico.
-
-### Etapa 4 — Features Complexas (CONCLUÍDA)
-Cards redesenhados (layout vertical, AI_SUMMARY, ParticipantLog, navegação), busca inteligente, plano de leitura (calendário interativo, ChapterChecklist parcial/completo, progresso), relatórios (gráficos barras/linha/pizza, filtros avançados, toggle semanal/mensal/anual, exportar CSV), seção devocional (progresso por livro, roadmap, "Abrir Bíblia").
-
-### Etapa 6 — Polimento (CONCLUÍDA)
-Correções da Etapa 4 (modal retroativo, popup horário, rotação de dias), responsividade total (4+ breakpoints, fullscreen mobile, sidebar hamburger), dark mode (2042 linhas CSS), performance (lazy loading Bíblia, skeletons, debounce), segurança (29 endpoints com requireRole, uploads validados, API key segura, tokens com expiração).
-
-### Etapa 7 — Validação & Deploy (CONCLUÍDA)
-Prisma generate e tsc --noEmit sem erros, zero imports antigos, zero credenciais no código, .gitignore completo, CLAUDE.md atualizado, deploy em produção.
-
-
-### Novos Arquivos da Etapa 1 (já implementados)
-- `src/features/permissions/lib/role-hierarchy.ts` — Hierarquia de roles (SUPER_ADMIN:100 → MEMBER:20)
-- `src/features/permissions/lib/permission-guard.ts` — Guards: requireRole(), requirePermission()
-- `src/app/api/admin/permissions/route.ts` — GET/PATCH permissões
-- `src/app/api/auth/forgot-password/route.ts` — Enviar email de redefinição
-- `src/app/api/auth/reset-password/route.ts` — Redefinir senha com token
-- `src/app/api/profile/password/route.ts` — Alterar senha (logado)
-- `src/app/api/profile/account/route.ts` — Soft delete (LGPD)
-- `src/shared/lib/image-utils.ts` — Compressão de fotos (sharp)
-
-### Novos Models Prisma (Etapa 1)
-- `Permission` — recurso + minRole (controle de acesso configurável)
-- `PasswordResetToken` — token de redefinição de senha com expiração
-- `ParticipantEntry` — log de entradas/saídas individuais do Zoom
-- `ChapterReading` — leitura parcial/completa por capítulo
-- `PlanningCard` — card de planejamento teológico por capítulo
-
-### Enum UserRole Atualizado
-```
-SUPER_ADMIN (100) — Controle total (antigo ADMIN)
-ADMIN (80) — Equipe de manutenção
-SUBSCRIBER_VIP (60) — Assinante VIP (futuro)
-SUBSCRIBER (40) — Assinante (futuro)
-MEMBER (20) — Participante regular
-```
-
-## Processo de Desenvolvimento (OBRIGATÓRIO)
-
-### Fluxo padrão
+### Fluxo padrao
 1. Receber demanda → Planejar (Etapa → Sub-etapa → Tasks)
 2. Implementar tasks de uma sub-etapa
 3. **Testar com Playwright** ao final de cada etapa:
    - Login na plataforma com credenciais do .env (ADMIN_EMAIL/ADMIN_PASSWORD)
-   - Navegar até a feature implementada
-   - Verificar visualmente (screenshots) se está conforme solicitado
-   - Testar interações (cliques, hover, scroll)
-4. Se testes falharem → corrigir antes de avançar
-5. **Commit por etapa** (não por task individual)
+   - Navegar ate a feature implementada
+   - Verificar visualmente (screenshots) se esta conforme solicitado
+   - Testar interacoes (cliques, hover, scroll)
+4. Se testes falharem → corrigir antes de avancar
+5. **Commit por etapa** (nao por task individual)
 6. **Deploy SOMENTE ao final de TODAS as etapas**
-7. Deploy assistido: acompanhar CI/CD, verificar HTTP 200, só chamar o usuário quando tudo estiver OK
+7. Deploy assistido: acompanhar CI/CD, verificar HTTP 200, so chamar o usuario quando tudo estiver OK
 
 ### Estrutura de toda demanda
-Toda solicitação deve ser organizada antes de implementar:
 ```
 Etapa (agrupamento macro)
   └── Sub-etapa (agrupamento funcional)
-       └── Tasks (tarefas individuais implementáveis)
+       └── Tasks (tarefas individuais implementaveis)
 ```
 
-### Testes com Playwright (https://github.com/microsoft/playwright)
-- Usado para testes de frontend automatizados
-- Validar: navegação, componentes, interações do usuário
+### Testes com Playwright
+- Configuracao: `playwright.config.ts` + `tests/e2e/`
+- Projetos: Desktop Chrome + Mobile Chrome (Pixel 7)
+- Base URL: `https://devocional.nexusai360.com` (ou `PLAYWRIGHT_BASE_URL`)
 - Login com credenciais do .env (ADMIN_EMAIL/ADMIN_PASSWORD)
-- Screenshots para validação visual
-- Rodar antes de cada deploy de features de frontend
-- Configuração: `npx playwright install` + `npx playwright test`
+- Screenshots para validacao visual
+- Rodar: `npx playwright install` + `npx playwright test`
 
 ## Build & Deploy
+
 - Build: `npm run build` (APENAS na VPS/Docker — ver nota abaixo)
 - Dev: `npm run dev`
-- Prisma: `npx prisma generate` após alterar schema
+- Prisma: `npx prisma generate` apos alterar schema
 - DB sync: `npx prisma db push` (APENAS na VPS — requer PostgreSQL)
 - Install: `npm install --legacy-peer-deps` (conflito de peer deps com next-auth beta)
 - Deploy: push para `main` → GitHub Actions builda Docker image → faz deploy no Portainer
-- IMPORTANTE: Após deploy, o container leva ~30s para reiniciar. Aguardar antes de validar.
-- IMPORTANTE: O Portainer só atualiza o container se o stack YAML mudar. O CI/CD injeta `DEPLOY_SHA` para forçar redeploy.
+- IMPORTANTE: Apos deploy, o container leva ~30s para reiniciar. Aguardar antes de validar.
+- IMPORTANTE: O Portainer so atualiza o container se o stack YAML mudar. O CI/CD injeta `DEPLOY_SHA` para forcar redeploy.
 
-### Build Local — ATENÇÃO
-- O `npm run build` TRAVA localmente porque tenta conectar ao PostgreSQL durante a compilação de server components
+### Build Local — ATENCAO
+- O `npm run build` TRAVA localmente porque tenta conectar ao PostgreSQL durante a compilacao de server components
 - PostgreSQL roda APENAS na VPS (Docker Swarm), NUNCA localmente
-- Para validar código localmente: usar `npx prisma generate` (valida schema) + `npx tsc --noEmit` (valida tipos)
+- Para validar codigo localmente: usar `npx prisma generate` (valida schema) + `npx tsc --noEmit` (valida tipos)
 - O build real acontece no CI/CD (GitHub Actions → Docker)
 
 ## Stack
-- Next.js 16 (App Router) + TypeScript
-- Tailwind CSS 4 (ATENÇÃO: NÃO usar @theme inline — as CSS variables não funcionam em produção)
-- CSS: usar classes hardcoded em `globals.css` (`.card`, `.btn-primary`, `.input-field`, etc.) + inline styles
-- Prisma 5 + PostgreSQL (via Docker Swarm, host: `postgres`)
-- NextAuth v5 beta (credentials provider, JWT strategy, `trustHost: true`)
-- Nodemailer para emails (Gmail SMTP)
-- Playwright para automação NotebookLM
-- sharp (v0.34.5) para compressão de imagens de perfil
-- Recharts para gráficos (pizza, barras, linha)
-- OpenAI API (primário) — gpt-4.1-mini, modelo configurável via admin
-- OpenRouter API (fallback gratuito) — Nemotron 120B
-- Google Gemini API (fallback gratuito) — gemini-2.5-flash
+
+- **Next.js 16** (App Router) + TypeScript
+- **Tailwind CSS 4** — ATENCAO: NAO usar @theme inline (CSS variables nao funcionam em producao)
+- **CSS:** classes hardcoded em `globals.css` (`.card`, `.btn-primary`, `.input-field`, etc.) + inline styles
+- **Prisma 5** + PostgreSQL (via Docker Swarm, host: `postgres`)
+- **NextAuth v5 beta** (credentials provider, JWT strategy, `trustHost: true`)
+- **React 19** (19.2.3)
+- **Nodemailer** para emails (Gmail SMTP)
+- **Playwright** para testes E2E e automacao NotebookLM
+- **sharp** (v0.34.5) para compressao de imagens de perfil
+- **Recharts** para graficos (pizza, barras, linha)
+- **OpenAI API** (primario) — gpt-4.1-mini, modelo configuravel via admin
+- **OpenRouter API** (fallback gratuito) — Nemotron 120B
+- **Google Gemini API** (fallback gratuito) — Gemini 2.5 Flash
 
 ## Arquitetura (Feature-Based)
+
 ```
 src/
 ├── app/                          # Routing layer (pages + API routes)
 │   ├── (auth)/                   # Login, Invite (sem sidebar)
-│   ├── (dashboard)/              # Páginas autenticadas (com sidebar)
+│   ├── (dashboard)/              # Paginas autenticadas (com sidebar)
 │   │   ├── layout.tsx            # Layout compartilhado: Sidebar + auth check
-│   │   ├── page.tsx              # Dashboard (home) — stats, hero, insights IA, calendário
+│   │   ├── page.tsx              # Dashboard (home) — stats, hero, insights IA, calendario
 │   │   ├── books/page.tsx        # Devocional (lista + grid de cards)
-│   │   ├── planning/page.tsx     # Planejamento teológico
-│   │   ├── reports/page.tsx      # Relatórios (filtros, gráficos, tabela)
-│   │   ├── admin/page.tsx        # Painel admin (7 abas com ícones)
-│   │   ├── profile/page.tsx      # Perfil do usuário
-│   │   └── session/[id]/page.tsx # Detalhe da sessão
-│   ├── api/                      # 52 API endpoints
+│   │   ├── planning/page.tsx     # Planejamento teologico
+│   │   ├── reports/page.tsx      # Relatorios (filtros, graficos, tabela)
+│   │   ├── admin/page.tsx        # Painel admin (7 abas com icones)
+│   │   ├── profile/page.tsx      # Perfil do usuario
+│   │   └── session/[id]/page.tsx # Detalhe da sessao
+│   ├── api/                      # API endpoints
 │   ├── layout.tsx                # Root layout (font, theme script)
 │   └── globals.css               # Design system v3 com CSS variables + dark mode
-├── features/                     # Domínios de negócio
-│   ├── auth/lib/                 # Autenticação (NextAuth config)
-│   ├── sessions/                 # Sessões e presença
+├── features/                     # Dominios de negocio
+│   ├── auth/lib/                 # Autenticacao (NextAuth config)
+│   ├── sessions/                 # Sessoes e presenca
 │   │   ├── components/           # ProtectedDocuments, SessionNavigation, ParticipantLog
 │   │   └── lib/                  # attendance-sync.ts
 │   ├── dashboard/components/     # DashboardCalendar, BooksDistributionChart
 │   ├── admin/components/         # Componentes do painel admin
 │   ├── search/                   # Busca inteligente
-│   ├── bible/                    # Textos bíblicos
+│   ├── bible/                    # Textos biblicos (books list, abbreviations)
 │   │   ├── components/           # BooksPageClient
 │   │   └── lib/                  # bible.ts, bible-books.ts, bible-abbreviations.ts
-│   ├── bible-reader/             # Bíblia interativa (bubble + player) — NOVO
-│   │   ├── components/           # BibleBubble, BibleModal, AudioPlayer, Seletores
-│   │   └── lib/                  # holy-bible-client, bible-is-audio, audio-manager, version-discovery
-│   ├── permissions/lib/          # Sistema de permissões multi-nível — NOVO
-│   ├── planning/                 # Módulo de planejamento teológico — NOVO
+│   ├── bible-reader/             # Biblia interativa (bubble + player + YouVersion)
+│   │   ├── components/           # BibleBubble, BibleModal, AudioPlayer, Seletores, etc.
+│   │   └── lib/                  # youversion-client, bible-formatter, holy-bible-client, bible-is-audio, audio-manager, version-discovery, devocional-context
+│   ├── permissions/lib/          # Sistema de permissoes multi-nivel
+│   ├── planning/                 # Modulo de planejamento teologico
 │   │   ├── components/           # PlanningPage, PlanningCard, ThemeGroup
 │   │   └── lib/                  # planning-generator, reference-fetcher
-│   ├── pipeline/lib/             # Orquestração: ai.ts, pipeline.ts, notebooklm.ts, reading-plan-sync.ts, transcription-triage.ts
-│   ├── zoom/lib/                 # Integração Zoom (OAuth, recordings, participants)
-│   └── email/lib/                # Envio de emails (Gmail SMTP) — Templates atualizados
-├── shared/                       # Código compartilhado entre features
+│   ├── pipeline/lib/             # Orquestracao: ai.ts, pipeline.ts, notebooklm.ts, reading-plan-sync.ts, transcription-triage.ts
+│   ├── zoom/lib/                 # Integracao Zoom (OAuth, recordings, participants)
+│   └── email/lib/                # Envio de emails (Gmail SMTP)
+├── shared/                       # Codigo compartilhado entre features
 │   ├── components/               # Sidebar e componentes compartilhados
-│   │   ├── Sidebar.tsx           # Sidebar: Início, Devocional, Planejamento, Relatórios, Admin
+│   │   ├── Sidebar.tsx           # Sidebar: Inicio, Devocional, Planejamento, Relatorios, Admin
 │   │   └── ui/                   # Badge e componentes de UI
 │   └── lib/                      # db.ts, storage.ts, utils.ts, image-utils.ts
-└── middleware.ts                 # Middleware de autenticação
+└── middleware.ts                 # Middleware de autenticacao
 ```
 
-### Rotas
-| Rota | Arquivo | Descrição |
+## Rotas
+
+| Rota | Arquivo | Descricao |
 |------|---------|-----------|
-| `/` | `(dashboard)/page.tsx` | Dashboard com stats, hero, insights IA, calendário |
-| `/books` | `(dashboard)/books/page.tsx` | Devocional (lista lateral + grid responsivo de cards azuis) |
-| `/planning` | `(dashboard)/planning/page.tsx` | Planejamento teológico |
-| `/reports` | `(dashboard)/reports/page.tsx` | Relatórios (filtros, gráficos, tabela por usuário) |
-| `/profile` | `(dashboard)/profile/page.tsx` | Perfil do usuário |
+| `/` | `(dashboard)/page.tsx` | Dashboard com stats, hero, insights IA, calendario |
+| `/books` | `(dashboard)/books/page.tsx` | Devocional (lista lateral + grid responsivo de cards) |
+| `/planning` | `(dashboard)/planning/page.tsx` | Planejamento teologico |
+| `/reports` | `(dashboard)/reports/page.tsx` | Relatorios (filtros, graficos, tabela por usuario) |
+| `/profile` | `(dashboard)/profile/page.tsx` | Perfil do usuario |
 | `/admin` | `(dashboard)/admin/page.tsx` | Painel admin (7 abas) |
-| `/session/[id]` | `(dashboard)/session/[id]/page.tsx` | Detalhe da sessão |
+| `/session/[id]` | `(dashboard)/session/[id]/page.tsx` | Detalhe da sessao |
 | `/login` | `(auth)/login/page.tsx` | Login |
 | `/invite/[token]` | `(auth)/invite/[token]/page.tsx` | Aceitar convite |
 | `/reset-password/[token]` | `(auth)/reset-password/[token]/page.tsx` | Redefinir senha |
 
-### Endpoints de API
-| Grupo | Endpoint | Descrição |
+## Endpoints de API
+
+| Grupo | Endpoint | Descricao |
 |-------|----------|-----------|
 | Auth | `/api/auth/[...nextauth]` | NextAuth (login/session) |
-| Auth | `/api/auth/forgot-password` | Enviar email de redefinição |
+| Auth | `/api/auth/forgot-password` | Enviar email de redefinicao |
 | Auth | `/api/auth/reset-password` | Redefinir senha com token |
-| Auth | `/api/auth/validate-reset-token` | Validar token de redefinição |
+| Auth | `/api/auth/validate-reset-token` | Validar token de redefinicao |
 | Profile | `/api/profile/password` | Alterar senha (logado) |
 | Profile | `/api/profile/account` | Soft delete (LGPD) |
 | Profile | `/api/profile/photo/[userId]` | Foto de perfil |
-| Admin | `/api/admin/permissions` | GET/PATCH permissões |
-| Admin | `/api/admin/users/[id]` | Editar/desativar usuário |
-| Admin | `/api/admin/users/[id]/zoom-identifiers` | Zoom IDs do usuário |
+| Admin | `/api/admin/permissions` | GET/PATCH permissoes |
+| Admin | `/api/admin/users/[id]` | Editar/desativar usuario |
+| Admin | `/api/admin/users/[id]/zoom-identifiers` | Zoom IDs do usuario |
 | Admin | `/api/admin/webhooks` | CRUD webhooks |
-| Admin | `/api/admin/settings/schedules` | Horários agendados |
+| Admin | `/api/admin/settings/schedules` | Horarios agendados |
 | Admin | `/api/admin/reading-plans/[id]/retroactive` | Processamento retroativo |
-| Admin | `/api/admin/reading-plans/[id]/days/[dayId]/chapters` | Marcar capítulos |
-| Admin | `/api/admin/notebooklm-session` | Sessão NotebookLM |
+| Admin | `/api/admin/reading-plans/[id]/days/[dayId]/chapters` | Marcar capitulos |
+| Admin | `/api/admin/notebooklm-session` | Sessao NotebookLM |
 | Admin | `/api/admin/notebooklm-setup` | Setup NotebookLM |
 | Admin | `/api/admin/cleanup` | Limpar banco (SUPER_ADMIN) |
-| Bible | `/api/bible/versions` | Listar versões PT (Holy Bible API) |
-| Bible | `/api/bible/content/[versionId]/[chapterId]` | Texto do capítulo (Holy Bible API) |
-| Bible | `/api/bible/audio/[versionId]/[chapterId]` | URL áudio MP3 PT-BR (Word Project) |
+| Bible | `/api/bible/versions` | Listar versoes PT (Holy Bible API) |
+| Bible | `/api/bible/content/[versionId]/[chapterId]` | Texto do capitulo (Holy Bible API + YouVersion) |
+| Bible | `/api/bible/audio/[versionId]/[chapterId]` | URL audio MP3 PT-BR (Bible.is) |
 | Bible | `/api/bible/context` | Contexto devocional (plano ativo) |
 | Planning | `/api/planning/current` | Plano ativo com cards |
 | Planning | `/api/planning/cards/[planId]` | Cards de um plano |
 | Planning | `/api/planning/card/[cardId]` | Detalhe de um card |
 | Planning | `/api/planning/generate/[planId]` | Gerar cards via IA |
 | Search | `/api/search` | Busca inteligente |
-| Reports | `/api/reports/presence` | Dados de presença |
-| Reports | `/api/reports/frequency` | Frequência semanal/mensal |
-| Reports | `/api/reports/evolution` | Evolução (gráfico linha) |
+| Reports | `/api/reports/presence` | Dados de presenca |
+| Reports | `/api/reports/frequency` | Frequencia semanal/mensal |
+| Reports | `/api/reports/evolution` | Evolucao (grafico linha) |
 | Reports | `/api/reports/hours` | Horas de devocional |
-| Reports | `/api/reports/books-distribution` | Distribuição por livro |
-| Sessions | `/api/sessions/[id]` | Detalhe da sessão |
-| Sessions | `/api/sessions/[id]/adjacent` | Sessões adjacentes |
+| Reports | `/api/reports/books-distribution` | Distribuicao por livro |
+| Sessions | `/api/sessions/[id]` | Detalhe da sessao |
+| Sessions | `/api/sessions/[id]/adjacent` | Sessoes adjacentes |
 | Sessions | `/api/sessions/[id]/verify-password` | Verificar senha |
 | Dashboard | `/api/dashboard/day-summary` | Resumo do dia |
-| Attendance | `/api/attendance/user/[id]` | Presença por usuário |
+| Attendance | `/api/attendance/user/[id]` | Presenca por usuario |
 | Pipeline | `/api/pipeline/run` | Executar pipeline |
 | Cron | `/api/cron/check` | Health check |
 | Files | `/api/files/[id]` | Servir arquivos |
 | Invite | `/api/invite/[token]` | Aceitar convite |
 | Webhook | `/api/webhook/[slug]` | Webhooks Zoom |
 
-### Design System v3 (`globals.css`)
+## Design System v3 (`globals.css`)
+
 - CSS em `src/app/globals.css` — Design system v3 com CSS custom properties (:root + [data-theme="dark"])
-- ATENÇÃO: NÃO usar `@theme` inline do Tailwind v4 — apenas CSS custom properties padrão
+- ATENCAO: NAO usar `@theme` inline do Tailwind v4 — apenas CSS custom properties padrao
 - Dark mode (tema principal): bg `#0c0c0e`, surface `#141416`, accent `#f5a623`
-- Light mode: bg `#f5f5f7`, surface `#ffffff`, accent `#d97706`
+- Light mode: bg `#f5f5f7`, surface `#ffffff`, accent `#c7910a`
 - Cores SEMPRE via `var()`: `var(--text)`, `var(--accent)`, `var(--surface)`, etc.
 - NUNCA usar cores hardcoded (#hex) em componentes — sempre CSS variables
 - Classes de layout: `.dashboard-two-col`, `.books-layout`, `.reports-top-grid`, `.session-detail-grid`
 - Classes de reports: `.reports-stat-card`, `.reports-chart-card`, `.reports-table-card`, `.reports-table`
 - Dark mode: `data-theme="dark"` no `<html>`, salvo em localStorage como `devhub-theme`
-- Responsive breakpoints: Mobile (<768px), Small tablet (480-767px), Tablet (768-1023px), Desktop (1024-1279px), Large (≥1440px)
-- Imports: `@/features/<feature>/lib/<module>`, `@/features/<feature>/components/<Component>`, `@/shared/lib/<module>`
+- Responsive breakpoints: Mobile (<768px), Small tablet (480-767px), Tablet (768-1023px), Desktop (1024-1279px), Large (>=1440px)
 
-### Navegação (Sidebar) — Atualização v2
-- Menu principal: Início (/), Devocional (/books), Planejamento (/planning), Progresso (/reports)
+### Navegacao (Sidebar)
+- Menu principal: Inicio (/), Devocional (/books), Planejamento (/planning), Progresso (/reports)
 - Admin: Painel Admin (/admin)
-- "Meu Perfil" acessível pelo clique no nome do usuário (rodapé sidebar)
-- Menu "Presença" removido (redundante com Progresso/Relatórios)
+- "Meu Perfil" acessivel pelo clique no nome do usuario (rodape sidebar)
 
-## Modelos do Banco (Prisma) — Atualizado v2
-- User: email, password?, name, role (SUPER_ADMIN/ADMIN/SUBSCRIBER_VIP/SUBSCRIBER/MEMBER), church, team, subTeam, photoUrl, whatsapp?, deletedAt?, deletedBy?, inviteToken
-- Session: date, startTime?, zoomMeetingId, zoomUuid, chapterRef, summary, contentPassword?, status, relatedSessionIds[], documents[], participants[]
-- Participant: name, email, joinTime, leaveTime, duration, totalDuration, entries[]
-- ParticipantEntry: joinTime, leaveTime, duration (log de cada entrada/saída)
-- Document: type (TRANSCRIPT_RAW/CLEAN, BIBLE_TEXT, INFOGRAPHIC, SLIDES, AUDIO_OVERVIEW, AI_SUMMARY, PLANNING), fileName, storagePath
-- Permission: resource (unique), minRole (controle de acesso configurável)
-- PasswordResetToken: userId, token, expiresAt, usedAt?
-- ChapterReading: dayId, chapter, isComplete, isPartial, sessions, completedAt?
-- PlanningCard: planId, bookName, bookCode, chapter, analysis, references, studyLinks[], imageUrls[], themeGroup?
-- ReadingPlanDay: planId, date, chapters, completed, logNote?, actualChapters?, chapterReadings[]
-- Webhook: name, slug, active
-- AppSetting: key-value (mainSpeakerName, zoomMeetingId, aiModel)
+## Modelos do Banco (Prisma)
+
+- **User:** email, password?, name, role (SUPER_ADMIN/ADMIN/SUBSCRIBER_VIP/SUBSCRIBER/MEMBER), church, team, subTeam, photoUrl, whatsapp?, deletedAt?, deletedBy?, inviteToken
+- **Session:** date, startTime?, zoomMeetingId, zoomUuid, chapterRef, summary, contentPassword?, status, relatedSessionIds[], documents[], participants[]
+- **Participant:** name, email, joinTime, leaveTime, duration, totalDuration, entries[]
+- **ParticipantEntry:** joinTime, leaveTime, duration (log de cada entrada/saida)
+- **Document:** type (TRANSCRIPT_RAW/CLEAN, BIBLE_TEXT, INFOGRAPHIC, SLIDES, AUDIO_OVERVIEW, AI_SUMMARY, PLANNING), fileName, storagePath
+- **Permission:** resource (unique), minRole (controle de acesso configuravel)
+- **PasswordResetToken:** userId, token, expiresAt, usedAt?
+- **ChapterReading:** dayId, chapter, isComplete, isPartial, sessions, completedAt?
+- **PlanningCard:** planId, bookName, bookCode, chapter, analysis, references, studyLinks[], imageUrls[], themeGroup?
+- **ReadingPlanDay:** planId, date, chapters, completed, logNote?, actualChapters?, chapterReadings[]
+- **Webhook:** name, slug, active
+- **AppSetting:** key-value (mainSpeakerName, zoomMeetingId, aiModel)
+
+### Enum UserRole
+```
+SUPER_ADMIN (100) — Controle total
+ADMIN (80) — Equipe de manutencao
+SUBSCRIBER_VIP (60) — Assinante VIP (futuro)
+SUBSCRIBER (40) — Assinante (futuro)
+MEMBER (20) — Participante regular
+```
 
 ## Pipeline de Processamento
+
 1. Webhook Zoom (`meeting.ended`) → recebe meeting_id + uuid
 2. Aguarda 5min para VTT ficar pronto
 3. Baixa VTT via `GET /meetings/{uuid}/recordings` (file_type=TRANSCRIPT)
 4. UUID com `/` ou `+` precisa de duplo URL-encode (%252F, %252B)
-5. Deduplicação de participantes (agrupa por email, múltiplas entradas/saídas → ParticipantEntry)
-6. Triagem teológica da transcrição (remove nomes, corrige fatos bíblicos, mantém interpretações)
-7. Detecção de multi-sessão (verifica se capítulo já tem sessão anterior, sinais de continuidade)
-8. Processa transcrição com IA (cascata de fallbacks)
-9. Busca texto bíblico NVI via Holy Bible API (gratuita, sem chave)
-10. Gera pesquisa teológica + Knowledge Base unificada
-11. Extrai senha da transcrição (se mencionada)
-12. NotebookLM: cria notebook com KB rica, gera slides + infográfico + vídeo resumo
+5. Deduplicacao de participantes (agrupa por email, multiplas entradas/saidas → ParticipantEntry)
+6. Triagem teologica da transcricao (remove nomes, corrige fatos biblicos, mantem interpretacoes)
+7. Deteccao de multi-sessao (verifica se capitulo ja tem sessao anterior, sinais de continuidade)
+8. Processa transcricao com IA (cascata de fallbacks)
+9. Busca texto biblico NVI via Holy Bible API (gratuita, sem chave)
+10. Gera pesquisa teologica + Knowledge Base unificada
+11. Extrai senha da transcricao (se mencionada)
+12. NotebookLM: cria notebook com KB rica, gera slides + infografico + video resumo
 13. Salva tudo no banco + storage local
 
 ## Cascata de IA (callAI)
-OpenAI como primário (modelo configurável via admin), fallback automático para gratuitos:
-1. **OpenAI** — Modelo selecionado no admin (padrão: `gpt-4.1-mini`) — `OPENAI_API_KEY`
+
+OpenAI como primario (modelo configuravel via admin), fallback automatico para gratuitos:
+
+1. **OpenAI** — Modelo selecionado no admin (padrao: `gpt-4.1-mini`) — `OPENAI_API_KEY`
 2. Nemotron 120B (`nvidia/nemotron-3-super-120b-a12b:free`) — OpenRouter (fallback gratuito)
 3. Step 3.5 Flash (`stepfun/step-3.5-flash:free`) — OpenRouter (fallback gratuito)
 4. Nemotron 30B (`nvidia/nemotron-3-nano-30b-a3b:free`) — OpenRouter (fallback gratuito)
@@ -408,47 +322,56 @@ OpenAI como primário (modelo configurável via admin), fallback automático par
 6. Erro com log de todas as falhas
 
 O modelo OpenAI pode ser alterado no painel admin (aba "IA") sem necessidade de deploy.
-Modelos disponíveis: gpt-4.1-mini, gpt-4.1, gpt-4.1-nano, gpt-4o, gpt-4o-mini, o4-mini, o3, o3-mini
+Modelos disponiveis: gpt-4.1-mini, gpt-4.1, gpt-4.1-nano, gpt-4o, gpt-4o-mini, o4-mini, o3, o3-mini
 
 ## Infraestrutura
-- Domínio: devocional.nexusai360.com (Cloudflare DNS)
-- Docker Swarm via Portainer
+
+- Dominio: devocional.nexusai360.com (Cloudflare DNS)
+- Docker Swarm via Portainer (painel.nexusai360.com, Stack ID: 86)
 - Rede: rede_nexusAI (overlay)
 - Traefik: reverse proxy + Let's Encrypt SSL + HSTS
 - GHCR: ghcr.io/jvzanini/devocional-hub:latest
 - GitHub: github.com/jvzanini/Devocional-Hub
 
-## Credenciais (definidas APENAS no Portainer, NUNCA no código)
-- Todas as credenciais são configuradas via variáveis de ambiente no Portainer
-- No repositório, usar SEMPRE valores genéricos (YOUR_*, changeme, etc.)
+## Credenciais (definidas APENAS no Portainer, NUNCA no codigo)
+
+- Todas as credenciais sao configuradas via variaveis de ambiente no Portainer
+- No repositorio, usar SEMPRE valores genericos (YOUR_*, changeme, etc.)
 - NUNCA commitar senhas, API keys, tokens ou emails reais no Git
-- Variáveis usadas: ADMIN_EMAIL, ADMIN_PASSWORD, SMTP_USER, SMTP_PASS, ZOOM_*, OPENAI_API_KEY, GEMINI_API_KEY, OPENROUTER_API_KEY, GOOGLE_EMAIL, GOOGLE_PASSWORD
+- Variaveis usadas: ADMIN_EMAIL, ADMIN_PASSWORD, SMTP_USER, SMTP_PASS, ZOOM_*, OPENAI_API_KEY, GEMINI_API_KEY, OPENROUTER_API_KEY, GOOGLE_EMAIL, GOOGLE_PASSWORD
 
-## Segurança — REGRAS OBRIGATÓRIAS
+## Seguranca — REGRAS OBRIGATORIAS
+
 - NUNCA commitar credenciais, senhas, API keys, tokens ou emails reais no Git
-- Arquivos com credenciais (portainer-stack.yml, docker-compose.yml) devem ter SEMPRE valores genéricos no repositório (YOUR_*, changeme)
-- As credenciais reais ficam APENAS no Portainer (variáveis de ambiente da stack)
-- Antes de cada commit, verificar se não há dados sensíveis nos arquivos alterados
-- O .env está no .gitignore e NUNCA deve ser commitado
+- Arquivos com credenciais (portainer-stack.yml, docker-compose.yml) devem ter SEMPRE valores genericos no repositorio
+- As credenciais reais ficam APENAS no Portainer (variaveis de ambiente da stack)
+- Antes de cada commit, verificar se nao ha dados sensiveis nos arquivos alterados
+- O .env esta no .gitignore e NUNCA deve ser commitado
 
-## Gotchas Críticos
-- NUNCA usar `@theme inline` do Tailwind v4 — as CSS variables não existem em runtime no Docker
+## Gotchas Criticos
+
+- NUNCA usar `@theme inline` do Tailwind v4 — as CSS variables nao existem em runtime no Docker
 - SEMPRE usar CSS hardcoded em globals.css ou inline styles para estilos visuais
 - O `npm ci` no Dockerfile PRECISA de `--legacy-peer-deps`
 - O `prisma db push` no entrypoint PRECISA de `--skip-generate` (EACCES no /app)
 - A senha do PostgreSQL tem `@` — usar `%40` na DATABASE_URL
-- Cloudflare está em modo "DNS only" (sem proxy) — SSL é pelo Traefik/Let's Encrypt
-- O browser do usuário pode cachear versão HTTP — HSTS está configurado mas pode precisar de hard refresh
+- Cloudflare esta em modo "DNS only" (sem proxy) — SSL e pelo Traefik/Let's Encrypt
+- O browser do usuario pode cachear versao HTTP — HSTS esta configurado mas pode precisar de hard refresh
+- PostgreSQL roda APENAS na VPS (Docker Swarm), NUNCA localmente — `npm run build` trava local
+- NVT usa class="s" (sem numero) alem de class="s1" para headings — regex precisa aceitar ambos
 
 ## Git
+
 - Branch: main
-- Commit messages em português, descritivos
+- Commit messages em portugues, descritivos
 - Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
 - CI/CD: .github/workflows/deploy.yml (build Docker + deploy Portainer)
 
-## Convenções de Código
-- Responder SEMPRE em português brasileiro
+## Convencoes de Codigo
+
+- Responder SEMPRE em portugues brasileiro
 - Usar acentos corretos (UTF-8 direto, NUNCA unicode escapes \u00XX)
-- camelCase para variáveis/funções, PascalCase para componentes
-- Inline styles para layout (style={{ }}) — mais confiável que Tailwind em produção
+- camelCase para variaveis/funcoes, PascalCase para componentes
+- Inline styles para layout (style={{ }}) — mais confiavel que Tailwind em producao
 - CSS classes hardcoded em globals.css para design visual (cards, buttons, inputs, badges)
+- Imports: `@/features/<feature>/lib/<module>`, `@/features/<feature>/components/<Component>`, `@/shared/lib/<module>`
