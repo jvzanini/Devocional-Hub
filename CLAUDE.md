@@ -39,20 +39,24 @@ O Bible Bubble e o modulo de leitura biblica interativa do DevocionalHub. Todas 
 ARC (637), Almeida (636), ARA (635), NBV (642), OL (646), TB (647), CAP (640), BPT (639)
 
 ### Features UX
-- **Leitura acompanhada (v5.7):** barra lateral esquerda (3px) acompanha o versiculo sendo lido no audio, auto-scroll inteligente (puxa versiculo para topo quando sai da tela, respeita limites), pausa auto-scroll 4s se usuario rolar manualmente
-- **Timestamps Bible.is:** API `live.bible.is/api/timestamps/{fileset}/{book}/{ch}?v=4` — disponivel para NVI, NTLH, NVT (NT); fallback proporcional (duracao/versiculos) para NAA e AT
-- **Progress ring (v5.7):** barra de progresso circular no botao play colapsado, estilo relogio (topo→sentido horario), branca, para dentro do botao, SVG com stroke-dasharray/offset, atualiza via DOM direto (sem re-render)
-- **Player colapsado (v5.7):** botao play 52x52 (antes 40x40), botoes nav maiores (font 13px, padding 6px 10px), icones 24px/16px, gap 14px
+- **Guia de leitura (v5.7):** barra lateral esquerda (4px, border-radius 3px) acompanha o versiculo sendo lido no audio. Posicao: left 6px (desktop) / 8px (mobile). Calculo de altura via `getClientRects()` (fix versiculos inline multi-linha). Reagrupavel: recalcula ao mudar fontSize. Branco em dark mode, preto em light mode. Transicoes cubic-bezier.
+- **Auto-scroll inteligente (v5.7):** puxa versiculo para o topo quando sai da tela visivel. Considera altura do footer/player expandido para nao esconder texto. Pausa 4s se usuario rolar manualmente (detecta wheel/touchmove). Usa getClientRects para precisao.
+- **Timestamps Bible.is:** API `live.bible.is/api/timestamps/{fileset}/{book}/{ch}?v=4` — disponivel para NVI, NTLH, NVT (NT apenas). Fallback proporcional para NAA e AT (8% offset intro + divisao igual). Timestamps sao tempo-arquivo (independe de playbackRate).
+- **Progress ring (v5.7):** barra circular no botao play colapsado, estilo relogio (topo→sentido horario), branca, stroke-width 2px, track opacity 0.15. SVG viewBox 48x48, radius 22. Atualiza via DOM direto (sem re-render).
+- **Player colapsado (v5.7):** botao play 48x48 (igual ao expandido), botoes nav maiores (font 13px, padding 6px 10px), icones 24px/16px, gap 14px
+- **Player expandido (v5.7):** botao play 48x48 (igual ao colapsado), icones 24px
+- **Speed button:** min-width 46px para nao empurrar outros botoes ao alternar velocidade (1x→2x). Posicao fixa no layout.
 - **Bubble:** 15% maior que padrao, label "Abrir Biblia", esconde quando modal aberto, z-index 9999, subido 20px, anti-zoom iOS
 - **Player:** inicia colapsado/pausado, sem autoplay, drag-to-seek (mouse+touch), cache de posicao (localStorage 24h)
-- **Audio speed:** pause → alterar playbackRate → seek posicao exata → requestAnimationFrame → resume (fix stutter mobile). Timestamps funcionam independente de velocidade (currentTime e sempre tempo-arquivo)
-- **Busca:** lupa no header, client-side no capitulo com highlight, filtra versiculos, ignora acentos/pontuacao, remove footnotes antes do matching
+- **Audio speed:** pause → alterar playbackRate → seek posicao exata → requestAnimationFrame → resume (fix stutter mobile)
+- **Busca:** lupa no header, client-side no capitulo com highlight, filtra versiculos, ignora acentos/pontuacao, remove footnotes antes do matching. Esconde titulos/breaks/containers sem versiculos visiveis.
 - **Footnotes:** icone 18x18 com margin-left 4px, tooltip abre abaixo, max-width responsivo
-- **Botao AA:** ciclo normal (17px) → medio (20px) → grande (24px), persistencia via localStorage
+- **Botao AA:** ciclo normal (17px) → medio (20px) → grande (24px), persistencia via localStorage. Guia de leitura recalcula ao mudar.
 - **Navegacao lateral:** botoes flutuantes prev/next capitulo nos lados do modal (escondidos em mobile < 768px)
 - **Seletores:** centralizados em mobile, bordas, transicoes suaves, separacao AT/NT
 - **NVT fix:** class="s" (sem numero) tratado como section title alem de class="s1"
 - **Modal:** scroll lock total no mobile, pinch-to-zoom desabilitado (touch-action: pan-y), body padding removido em mobile
+- **Padding texto:** desktop 20px, mobile 24px (libera espaco para guia de leitura)
 
 ### Componentes
 `BibleBubble`, `BibleBubbleWrapper`, `BibleModal`, `BibleContent`, `BibleHeader`, `BibleNavigation`, `AudioPlayer`, `SpeedControl`, `BookSelector`, `ChapterSelector`, `VersionSelector`
@@ -234,7 +238,7 @@ src/
 | Admin | `/api/admin/cleanup` | Limpar banco (SUPER_ADMIN) |
 | Bible | `/api/bible/versions` | Listar versoes PT (Holy Bible API) |
 | Bible | `/api/bible/content/[versionId]/[chapterId]` | Texto do capitulo (Holy Bible API + YouVersion) |
-| Bible | `/api/bible/audio/[versionId]/[chapterId]` | URL audio MP3 PT-BR (Bible.is) |
+| Bible | `/api/bible/audio/[versionId]/[chapterId]` | URL audio MP3 + timestamps por versiculo (Bible.is) |
 | Bible | `/api/bible/context` | Contexto devocional (plano ativo) |
 | Planning | `/api/planning/current` | Plano ativo com cards |
 | Planning | `/api/planning/cards/[planId]` | Cards de um plano |
