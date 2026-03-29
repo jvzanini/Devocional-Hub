@@ -211,7 +211,7 @@ export function BibleModal({
     }
 
     loadContent();
-    contentRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+    contentRef.current?.scrollTo({ top: 0 });
 
     if (selectedVersion) {
       savePosition({ bookCode, chapter, versionId: selectedVersion.id, audioTime: 0 });

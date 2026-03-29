@@ -229,6 +229,16 @@ export function BibleContent({
     const container = contentRef.current;
     if (!container) return;
 
+    // Restaurar orphan text nodes envolvidos em spans de busca anterior
+    container.querySelectorAll(".bible-orphan-text").forEach((wrapper) => {
+      const parent = wrapper.parentNode;
+      while (wrapper.firstChild) {
+        parent?.insertBefore(wrapper.firstChild, wrapper);
+      }
+      parent?.removeChild(wrapper);
+      parent?.normalize();
+    });
+
     clearHighlights(container);
 
     // Resetar visibilidade de TODOS os elementos + container
@@ -330,17 +340,40 @@ export function BibleContent({
     container.querySelectorAll<HTMLElement>(".bible-footnote").forEach((el) => {
       const parentVerse = el.closest(".bible-verse") as HTMLElement | null;
       if (parentVerse) {
-        // Dentro de um versículo — seguir visibilidade do versículo
         if (parentVerse.style.display === "none") el.style.display = "none";
         return;
       }
-      // Fora de versículo (órfão) — associar ao versículo irmão anterior
       let prev = el.previousElementSibling;
       while (prev && !prev.classList.contains("bible-verse")) {
         prev = prev.previousElementSibling;
       }
       if (!prev || (prev as HTMLElement).style.display === "none") {
         el.style.display = "none";
+      }
+    });
+
+    // Esconder text nodes órfãos de versículos ocultos
+    // (text nodes não aceitam display:none — envolver em span oculto)
+    verseSpans.forEach((span, index) => {
+      if (span.style.display !== "none") return;
+      const nextV = index < verseSpans.length - 1 ? verseSpans[index + 1] : null;
+      let sib: Node | null = span.nextSibling;
+      while (sib) {
+        if (sib === nextV) break;
+        if (sib.nodeType === Node.ELEMENT_NODE) {
+          const el = sib as Element;
+          if (el.classList?.contains("bible-verse")) break;
+        }
+        if (sib.nodeType === Node.TEXT_NODE && sib.textContent?.trim()) {
+          const wrapper = document.createElement("span");
+          wrapper.className = "bible-orphan-text";
+          wrapper.style.display = "none";
+          sib.parentNode?.insertBefore(wrapper, sib);
+          wrapper.appendChild(sib);
+          sib = wrapper.nextSibling;
+          continue;
+        }
+        sib = sib.nextSibling;
       }
     });
 
