@@ -1,89 +1,8 @@
 # Devocional Hub — Diretrizes do Projeto
 
-## Bible Bubble v5.14 — Fix busca flash, highlight orfaos, seek bar UX (CONCLUIDO — 2026-03-29)
+## Bible Bubble v5.14 — Estado atual (CONCLUIDO — 2026-03-29)
 
-### Busca (v5.14)
-- **Fix flash ao abrir busca com audio:** Removido useEffect race condition. Play/pausa agora gerenciado via handlers explicitos
-- **Collapse/velocidade nao saem da busca:** So play e X fecham busca (handlers dedicados)
-- **Play expandido fecha busca:** Prop `onPlayDuringSearch` passada ao AudioPlayer
-- **Highlight em texto orfao:** Apos highlight no span do versiculo, tambem aplica nos siblings orfaos (fix "sua" no v6)
-
-### Seek bar (v5.14)
-- **Fill/thumb sem delay:** `dragProgress` state atualizado imediatamente no drag, sem esperar render do AudioManager
-- **Thumb maior:** 14px padrao, 16px no hover, 18px durante drag, cursor grab/grabbing
-- **Fill sem transition durante drag:** `transition: none` durante arrasto
-
-## Bible Bubble v5.13 — Seek bar UX, preload mobile, verse tracking (CONCLUIDO — 2026-03-29)
-
-### Seek bar
-- **Pausa durante drag:** audio pausa ao iniciar drag na barra de progresso (mouse/touch), retoma ao soltar
-- **Verse tracking durante seek:** guia de leitura acompanha posicao da barra mesmo com audio pausado
-- **Notificacao imediata:** `seek()` chama `notifyListeners()` + evento `seeked` para feedback instantaneo
-
-### Mobile audio
-- **Preload auto:** `audio.preload = "auto"` forca buffering completo do MP3, reduz stutter ao mudar velocidade
-- **Speed change direto:** `playbackRate` setado sem pause/resume (buffer completo ja disponivel)
-
-## Bible Bubble v5.12 — Busca + audio integrados, auto-play nav (CONCLUIDO — 2026-03-29)
-
-### Busca + audio (v5.12)
-- **Play durante busca fecha busca automaticamente:** useEffect detecta `isAudioPlaying` durante busca → salva query, fecha busca, scroll para versiculo atual
-- **Scroll para versiculo ao fechar busca por play:** `scrollIntoView({ block: "center" })` no versiculo que estava sendo reproduzido
-- **Query salva restaurada com filtro:** ao reabrir busca com query salva, `processSearch` roda automaticamente via effect de `searchQuery`
-- **Minimizar/velocidade NAO saem da busca:** `onMouseDown preventDefault` no footer + so play e X fecham busca
-
-### Auto-play navegacao (v5.12)
-- **Capitulo prev/next com audio tocando:** `setAutoPlayNext(true)` antes de navegar se `isAudioPlaying`
-- **Seletor de livro/capitulo com audio tocando:** `handleNavigate` tambem ativa auto-play se audio estava rodando
-- **Audio desligado → sem auto-play:** comportamento mantido, so auto-play quando audio ja estava em execucao
-
-## Bible Bubble v5.11 — Busca integrada + UX polish (CONCLUIDO — 2026-03-29)
-
-### Busca integrada com audio
-- **Abrir busca pausa audio:** ao clicar na lupa, audio e pausado automaticamente. Ao fechar (X), audio retoma se estava tocando
-- **Play durante busca fecha busca:** clicar play no player colapsado fecha busca (salva query em memoria), retoma audio
-- **Query preservada:** query salva quando busca fecha por play. Reabrir lupa restaura a query. So limpa no X ou deletando manual
-- **Controles de audio nao tiram foco:** `onMouseDown preventDefault` no footer impede perda de foco do input
-- **Scroll para cima ao buscar:** `scrollTo({ top: 0 })` no modal body quando resultados mudam
-
-### Busca — hifens
-- **Hifens normalizados:** `normalizeForSearch` converte hifens Unicode (U+2010-2015) para ASCII antes de comparar
-- **Highlight flexivel:** regex de highlight aceita qualquer tipo de hifen (`[-\u2010-\u2015]`), "use-" destaca "use‑o"
-
-### Guia de leitura
-- **Escondida durante busca:** prop `isSearchActive` controla opacidade do indicador (nao faz sentido durante busca)
-
-### Tooltips mobile
-- **Fix flash no tap:** `mouseover`/`mouseout` ignoram eventos sinteticos gerados por touch (500ms cooldown apos touchstart)
-
-## Bible Bubble v5.10 — Fix audio, guia, tooltips e busca (CONCLUIDO — 2026-03-29)
-
-### Audio (v5.9)
-- **Subscribe sincronizado:** `AudioManager.subscribe()` emite estado atual imediatamente ao se inscrever
-- **Pausa ao navegar capitulos:** `AudioPlayer` pausa audio antigo quando `audioUrl` fica null (troca de capitulo)
-- **isLoading preciso:** Flag `hasSrc` para que `isLoading` so seja true quando ha fonte carregando
-- **Speed fluido:** `setSpeed()` seta `playbackRate` direto (sem pause/resume que causava engasgada)
-- **Player colapsado com loading correto:** Spinner quando `audioUrl` e null, clique desabilitado
-
-### Guia de leitura (v5.10)
-- **Altura correta em versiculos com poesia:** Calculo mede do versiculo atual ate o PROXIMO versiculo, cobrindo blocos intermediarios (poesia q1/q2, quebras de linha). Antes `getClientRects()` so media o span do versiculo, ignorando divs irmas de poesia.
-- **Ultimo versiculo:** Mede ate o fim do container de conteudo
-
-### Tooltips/Insights (v5.10)
-- **Posicionamento 100% via JS:** Removido CSS `:hover` display. Hover e click usam mesma logica JS com `position: fixed`
-- **maxWidth restrito ao modal:** `modalRect.width - 24px` garante que tooltip nunca ultrapassa bordas
-- **Medicao apos reflow:** `offsetWidth`/`offsetHeight` medidos depois de aplicar maxWidth
-- **Clamp horizontal e vertical:** Tooltip sempre dentro dos limites do modal (12px margem)
-
-### Busca (v5.10)
-- **Texto orfao do YouVersion:** YouVersion coloca texto apos footnotes FORA do span do versiculo (`</span>NOTE<span class="content">text</span>`). Busca agora percorre siblings ate o proximo versiculo para coletar texto completo
-- **Footnotes visiveis nos resultados:** Footnotes que sao siblings (nao filhos) do versiculo sao associados ao versiculo anterior na hora de mostrar/esconder
-- **Tela limpa sem resultados:** Quando nenhum versiculo encontra, `container.style.display = "none"` esconde tudo (fix texto orfao visivel)
-- **Highlight nos resultados:** `highlightTextInElement` aplicado nos versiculos que correspondem a busca
-
-## Bible Bubble v5.7 — Leitura Acompanhada + Player Melhorado (CONCLUIDO — 2026-03-23)
-
-O Bible Bubble e o modulo de leitura biblica interativa do DevocionalHub. Todas as versoes anteriores (v4, v4.1, v5, v5.1, v5.2, v5.3, v5.4-v5.6) foram consolidadas aqui.
+O Bible Bubble e o modulo de leitura biblica interativa do DevocionalHub. Versao atual: v5.14 (consolidado v5.7-v5.14).
 
 ### Fontes de dados
 - **Texto:** Holy Bible API (holy-bible-api.com) — 12 versoes PT, gratuita, sem API key
@@ -140,7 +59,7 @@ ARC (637), Almeida (636), ARA (635), NBV (642), OL (646), TB (647), CAP (640), B
 - **Padding texto:** desktop 20px, mobile 24px (libera espaco para guia de leitura)
 
 ### Componentes
-`BibleBubble`, `BibleBubbleWrapper`, `BibleModal`, `BibleContent`, `BibleHeader`, `BibleNavigation`, `AudioPlayer`, `SpeedControl`, `BookSelector`, `ChapterSelector`, `VersionSelector`
+`BibleBubble`, `BibleBubbleWrapper`, `BibleModal`, `BibleContent`, `BibleHeader`, `BibleNavigation`, `AudioPlayer`, `BookSelector`, `ChapterSelector`, `VersionSelector`
 
 ### Lib
 `youversion-client.ts`, `bible-formatter.ts`, `holy-bible-client.ts`, `bible-is-audio.ts`, `audio-manager.ts`, `version-discovery.ts`, `devocional-context.ts`

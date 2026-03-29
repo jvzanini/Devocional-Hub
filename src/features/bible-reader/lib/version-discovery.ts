@@ -140,21 +140,3 @@ const PORTUGUESE_VERSIONS: DiscoveredVersion[] = [
 export async function discoverPortugueseVersions(): Promise<DiscoveredVersion[]> {
   return PORTUGUESE_VERSIONS;
 }
-
-/**
- * Buscar uma versão específica por ID
- */
-export function getVersionById(id: string, versions: DiscoveredVersion[]): DiscoveredVersion | undefined {
-  return versions.find((v) => v.id === id);
-}
-
-/**
- * Versão padrão (NVI)
- */
-export function getDefaultVersion(versions: DiscoveredVersion[]): DiscoveredVersion {
-  return (
-    versions.find((v) => v.abbreviation === "NVI") ||
-    versions.find((v) => v.abbreviation === "NAA") ||
-    versions[0]
-  );
-}

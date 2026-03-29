@@ -413,16 +413,3 @@ function transformYouVersionHtml(rawHtml: string): string {
 export function isYouVersionAvailable(internalVersionId: string): boolean {
   return internalVersionId in VERSION_MAP;
 }
-
-/**
- * Retorna a URL do YouVersion para um capítulo específico (para link externo)
- */
-export function getYouVersionUrl(
-  internalVersionId: string,
-  bookCode: string,
-  chapter: number
-): string | null {
-  const mapping = VERSION_MAP[internalVersionId];
-  if (!mapping) return null;
-  return `https://www.bible.com/bible/${mapping.youVersionId}/${bookCode.toUpperCase()}.${chapter}.${mapping.abbreviation}`;
-}

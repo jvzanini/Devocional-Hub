@@ -2138,35 +2138,6 @@ select.input-field {
   flex-shrink: 0;
 }
 
-.bible-player-extras {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-top: 6px;
-}
-.bible-speed-btn {
-  padding: 3px 10px;
-  border-radius: var(--radius);
-  border: 1px solid var(--border, rgba(128,128,128,0.2));
-  background: transparent;
-  color: var(--text);
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-.bible-speed-btn:hover {
-  background: var(--surface-hover);
-}
-.bible-player-copyright {
-  font-size: 11px;
-  color: var(--text-secondary);
-  max-width: 300px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 /* ─── Selector Overlay ───────────────────────────── */
 .bible-selector-overlay {
   position: absolute;
