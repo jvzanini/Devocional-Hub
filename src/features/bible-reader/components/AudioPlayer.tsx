@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback } from "react";
-import type { AudioState, PlaybackSpeed } from "../lib/audio-manager";
+import type { AudioState } from "../lib/audio-manager";
 import { getAudioManager } from "../lib/audio-manager";
 
 interface AudioPlayerProps {
@@ -47,11 +47,15 @@ export function AudioPlayer({
   const managerRef = useRef(getAudioManager());
   const loadedUrlRef = useRef<string | null>(null);
   const wasPlayingBeforeDragRef = useRef(false);
+  const isDraggingRef = useRef(false);
 
   useEffect(() => {
     const manager = managerRef.current;
     const unsub = manager.subscribe(setState);
-    const unsubEnd = manager.onChapterEnd(onNext);
+    // Suprimir troca de capítulo durante drag (previne cascata)
+    const unsubEnd = manager.onChapterEnd(() => {
+      if (!isDraggingRef.current) onNext();
+    });
     return () => { unsub(); unsubEnd(); };
   }, [onNext]);
 
@@ -95,23 +99,34 @@ export function AudioPlayer({
   }, [pendingSeekTime, onSeekHandled]);
 
   // Drag-to-seek
-  const seekFromEvent = useCallback((clientX: number) => {
+  const seekFromEvent = useCallback((clientX: number, clampEnd = false) => {
     if (!progressRef.current || !state.duration) return;
     const rect = progressRef.current.getBoundingClientRect();
     const pct = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-    setDragProgress(pct * 100); // Feedback visual imediato (sem esperar render)
-    managerRef.current.seek(pct * state.duration);
+    setDragProgress(pct * 100);
+    // Durante drag, limitar antes do final para evitar evento "ended" (previne troca de capítulo)
+    const seekTime = clampEnd
+      ? Math.min(pct * state.duration, state.duration - 0.5)
+      : pct * state.duration;
+    managerRef.current.seek(Math.max(0, seekTime));
   }, [state.duration]);
 
   useEffect(() => {
     if (!isDragging) return;
-    function handleMouseMove(e: MouseEvent) { seekFromEvent(e.clientX); }
+    function handleMouseMove(e: MouseEvent) { seekFromEvent(e.clientX, true); }
     function handleMouseUp() {
+      isDraggingRef.current = false;
       setIsDragging(false);
       setDragProgress(null);
       if (wasPlayingBeforeDragRef.current) {
-        managerRef.current.play();
         wasPlayingBeforeDragRef.current = false;
+        const s = managerRef.current.getState();
+        // Se soltou no final e estava tocando → avançar capítulo naturalmente
+        if (s.duration > 0 && s.currentTime >= s.duration - 1) {
+          onNext();
+        } else {
+          managerRef.current.play();
+        }
       }
     }
     window.addEventListener("mousemove", handleMouseMove);
@@ -120,7 +135,7 @@ export function AudioPlayer({
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
     };
-  }, [isDragging, seekFromEvent]);
+  }, [isDragging, seekFromEvent, onNext]);
 
   if (!audioAvailable) return null;
 
@@ -184,22 +199,30 @@ export function AudioPlayer({
             e.preventDefault();
             wasPlayingBeforeDragRef.current = state.isPlaying;
             if (state.isPlaying) managerRef.current.pause();
+            isDraggingRef.current = true;
             setIsDragging(true);
-            seekFromEvent(e.clientX);
+            seekFromEvent(e.clientX, true);
           }}
           onTouchStart={(e) => {
             wasPlayingBeforeDragRef.current = state.isPlaying;
             if (state.isPlaying) managerRef.current.pause();
+            isDraggingRef.current = true;
             setIsDragging(true);
-            seekFromEvent(e.touches[0].clientX);
+            seekFromEvent(e.touches[0].clientX, true);
           }}
-          onTouchMove={(e) => { if (isDragging) seekFromEvent(e.touches[0].clientX); }}
+          onTouchMove={(e) => { if (isDragging) seekFromEvent(e.touches[0].clientX, true); }}
           onTouchEnd={() => {
+            isDraggingRef.current = false;
             setIsDragging(false);
             setDragProgress(null);
             if (wasPlayingBeforeDragRef.current) {
-              managerRef.current.play();
               wasPlayingBeforeDragRef.current = false;
+              const s = managerRef.current.getState();
+              if (s.duration > 0 && s.currentTime >= s.duration - 1) {
+                onNext();
+              } else {
+                managerRef.current.play();
+              }
             }
           }}
           role="slider"

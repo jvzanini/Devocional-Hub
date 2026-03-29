@@ -466,8 +466,13 @@ export function BibleModal({
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key === "Escape") {
         if (isSearchOpen) {
+          savedSearchQueryRef.current = searchQuery;
           setIsSearchOpen(false);
           setSearchQuery("");
+          if (wasPlayingBeforeSearchRef.current) {
+            getAudioManager().play();
+            wasPlayingBeforeSearchRef.current = false;
+          }
         } else if (!activeSelector) {
           onClose();
         }
@@ -475,7 +480,7 @@ export function BibleModal({
     }
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, activeSelector, isSearchOpen, onClose]);
+  }, [isOpen, activeSelector, isSearchOpen, searchQuery, onClose]);
 
   // T9: Salvar posição ao fechar e parar áudio
   useEffect(() => {
@@ -657,10 +662,10 @@ export function BibleModal({
               }
               setIsSearchOpen(true);
             } else {
-              // Fechando busca (via toggle lupa): limpar tudo e retomar áudio
+              // Fechando busca (via toggle lupa): salvar query para restaurar depois
+              savedSearchQueryRef.current = searchQuery;
               setIsSearchOpen(false);
               setSearchQuery("");
-              savedSearchQueryRef.current = "";
               if (wasPlayingBeforeSearchRef.current) {
                 getAudioManager().play();
                 wasPlayingBeforeSearchRef.current = false;

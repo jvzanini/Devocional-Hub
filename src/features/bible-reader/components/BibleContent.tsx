@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, useCallback } from "react";
 
 type FontSizeLevel = "normal" | "medium" | "large";
 
@@ -64,32 +64,70 @@ function clearHighlights(container: HTMLElement) {
 
 function highlightTextInElement(element: Element, query: string) {
   const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  // Hífens flexíveis: ASCII hyphen match qualquer tipo de hífen Unicode
-  const flexible = escaped.replace(/-/g, "[-\u2010\u2011\u2012\u2013\u2014\u2015]");
+  // Hífens flexíveis + espaços flexíveis (para matches entre nós separados por footnotes)
+  const flexible = escaped
+    .replace(/-/g, "[-\u2010\u2011\u2012\u2013\u2014\u2015]")
+    .replace(/ /g, "\\s+");
   const regex = new RegExp(`(${flexible})`, "gi");
 
+  // Coletar text nodes elegíveis (pular footnotes inteiros e números de versículo)
   const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
   const textNodes: Text[] = [];
   while (walker.nextNode()) {
     const node = walker.currentNode as Text;
-    if (node.parentElement?.closest(".bible-footnote-content")) continue;
+    if (node.parentElement?.closest(".bible-footnote")) continue;
     if (node.parentElement?.closest("sup.v")) continue;
     if (node.parentElement?.tagName === "MARK") continue;
     textNodes.push(node);
   }
 
-  for (const textNode of textNodes) {
+  if (textNodes.length === 0) return;
+
+  // Construir texto combinado e mapa de ranges por nó
+  const nodeRanges: { start: number; end: number; node: Text }[] = [];
+  let totalLen = 0;
+  for (const node of textNodes) {
+    const len = (node.textContent || "").length;
+    nodeRanges.push({ start: totalLen, end: totalLen + len, node });
+    totalLen += len;
+  }
+  const combined = textNodes.map(n => n.textContent || "").join("");
+
+  // Encontrar todos os matches no texto combinado (cross-node)
+  const matchRanges: { start: number; end: number }[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = regex.exec(combined)) !== null) {
+    matchRanges.push({ start: m.index, end: m.index + m[0].length });
+  }
+
+  if (matchRanges.length === 0) return;
+
+  // Calcular ranges de highlight por nó
+  const nodeHighlights = new Map<number, { start: number; end: number }[]>();
+  for (const match of matchRanges) {
+    for (let i = 0; i < nodeRanges.length; i++) {
+      const nr = nodeRanges[i];
+      const overlapStart = Math.max(match.start, nr.start);
+      const overlapEnd = Math.min(match.end, nr.end);
+      if (overlapStart >= overlapEnd) continue;
+      if (!nodeHighlights.has(i)) nodeHighlights.set(i, []);
+      nodeHighlights.get(i)!.push({ start: overlapStart - nr.start, end: overlapEnd - nr.start });
+    }
+  }
+
+  // Aplicar highlights de trás para frente (preservar posições no DOM)
+  const sortedIndices = Array.from(nodeHighlights.keys()).sort((a, b) => b - a);
+  for (const idx of sortedIndices) {
+    const ranges = nodeHighlights.get(idx)!;
+    const textNode = nodeRanges[idx].node;
     const text = textNode.textContent || "";
-    if (!regex.test(text)) continue;
-    regex.lastIndex = 0;
+    ranges.sort((a, b) => a.start - b.start);
 
     const fragment = document.createDocumentFragment();
-    let lastIdx = 0;
-    let match: RegExpExecArray | null;
-
-    while ((match = regex.exec(text)) !== null) {
-      if (match.index > lastIdx) {
-        fragment.appendChild(document.createTextNode(text.slice(lastIdx, match.index)));
+    let cursor = 0;
+    for (const range of ranges) {
+      if (range.start > cursor) {
+        fragment.appendChild(document.createTextNode(text.slice(cursor, range.start)));
       }
       const mark = document.createElement("mark");
       mark.setAttribute("data-search-hl", "1");
@@ -97,18 +135,14 @@ function highlightTextInElement(element: Element, query: string) {
       mark.style.color = "#000";
       mark.style.borderRadius = "2px";
       mark.style.padding = "0 2px";
-      mark.textContent = match[1];
+      mark.textContent = text.slice(range.start, range.end);
       fragment.appendChild(mark);
-      lastIdx = match.index + match[0].length;
+      cursor = range.end;
     }
-
-    if (lastIdx < text.length) {
-      fragment.appendChild(document.createTextNode(text.slice(lastIdx)));
+    if (cursor < text.length) {
+      fragment.appendChild(document.createTextNode(text.slice(cursor)));
     }
-
-    if (lastIdx > 0) {
-      textNode.parentNode?.replaceChild(fragment, textNode);
-    }
+    textNode.parentNode?.replaceChild(fragment, textNode);
   }
 }
 
@@ -327,6 +361,18 @@ export function BibleContent({
     const timer = requestAnimationFrame(() => processSearch());
     return () => cancelAnimationFrame(timer);
   }, [searchQuery, htmlContent, processSearch]);
+
+  // Safeguard: re-aplicar filtro caso o DOM tenha sido resetado pelo React (ex: collapse/expand player)
+  useLayoutEffect(() => {
+    if (!contentRef.current || !htmlContent || !searchQuery || searchQuery.length < 2) return;
+    const container = contentRef.current;
+    const hasFilterMarks = container.querySelector('mark[data-search-hl="1"]');
+    const hasHiddenVerses = container.querySelector('.bible-verse[style*="display: none"]');
+    const isContainerHidden = container.style.display === "none";
+    if (!hasFilterMarks && !hasHiddenVerses && !isContainerHidden) {
+      processSearch();
+    }
+  });
 
   // ─── Posicionar tooltip dentro dos limites do modal (fixed) ─────────────────
   const positionTooltip = useCallback((footnoteEl: HTMLElement) => {

@@ -1,8 +1,8 @@
 # Devocional Hub — Diretrizes do Projeto
 
-## Bible Bubble v5.14 — Estado atual (CONCLUIDO — 2026-03-29)
+## Bible Bubble v5.15 — Estado atual (CONCLUIDO — 2026-03-29)
 
-O Bible Bubble e o modulo de leitura biblica interativa do DevocionalHub. Versao atual: v5.14 (consolidado v5.7-v5.14).
+O Bible Bubble e o modulo de leitura biblica interativa do DevocionalHub. Versao atual: v5.15 (consolidado v5.7-v5.15).
 
 ### Fontes de dados
 - **Texto:** Holy Bible API (holy-bible-api.com) — 12 versoes PT, gratuita, sem API key
@@ -47,9 +47,11 @@ ARC (637), Almeida (636), ARA (635), NBV (642), OL (646), TB (647), CAP (640), B
 - **Player expandido (v5.7):** botao play 48x48 (igual ao colapsado), icones 24px
 - **Speed button:** min-width 46px para nao empurrar outros botoes ao alternar velocidade (1x→2x). Posicao fixa no layout.
 - **Bubble:** 15% maior que padrao, label "Abrir Biblia", esconde quando modal aberto, z-index 9999, subido 20px, anti-zoom iOS
-- **Player:** inicia colapsado/pausado, sem autoplay, drag-to-seek (mouse+touch), cache de posicao (localStorage 24h)
+- **Player:** inicia colapsado/pausado, sem autoplay, drag-to-seek (mouse+touch), cache de posicao (localStorage 24h). Area de interacao expandida via `::before` (32px hit area, visual 4px).
+- **Drag-to-seek (v5.15):** dupla protecao contra troca cascata de capitulos — `isDraggingRef` suprime callback `onChapterEnd` durante drag + seek clampado a `duration - 0.5s`. Ao soltar no final, avanca capitulo se estava tocando. Clique direto (sem drag) nao e afetado.
 - **Audio speed:** `setSpeed()` seta playbackRate direto no HTMLAudioElement (fluido, sem pause/resume)
-- **Busca:** lupa no header, client-side no capitulo com highlight, filtra versiculos, ignora acentos/pontuacao, remove footnotes antes do matching. Esconde titulos/breaks/containers sem versiculos visiveis. Coleta texto orfao de siblings (fix YouVersion footnotes). Container inteiro escondido quando sem resultados.
+- **Busca (v5.15):** lupa no header, client-side no capitulo com highlight cross-node (matches que cruzam fronteira de footnotes). Filtra versiculos, ignora acentos/pontuacao, remove footnotes antes do matching. Esconde titulos/breaks/containers sem versiculos visiveis. Coleta texto orfao de siblings (fix YouVersion footnotes). Container inteiro escondido quando sem resultados. `useLayoutEffect` safeguard re-aplica filtro se DOM resetado pelo React (ex: collapse/expand player). Espacos flexiveis na regex (`\s+`) para matches entre nos separados.
+- **Busca — comportamento dos botoes (v5.15):** Lupa: toggle busca, salva query em `savedSearchQueryRef` ao fechar (restaura ao reabrir). X: limpa query + `savedSearchQueryRef` e fecha. Play: salva query e fecha. ESC: mesmo da lupa. Collapse/expand/velocidade: NAO afetam busca.
 - **Footnotes:** icone 18x18 com margin-left 4px, tooltip posicionado via JS (position: fixed), maxWidth restrito ao modal, hover+click usam mesma logica de posicionamento
 - **Botao AA:** ciclo normal (17px) → medio (20px) → grande (24px), persistencia via localStorage. Guia de leitura recalcula ao mudar.
 - **Navegacao lateral:** botoes flutuantes prev/next capitulo nos lados do modal (escondidos em mobile < 768px)

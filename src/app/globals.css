@@ -1971,6 +1971,15 @@ select.input-field {
   cursor: pointer;
   position: relative;
 }
+/* Área de interação expandida — visualmente 4px, clicável ~32px */
+.bible-player-progress::before {
+  content: "";
+  position: absolute;
+  top: -14px;
+  bottom: -14px;
+  left: 0;
+  right: 0;
+}
 .bible-player-progress-fill {
   height: 100%;
   background: var(--accent);
