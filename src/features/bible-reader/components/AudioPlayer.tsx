@@ -15,6 +15,7 @@ interface AudioPlayerProps {
   onSeekHandled?: () => void;
   autoPlay?: boolean;
   onAutoPlayHandled?: () => void;
+  onPlayDuringSearch?: () => void;
 }
 
 function formatTime(seconds: number): string {
@@ -34,12 +35,14 @@ export function AudioPlayer({
   onSeekHandled,
   autoPlay,
   onAutoPlayHandled,
+  onPlayDuringSearch,
 }: AudioPlayerProps) {
   const [state, setState] = useState<AudioState>({
     isPlaying: false, isPaused: true, currentTime: 0,
     duration: 0, speed: 1, isLoading: false, error: null,
   });
   const [isDragging, setIsDragging] = useState(false);
+  const [dragProgress, setDragProgress] = useState<number | null>(null);
   const progressRef = useRef<HTMLDivElement>(null);
   const managerRef = useRef(getAudioManager());
   const loadedUrlRef = useRef<string | null>(null);
@@ -96,6 +99,7 @@ export function AudioPlayer({
     if (!progressRef.current || !state.duration) return;
     const rect = progressRef.current.getBoundingClientRect();
     const pct = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+    setDragProgress(pct * 100); // Feedback visual imediato (sem esperar render)
     managerRef.current.seek(pct * state.duration);
   }, [state.duration]);
 
@@ -104,6 +108,7 @@ export function AudioPlayer({
     function handleMouseMove(e: MouseEvent) { seekFromEvent(e.clientX); }
     function handleMouseUp() {
       setIsDragging(false);
+      setDragProgress(null);
       if (wasPlayingBeforeDragRef.current) {
         managerRef.current.play();
         wasPlayingBeforeDragRef.current = false;
@@ -120,6 +125,7 @@ export function AudioPlayer({
   if (!audioAvailable) return null;
 
   const progress = state.duration > 0 ? (state.currentTime / state.duration) * 100 : 0;
+  const displayProgress = isDragging && dragProgress !== null ? dragProgress : progress;
 
   return (
     <div className="bible-player">
@@ -139,7 +145,10 @@ export function AudioPlayer({
 
         <button
           className="bible-player-btn bible-player-btn--main"
-          onClick={() => managerRef.current.togglePlayPause()}
+          onClick={() => {
+            if (onPlayDuringSearch && state.isPaused) onPlayDuringSearch();
+            managerRef.current.togglePlayPause();
+          }}
           aria-label={state.isPlaying ? "Pausar" : "Reproduzir"}
         >
           {state.isLoading ? (
@@ -187,18 +196,19 @@ export function AudioPlayer({
           onTouchMove={(e) => { if (isDragging) seekFromEvent(e.touches[0].clientX); }}
           onTouchEnd={() => {
             setIsDragging(false);
+            setDragProgress(null);
             if (wasPlayingBeforeDragRef.current) {
               managerRef.current.play();
               wasPlayingBeforeDragRef.current = false;
             }
           }}
           role="slider"
-          aria-valuenow={Math.round(progress)}
+          aria-valuenow={Math.round(displayProgress)}
           aria-valuemin={0}
           aria-valuemax={100}
         >
-          <div className="bible-player-progress-fill" style={{ width: `${progress}%` }} />
-          <div className="bible-player-progress-thumb" style={{ left: `${progress}%` }} />
+          <div className="bible-player-progress-fill" style={{ width: `${displayProgress}%` }} />
+          <div className="bible-player-progress-thumb" style={{ left: `${displayProgress}%` }} />
         </div>
         <span className="bible-player-time">{formatTime(state.duration)}</span>
       </div>

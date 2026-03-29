@@ -258,6 +258,20 @@ export function BibleContent({
         span.style.display = "";
         hasVisible = true;
         highlightTextInElement(span, searchQuery);
+        // Highlight também nos siblings órfãos (texto fora do span por causa de footnotes)
+        const nextVerse = index < verseSpans.length - 1 ? verseSpans[index + 1] : null;
+        let sib: Node | null = span.nextSibling;
+        while (sib) {
+          if (sib === nextVerse) break;
+          if (sib.nodeType === Node.ELEMENT_NODE) {
+            const el = sib as Element;
+            if (el.classList?.contains("bible-verse")) break;
+            if (!el.classList?.contains("bible-footnote-content")) {
+              highlightTextInElement(el, searchQuery);
+            }
+          }
+          sib = sib.nextSibling;
+        }
       } else {
         span.style.display = "none";
       }

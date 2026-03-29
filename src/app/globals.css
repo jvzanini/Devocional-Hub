@@ -1975,31 +1975,38 @@ select.input-field {
   height: 100%;
   background: var(--accent);
   border-radius: 2px;
-  transition: width 0.1s linear;
+  pointer-events: none;
+}
+.bible-player-progress--dragging .bible-player-progress-fill {
+  transition: none;
 }
 .bible-player-progress-thumb {
   position: absolute;
   top: 50%;
-  width: 12px;
-  height: 12px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
   background: var(--accent);
   transform: translate(-50%, -50%);
   opacity: 0;
-  transition: opacity 0.15s;
+  transition: opacity 0.15s, width 0.1s, height 0.1s;
+  touch-action: none;
+  cursor: grab;
+  pointer-events: none;
 }
 .bible-player-progress:hover .bible-player-progress-thumb,
 .bible-player-progress--dragging .bible-player-progress-thumb {
   opacity: 1;
 }
-.bible-player-progress-thumb {
-  touch-action: none;
-  cursor: grab;
+.bible-player-progress:hover .bible-player-progress-thumb {
+  width: 16px;
+  height: 16px;
 }
 .bible-player-progress--dragging .bible-player-progress-thumb {
   cursor: grabbing;
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
+  transition: none;
 }
 
 /* Botão colapsar */

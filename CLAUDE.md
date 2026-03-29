@@ -1,5 +1,18 @@
 # Devocional Hub — Diretrizes do Projeto
 
+## Bible Bubble v5.14 — Fix busca flash, highlight orfaos, seek bar UX (CONCLUIDO — 2026-03-29)
+
+### Busca (v5.14)
+- **Fix flash ao abrir busca com audio:** Removido useEffect race condition. Play/pausa agora gerenciado via handlers explicitos
+- **Collapse/velocidade nao saem da busca:** So play e X fecham busca (handlers dedicados)
+- **Play expandido fecha busca:** Prop `onPlayDuringSearch` passada ao AudioPlayer
+- **Highlight em texto orfao:** Apos highlight no span do versiculo, tambem aplica nos siblings orfaos (fix "sua" no v6)
+
+### Seek bar (v5.14)
+- **Fill/thumb sem delay:** `dragProgress` state atualizado imediatamente no drag, sem esperar render do AudioManager
+- **Thumb maior:** 14px padrao, 16px no hover, 18px durante drag, cursor grab/grabbing
+- **Fill sem transition durante drag:** `transition: none` durante arrasto
+
 ## Bible Bubble v5.13 — Seek bar UX, preload mobile, verse tracking (CONCLUIDO — 2026-03-29)
 
 ### Seek bar

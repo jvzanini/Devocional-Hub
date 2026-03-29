@@ -330,22 +330,6 @@ export function BibleModal({
     return () => clearInterval(interval);
   }, [isOpen, audioAvailable, bookCode, chapter, selectedVersion]);
 
-  // ─── Fechar busca quando áudio começa a tocar + scroll para versículo ───
-  useEffect(() => {
-    if (!isSearchOpen || !isAudioPlaying) return;
-    // Áudio começou a tocar durante busca: salvar query, fechar busca, scroll
-    savedSearchQueryRef.current = searchQuery;
-    setIsSearchOpen(false);
-    setSearchQuery("");
-    wasPlayingBeforeSearchRef.current = false;
-    setTimeout(() => {
-      if (currentVerse && contentRef.current) {
-        const verseEl = contentRef.current.querySelector(`[data-verse="${currentVerse}"]`);
-        if (verseEl) verseEl.scrollIntoView({ behavior: "smooth", block: "center" });
-      }
-    }, 150);
-  }, [isSearchOpen, isAudioPlaying, searchQuery, currentVerse]);
-
   // ─── Verse Tracking: determinar versículo atual pelo currentTime do áudio ───
   useEffect(() => {
     const manager = getAudioManager();
@@ -783,6 +767,18 @@ export function BibleModal({
                 onSeekHandled={() => setPendingSeekTime(null)}
                 autoPlay={autoPlayNext}
                 onAutoPlayHandled={() => setAutoPlayNext(false)}
+                onPlayDuringSearch={isSearchOpen ? () => {
+                  savedSearchQueryRef.current = searchQuery;
+                  setIsSearchOpen(false);
+                  setSearchQuery("");
+                  wasPlayingBeforeSearchRef.current = false;
+                  setTimeout(() => {
+                    if (currentVerse && contentRef.current) {
+                      const verseEl = contentRef.current.querySelector(`[data-verse="${currentVerse}"]`);
+                      if (verseEl) verseEl.scrollIntoView({ behavior: "smooth", block: "center" });
+                    }
+                  }, 200);
+                } : undefined}
               />
             </div>
           )}
@@ -814,7 +810,24 @@ export function BibleModal({
 
               <button
                 className="bible-player-collapsed-btn--play"
-                onClick={audioUrl ? handleAudioToggle : undefined}
+                onClick={audioUrl ? () => {
+                  if (isSearchOpen && !isAudioPlaying) {
+                    // Play durante busca: salvar query, fechar busca, scroll para versículo
+                    savedSearchQueryRef.current = searchQuery;
+                    setIsSearchOpen(false);
+                    setSearchQuery("");
+                    wasPlayingBeforeSearchRef.current = false;
+                    handleAudioToggle();
+                    setTimeout(() => {
+                      if (currentVerse && contentRef.current) {
+                        const verseEl = contentRef.current.querySelector(`[data-verse="${currentVerse}"]`);
+                        if (verseEl) verseEl.scrollIntoView({ behavior: "smooth", block: "center" });
+                      }
+                    }, 200);
+                    return;
+                  }
+                  handleAudioToggle();
+                } : undefined}
                 aria-label={isAudioLoading || !audioUrl ? "Carregando" : isAudioPlaying ? "Pausar" : "Reproduzir"}
                 style={{ opacity: !audioUrl ? 0.6 : 1 }}
               >
