@@ -330,6 +330,22 @@ export function BibleModal({
     return () => clearInterval(interval);
   }, [isOpen, audioAvailable, bookCode, chapter, selectedVersion]);
 
+  // ─── Fechar busca quando áudio começa a tocar + scroll para versículo ───
+  useEffect(() => {
+    if (!isSearchOpen || !isAudioPlaying) return;
+    // Áudio começou a tocar durante busca: salvar query, fechar busca, scroll
+    savedSearchQueryRef.current = searchQuery;
+    setIsSearchOpen(false);
+    setSearchQuery("");
+    wasPlayingBeforeSearchRef.current = false;
+    setTimeout(() => {
+      if (currentVerse && contentRef.current) {
+        const verseEl = contentRef.current.querySelector(`[data-verse="${currentVerse}"]`);
+        if (verseEl) verseEl.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    }, 150);
+  }, [isSearchOpen, isAudioPlaying, searchQuery, currentVerse]);
+
   // ─── Verse Tracking: determinar versículo atual pelo currentTime do áudio ───
   useEffect(() => {
     const manager = getAudioManager();
@@ -531,10 +547,11 @@ export function BibleModal({
   }, [isOpen]);
 
   const handleNavigate = useCallback((newBookCode: string, newChapter: number) => {
+    if (isAudioPlaying) setAutoPlayNext(true);
     setBookCode(newBookCode);
     setChapter(newChapter);
     setActiveSelector(null);
-  }, []);
+  }, [isAudioPlaying]);
 
   const handleAudioToggle = useCallback(() => {
     getAudioManager().togglePlayPause();
@@ -550,6 +567,7 @@ export function BibleModal({
   }, []);
 
   const handlePreviousChapter = useCallback(() => {
+    if (isAudioPlaying) setAutoPlayNext(true);
     const currentBookIndex = BIBLE_BOOKS.findIndex((b) => b.code === bookCode);
     if (chapter > 1) {
       setChapter(chapter - 1);
@@ -558,9 +576,10 @@ export function BibleModal({
       setBookCode(prevBook.code);
       setChapter(prevBook.chapters);
     }
-  }, [bookCode, chapter]);
+  }, [bookCode, chapter, isAudioPlaying]);
 
   const handleNextChapter = useCallback(() => {
+    if (isAudioPlaying) setAutoPlayNext(true);
     const currentBook = BIBLE_BOOKS.find((b) => b.code === bookCode);
     const currentBookIndex = BIBLE_BOOKS.findIndex((b) => b.code === bookCode);
     if (currentBook && chapter < currentBook.chapters) {
@@ -570,7 +589,7 @@ export function BibleModal({
       setBookCode(nextBook.code);
       setChapter(1);
     }
-  }, [bookCode, chapter]);
+  }, [bookCode, chapter, isAudioPlaying]);
 
   const handleChapterEndAutoPlay = useCallback(() => {
     setAutoPlayNext(true);
@@ -793,16 +812,7 @@ export function BibleModal({
 
               <button
                 className="bible-player-collapsed-btn--play"
-                onClick={audioUrl ? () => {
-                  if (isSearchOpen && !isAudioPlaying) {
-                    // Clicou play durante busca: salvar query, fechar busca, tocar
-                    savedSearchQueryRef.current = searchQuery;
-                    setIsSearchOpen(false);
-                    setSearchQuery("");
-                    wasPlayingBeforeSearchRef.current = false;
-                  }
-                  handleAudioToggle();
-                } : undefined}
+                onClick={audioUrl ? handleAudioToggle : undefined}
                 aria-label={isAudioLoading || !audioUrl ? "Carregando" : isAudioPlaying ? "Pausar" : "Reproduzir"}
                 style={{ opacity: !audioUrl ? 0.6 : 1 }}
               >

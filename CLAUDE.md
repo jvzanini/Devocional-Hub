@@ -1,5 +1,18 @@
 # Devocional Hub — Diretrizes do Projeto
 
+## Bible Bubble v5.12 — Busca + audio integrados, auto-play nav (CONCLUIDO — 2026-03-29)
+
+### Busca + audio (v5.12)
+- **Play durante busca fecha busca automaticamente:** useEffect detecta `isAudioPlaying` durante busca → salva query, fecha busca, scroll para versiculo atual
+- **Scroll para versiculo ao fechar busca por play:** `scrollIntoView({ block: "center" })` no versiculo que estava sendo reproduzido
+- **Query salva restaurada com filtro:** ao reabrir busca com query salva, `processSearch` roda automaticamente via effect de `searchQuery`
+- **Minimizar/velocidade NAO saem da busca:** `onMouseDown preventDefault` no footer + so play e X fecham busca
+
+### Auto-play navegacao (v5.12)
+- **Capitulo prev/next com audio tocando:** `setAutoPlayNext(true)` antes de navegar se `isAudioPlaying`
+- **Seletor de livro/capitulo com audio tocando:** `handleNavigate` tambem ativa auto-play se audio estava rodando
+- **Audio desligado → sem auto-play:** comportamento mantido, so auto-play quando audio ja estava em execucao
+
 ## Bible Bubble v5.11 — Busca integrada + UX polish (CONCLUIDO — 2026-03-29)
 
 ### Busca integrada com audio
