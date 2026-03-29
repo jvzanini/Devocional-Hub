@@ -353,7 +353,7 @@ export function BibleModal({
     const unsub = manager.subscribe((state) => {
       // Sem timestamps e sem duração → sem tracking
       if (!state.isPlaying && !state.isPaused) {
-        // Áudio parado completamente → limpar
+        // Áudio parado completamente (sem src) → limpar
         if (lastVerseRef.current !== null) {
           lastVerseRef.current = null;
           setCurrentVerse(null);
@@ -361,7 +361,9 @@ export function BibleModal({
         return;
       }
 
-      if (!state.isPlaying) return; // pausado → manter versículo atual
+      // Tracking ativo durante play E durante seek (mesmo pausado)
+      // Permite que a guia de leitura acompanhe o drag na barra de progresso
+      if (!state.isPlaying && state.currentTime === 0 && !state.duration) return;
 
       // Gerar fallback proporcional se não houver timestamps da API
       let ts = verseTimestamps;

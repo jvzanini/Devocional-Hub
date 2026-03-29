@@ -35,6 +35,7 @@ export class AudioManager {
   constructor() {
     if (typeof window !== "undefined") {
       this.audio = new Audio();
+      this.audio.preload = "auto"; // Buffering completo — fix stutter ao mudar velocidade no mobile
       this.setupEventListeners();
       // Restaurar velocidade salva
       try {
@@ -58,6 +59,7 @@ export class AudioManager {
     this.audio.addEventListener("pause", () => this.notifyListeners());
     this.audio.addEventListener("waiting", () => this.notifyListeners());
     this.audio.addEventListener("canplay", () => this.notifyListeners());
+    this.audio.addEventListener("seeked", () => this.notifyListeners());
 
     this.audio.addEventListener("ended", () => {
       this.notifyListeners();
@@ -145,6 +147,7 @@ export class AudioManager {
   seek(time: number): void {
     if (this.audio && isFinite(time)) {
       this.audio.currentTime = time;
+      this.notifyListeners(); // Notificar imediatamente (verse tracking durante seek)
     }
   }
 

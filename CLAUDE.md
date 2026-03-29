@@ -1,5 +1,16 @@
 # Devocional Hub — Diretrizes do Projeto
 
+## Bible Bubble v5.13 — Seek bar UX, preload mobile, verse tracking (CONCLUIDO — 2026-03-29)
+
+### Seek bar
+- **Pausa durante drag:** audio pausa ao iniciar drag na barra de progresso (mouse/touch), retoma ao soltar
+- **Verse tracking durante seek:** guia de leitura acompanha posicao da barra mesmo com audio pausado
+- **Notificacao imediata:** `seek()` chama `notifyListeners()` + evento `seeked` para feedback instantaneo
+
+### Mobile audio
+- **Preload auto:** `audio.preload = "auto"` forca buffering completo do MP3, reduz stutter ao mudar velocidade
+- **Speed change direto:** `playbackRate` setado sem pause/resume (buffer completo ja disponivel)
+
 ## Bible Bubble v5.12 — Busca + audio integrados, auto-play nav (CONCLUIDO — 2026-03-29)
 
 ### Busca + audio (v5.12)

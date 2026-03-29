@@ -43,6 +43,7 @@ export function AudioPlayer({
   const progressRef = useRef<HTMLDivElement>(null);
   const managerRef = useRef(getAudioManager());
   const loadedUrlRef = useRef<string | null>(null);
+  const wasPlayingBeforeDragRef = useRef(false);
 
   useEffect(() => {
     const manager = managerRef.current;
@@ -101,7 +102,13 @@ export function AudioPlayer({
   useEffect(() => {
     if (!isDragging) return;
     function handleMouseMove(e: MouseEvent) { seekFromEvent(e.clientX); }
-    function handleMouseUp() { setIsDragging(false); }
+    function handleMouseUp() {
+      setIsDragging(false);
+      if (wasPlayingBeforeDragRef.current) {
+        managerRef.current.play();
+        wasPlayingBeforeDragRef.current = false;
+      }
+    }
     window.addEventListener("mousemove", handleMouseMove);
     window.addEventListener("mouseup", handleMouseUp);
     return () => {
@@ -163,11 +170,28 @@ export function AudioPlayer({
         <div
           ref={progressRef}
           className={`bible-player-progress ${isDragging ? "bible-player-progress--dragging" : ""}`}
-          onClick={(e) => seekFromEvent(e.clientX)}
-          onMouseDown={(e) => { e.preventDefault(); setIsDragging(true); seekFromEvent(e.clientX); }}
-          onTouchStart={(e) => { setIsDragging(true); seekFromEvent(e.touches[0].clientX); }}
+          onClick={(e) => { if (!isDragging) seekFromEvent(e.clientX); }}
+          onMouseDown={(e) => {
+            e.preventDefault();
+            wasPlayingBeforeDragRef.current = state.isPlaying;
+            if (state.isPlaying) managerRef.current.pause();
+            setIsDragging(true);
+            seekFromEvent(e.clientX);
+          }}
+          onTouchStart={(e) => {
+            wasPlayingBeforeDragRef.current = state.isPlaying;
+            if (state.isPlaying) managerRef.current.pause();
+            setIsDragging(true);
+            seekFromEvent(e.touches[0].clientX);
+          }}
           onTouchMove={(e) => { if (isDragging) seekFromEvent(e.touches[0].clientX); }}
-          onTouchEnd={() => setIsDragging(false)}
+          onTouchEnd={() => {
+            setIsDragging(false);
+            if (wasPlayingBeforeDragRef.current) {
+              managerRef.current.play();
+              wasPlayingBeforeDragRef.current = false;
+            }
+          }}
           role="slider"
           aria-valuenow={Math.round(progress)}
           aria-valuemin={0}
