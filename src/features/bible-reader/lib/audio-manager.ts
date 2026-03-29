@@ -30,6 +30,7 @@ export class AudioManager {
   private chapterEndListeners: Set<ChapterEndListener> = new Set();
   private currentSpeed: PlaybackSpeed = 1;
   private autoplayEnabled = true;
+  private hasSrc = false;
 
   constructor() {
     if (typeof window !== "undefined") {
@@ -90,7 +91,7 @@ export class AudioManager {
       currentTime: this.audio.currentTime || 0,
       duration: this.audio.duration || 0,
       speed: this.currentSpeed,
-      isLoading: this.audio.readyState < 3,
+      isLoading: this.hasSrc && this.audio.readyState < 3,
       error: this.audio.error ? "Erro ao carregar áudio" : null,
     };
   }
@@ -98,6 +99,7 @@ export class AudioManager {
   async loadAndPlay(url: string): Promise<void> {
     if (!this.audio) return;
 
+    this.hasSrc = true;
     this.audio.src = url;
     this.audio.playbackRate = this.currentSpeed;
 
@@ -112,6 +114,7 @@ export class AudioManager {
   /** Carregar áudio sem reproduzir (pré-carrega apenas) */
   loadOnly(url: string): void {
     if (!this.audio) return;
+    this.hasSrc = true;
     this.audio.src = url;
     this.audio.playbackRate = this.currentSpeed;
     this.audio.load();
@@ -148,7 +151,16 @@ export class AudioManager {
   setSpeed(speed: PlaybackSpeed): void {
     this.currentSpeed = speed;
     if (this.audio) {
+      const wasPlaying = !this.audio.paused;
+      const pos = this.audio.currentTime;
+      if (wasPlaying) this.audio.pause();
       this.audio.playbackRate = speed;
+      if (wasPlaying) {
+        this.audio.currentTime = pos;
+        requestAnimationFrame(() => {
+          this.audio?.play().catch(console.warn);
+        });
+      }
     }
     try { localStorage.setItem("devhub-bible-speed", String(speed)); } catch {}
     this.notifyListeners();
@@ -167,6 +179,7 @@ export class AudioManager {
   }
 
   stop(): void {
+    this.hasSrc = false;
     if (this.audio) {
       this.audio.pause();
       this.audio.currentTime = 0;
@@ -185,6 +198,8 @@ export class AudioManager {
 
   subscribe(listener: AudioStateListener): () => void {
     this.listeners.add(listener);
+    // Emitir estado atual imediatamente para sincronizar o componente
+    listener(this.getState());
     return () => this.listeners.delete(listener);
   }
 

@@ -1,5 +1,14 @@
 # Devocional Hub — Diretrizes do Projeto
 
+## Fix Audio v5.9 — Correcoes de reproducao de audio (CONCLUIDO — 2026-03-29)
+
+### Correcoes
+- **Subscribe sincronizado:** `AudioManager.subscribe()` agora emite estado atual imediatamente ao se inscrever. Antes o componente montava com estado falso ate o proximo evento do audio.
+- **Pausa ao navegar capitulos:** `AudioPlayer` agora pausa o audio antigo quando `audioUrl` fica null (troca de capitulo). Antes o audio do capitulo anterior continuava tocando sobre o texto do novo capitulo.
+- **isLoading preciso:** Flag `hasSrc` adicionada para que `isLoading` so seja true quando ha fonte carregando (`hasSrc && readyState < 3`). Antes retornava true com audio vazio apos `stop()`.
+- **Speed sem stutter (mobile):** `setSpeed()` agora faz pause → alterar playbackRate → seek posicao exata → requestAnimationFrame → resume. Antes mudava playbackRate direto causando stutter no mobile.
+- **Player colapsado com loading correto:** Botao play colapsado mostra spinner quando `audioUrl` e null (audio sendo buscado) e clique desabilitado. Antes mostrava icone de play que nao fazia nada.
+
 ## Bible Bubble v5.7 — Leitura Acompanhada + Player Melhorado (CONCLUIDO — 2026-03-23)
 
 O Bible Bubble e o modulo de leitura biblica interativa do DevocionalHub. Todas as versoes anteriores (v4, v4.1, v5, v5.1, v5.2, v5.3, v5.4-v5.6) foram consolidadas aqui.

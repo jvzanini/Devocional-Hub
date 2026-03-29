@@ -53,13 +53,24 @@ export function AudioPlayer({
 
   // Carregar áudio (autoplay quando vindo de transição contínua)
   useEffect(() => {
-    if (!audioUrl || audioUrl === loadedUrlRef.current) return;
+    const manager = managerRef.current;
+
+    if (!audioUrl) {
+      // URL limpa (navegação de capítulo) — pausar áudio antigo
+      if (loadedUrlRef.current) {
+        manager.pause();
+        loadedUrlRef.current = null;
+      }
+      return;
+    }
+
+    if (audioUrl === loadedUrlRef.current) return;
     loadedUrlRef.current = audioUrl;
     if (autoPlay) {
-      managerRef.current.loadAndPlay(audioUrl);
+      manager.loadAndPlay(audioUrl);
       onAutoPlayHandled?.();
     } else {
-      managerRef.current.loadOnly(audioUrl);
+      manager.loadOnly(audioUrl);
     }
   }, [audioUrl, autoPlay, onAutoPlayHandled]);
 

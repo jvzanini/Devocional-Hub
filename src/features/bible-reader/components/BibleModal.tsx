@@ -760,8 +760,9 @@ export function BibleModal({
 
               <button
                 className="bible-player-collapsed-btn--play"
-                onClick={handleAudioToggle}
-                aria-label={isAudioLoading ? "Carregando" : isAudioPlaying ? "Pausar" : "Reproduzir"}
+                onClick={audioUrl ? handleAudioToggle : undefined}
+                aria-label={isAudioLoading || !audioUrl ? "Carregando" : isAudioPlaying ? "Pausar" : "Reproduzir"}
+                style={{ opacity: !audioUrl ? 0.6 : 1 }}
               >
                 {/* Progress ring circular (só no colapsado) */}
                 <svg className="bible-player-progress-ring" viewBox="0 0 48 48">
@@ -774,7 +775,7 @@ export function BibleModal({
                     strokeDashoffset={RING_CIRCUMFERENCE}
                   />
                 </svg>
-                {isAudioLoading ? (
+                {isAudioLoading || !audioUrl ? (
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <circle cx="12" cy="12" r="10" strokeDasharray="31.4 31.4" strokeLinecap="round">
                       <animateTransform attributeName="transform" type="rotate" values="0 12 12;360 12 12" dur="1s" repeatCount="indefinite" />
