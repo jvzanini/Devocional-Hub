@@ -118,6 +118,8 @@ export function BibleModal({
   const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const lastVerseRef = useRef<number | null>(null);
   const progressRingRef = useRef<SVGCircleElement>(null);
+  const wasPlayingBeforeSearchRef = useRef(false);
+  const savedSearchQueryRef = useRef("");
 
   // Restaurar tamanho da fonte salvo
   useEffect(() => {
@@ -638,8 +640,27 @@ export function BibleModal({
           onVersionClick={() => setActiveSelector(activeSelector === "version" ? null : "version")}
           onClose={onClose}
           onSearchToggle={() => {
-            setIsSearchOpen(!isSearchOpen);
-            if (isSearchOpen) setSearchQuery("");
+            if (!isSearchOpen) {
+              // Abrindo busca: pausar áudio se tocando
+              const manager = getAudioManager();
+              const state = manager.getState();
+              wasPlayingBeforeSearchRef.current = state.isPlaying;
+              if (state.isPlaying) manager.pause();
+              // Restaurar query salva (se voltou de fechar por play)
+              if (savedSearchQueryRef.current) {
+                setSearchQuery(savedSearchQueryRef.current);
+              }
+              setIsSearchOpen(true);
+            } else {
+              // Fechando busca (via toggle lupa): limpar tudo e retomar áudio
+              setIsSearchOpen(false);
+              setSearchQuery("");
+              savedSearchQueryRef.current = "";
+              if (wasPlayingBeforeSearchRef.current) {
+                getAudioManager().play();
+                wasPlayingBeforeSearchRef.current = false;
+              }
+            }
           }}
           fontSize={fontSize}
           onFontSizeToggle={handleFontSizeToggle}
@@ -666,7 +687,15 @@ export function BibleModal({
               }}
             />
             <button
-              onClick={() => { setIsSearchOpen(false); setSearchQuery(""); }}
+              onClick={() => {
+                setIsSearchOpen(false);
+                setSearchQuery("");
+                savedSearchQueryRef.current = "";
+                if (wasPlayingBeforeSearchRef.current) {
+                  getAudioManager().play();
+                  wasPlayingBeforeSearchRef.current = false;
+                }
+              }}
               style={{ background: "none", border: "none", color: "var(--text-secondary)", padding: 8, cursor: "pointer" }}
               aria-label="Fechar busca"
             >
@@ -706,10 +735,14 @@ export function BibleModal({
             searchQuery={searchQuery}
             fontSize={fontSize}
             currentVerse={currentVerse}
+            isSearchActive={isSearchOpen && searchQuery.length >= 2}
           />
         </div>
 
-        <div className="bible-modal-footer">
+        <div className="bible-modal-footer" onMouseDown={(e) => {
+          // Prevenir perda de foco do input de busca ao clicar nos controles de áudio
+          if (isSearchOpen) e.preventDefault();
+        }}>
           {/* ── PLAYER EXPANDIDO (sempre montado, oculto via CSS) ── */}
           {audioAvailable && (
             <div style={{ display: isPlayerCollapsed ? "none" : "block" }}>
@@ -760,7 +793,16 @@ export function BibleModal({
 
               <button
                 className="bible-player-collapsed-btn--play"
-                onClick={audioUrl ? handleAudioToggle : undefined}
+                onClick={audioUrl ? () => {
+                  if (isSearchOpen && !isAudioPlaying) {
+                    // Clicou play durante busca: salvar query, fechar busca, tocar
+                    savedSearchQueryRef.current = searchQuery;
+                    setIsSearchOpen(false);
+                    setSearchQuery("");
+                    wasPlayingBeforeSearchRef.current = false;
+                  }
+                  handleAudioToggle();
+                } : undefined}
                 aria-label={isAudioLoading || !audioUrl ? "Carregando" : isAudioPlaying ? "Pausar" : "Reproduzir"}
                 style={{ opacity: !audioUrl ? 0.6 : 1 }}
               >

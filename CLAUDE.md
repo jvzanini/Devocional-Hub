@@ -1,5 +1,24 @@
 # Devocional Hub — Diretrizes do Projeto
 
+## Bible Bubble v5.11 — Busca integrada + UX polish (CONCLUIDO — 2026-03-29)
+
+### Busca integrada com audio
+- **Abrir busca pausa audio:** ao clicar na lupa, audio e pausado automaticamente. Ao fechar (X), audio retoma se estava tocando
+- **Play durante busca fecha busca:** clicar play no player colapsado fecha busca (salva query em memoria), retoma audio
+- **Query preservada:** query salva quando busca fecha por play. Reabrir lupa restaura a query. So limpa no X ou deletando manual
+- **Controles de audio nao tiram foco:** `onMouseDown preventDefault` no footer impede perda de foco do input
+- **Scroll para cima ao buscar:** `scrollTo({ top: 0 })` no modal body quando resultados mudam
+
+### Busca — hifens
+- **Hifens normalizados:** `normalizeForSearch` converte hifens Unicode (U+2010-2015) para ASCII antes de comparar
+- **Highlight flexivel:** regex de highlight aceita qualquer tipo de hifen (`[-\u2010-\u2015]`), "use-" destaca "use‑o"
+
+### Guia de leitura
+- **Escondida durante busca:** prop `isSearchActive` controla opacidade do indicador (nao faz sentido durante busca)
+
+### Tooltips mobile
+- **Fix flash no tap:** `mouseover`/`mouseout` ignoram eventos sinteticos gerados por touch (500ms cooldown apos touchstart)
+
 ## Bible Bubble v5.10 — Fix audio, guia, tooltips e busca (CONCLUIDO — 2026-03-29)
 
 ### Audio (v5.9)

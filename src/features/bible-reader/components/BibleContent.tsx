@@ -24,6 +24,7 @@ interface BibleContentProps {
   searchQuery?: string;
   fontSize?: FontSizeLevel;
   currentVerse?: number | null;
+  isSearchActive?: boolean;
 }
 
 function LoadingSkeleton() {
@@ -45,7 +46,8 @@ function normalizeForSearch(text: string): string {
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^\w\s]/g, "")
+    .replace(/[\u2010\u2011\u2012\u2013\u2014\u2015]/g, "-") // normalizar hífens Unicode → ASCII
+    .replace(/[^\w\s-]/g, "") // manter hífens no texto
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -62,7 +64,9 @@ function clearHighlights(container: HTMLElement) {
 
 function highlightTextInElement(element: Element, query: string) {
   const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const regex = new RegExp(`(${escaped})`, "gi");
+  // Hífens flexíveis: ASCII hyphen match qualquer tipo de hífen Unicode
+  const flexible = escaped.replace(/-/g, "[-\u2010\u2011\u2012\u2013\u2014\u2015]");
+  const regex = new RegExp(`(${flexible})`, "gi");
 
   const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
   const textNodes: Text[] = [];
@@ -116,6 +120,7 @@ export function BibleContent({
   searchQuery,
   fontSize = "normal",
   currentVerse,
+  isSearchActive,
 }: BibleContentProps) {
   const contentRef = useRef<HTMLDivElement>(null);
   const indicatorRef = useRef<HTMLDivElement>(null);
@@ -128,7 +133,7 @@ export function BibleContent({
     const indicator = indicatorRef.current;
     if (!container || !indicator) return;
 
-    if (!currentVerse) {
+    if (!currentVerse || isSearchActive) {
       indicator.style.opacity = "0";
       return;
     }
@@ -186,7 +191,7 @@ export function BibleContent({
     indicator.style.top = `${top}px`;
     indicator.style.height = `${Math.max(height, 8)}px`;
     indicator.style.opacity = "1";
-  }, [currentVerse, htmlContent, fontSize]);
+  }, [currentVerse, htmlContent, fontSize, isSearchActive]);
 
   const processSearch = useCallback(() => {
     const container = contentRef.current;
@@ -296,6 +301,10 @@ export function BibleContent({
       container.style.display = "none";
     }
 
+    // Scroll para cima ao buscar (para resultados serem visíveis)
+    const scrollParent = container.closest(".bible-modal-body");
+    if (scrollParent) scrollParent.scrollTo({ top: 0, behavior: "smooth" });
+
     setNoResults(!hasVisible);
   }, [searchQuery]);
 
@@ -386,7 +395,12 @@ export function BibleContent({
     const container = contentRef.current;
     if (!container) return;
 
+    // Ignorar mouse events sintéticos disparados por touch (causa flash no mobile)
+    let lastTouchTime = 0;
+    function handleTouchStart() { lastTouchTime = Date.now(); }
+
     function handleMouseOver(e: MouseEvent) {
+      if (Date.now() - lastTouchTime < 500) return; // ignorar mouse após touch
       const icon = (e.target as HTMLElement).closest(".bible-footnote-icon");
       if (!icon) return;
       const footnoteEl = icon.closest(".bible-footnote") as HTMLElement;
@@ -395,6 +409,7 @@ export function BibleContent({
     }
 
     function handleMouseOut(e: MouseEvent) {
+      if (Date.now() - lastTouchTime < 500) return;
       const footnoteEl = (e.target as HTMLElement).closest(".bible-footnote") as HTMLElement;
       if (!footnoteEl || footnoteEl.classList.contains("bible-footnote--active")) return;
       const related = e.relatedTarget as HTMLElement;
@@ -403,9 +418,11 @@ export function BibleContent({
       if (content) content.style.display = "none";
     }
 
+    container.addEventListener("touchstart", handleTouchStart, { passive: true });
     container.addEventListener("mouseover", handleMouseOver);
     container.addEventListener("mouseout", handleMouseOut);
     return () => {
+      container.removeEventListener("touchstart", handleTouchStart);
       container.removeEventListener("mouseover", handleMouseOver);
       container.removeEventListener("mouseout", handleMouseOut);
     };
