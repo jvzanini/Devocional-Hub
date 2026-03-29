@@ -62,28 +62,16 @@ function clearHighlights(container: HTMLElement) {
   });
 }
 
-function highlightTextInElement(element: Element, query: string) {
+/** Aplica highlight em um array de text nodes (cross-node: matches podem cruzar fronteiras) */
+function highlightNodes(textNodes: Text[], query: string) {
+  if (textNodes.length === 0) return;
+
   const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  // Hífens flexíveis + espaços flexíveis (para matches entre nós separados por footnotes)
   const flexible = escaped
     .replace(/-/g, "[-\u2010\u2011\u2012\u2013\u2014\u2015]")
     .replace(/ /g, "\\s+");
   const regex = new RegExp(`(${flexible})`, "gi");
 
-  // Coletar text nodes elegíveis (pular footnotes inteiros e números de versículo)
-  const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
-  const textNodes: Text[] = [];
-  while (walker.nextNode()) {
-    const node = walker.currentNode as Text;
-    if (node.parentElement?.closest(".bible-footnote")) continue;
-    if (node.parentElement?.closest("sup.v")) continue;
-    if (node.parentElement?.tagName === "MARK") continue;
-    textNodes.push(node);
-  }
-
-  if (textNodes.length === 0) return;
-
-  // Construir texto combinado e mapa de ranges por nó
   const nodeRanges: { start: number; end: number; node: Text }[] = [];
   let totalLen = 0;
   for (const node of textNodes) {
@@ -93,16 +81,13 @@ function highlightTextInElement(element: Element, query: string) {
   }
   const combined = textNodes.map(n => n.textContent || "").join("");
 
-  // Encontrar todos os matches no texto combinado (cross-node)
   const matchRanges: { start: number; end: number }[] = [];
   let m: RegExpExecArray | null;
   while ((m = regex.exec(combined)) !== null) {
     matchRanges.push({ start: m.index, end: m.index + m[0].length });
   }
-
   if (matchRanges.length === 0) return;
 
-  // Calcular ranges de highlight por nó
   const nodeHighlights = new Map<number, { start: number; end: number }[]>();
   for (const match of matchRanges) {
     for (let i = 0; i < nodeRanges.length; i++) {
@@ -115,7 +100,6 @@ function highlightTextInElement(element: Element, query: string) {
     }
   }
 
-  // Aplicar highlights de trás para frente (preservar posições no DOM)
   const sortedIndices = Array.from(nodeHighlights.keys()).sort((a, b) => b - a);
   for (const idx of sortedIndices) {
     const ranges = nodeHighlights.get(idx)!;
@@ -144,6 +128,20 @@ function highlightTextInElement(element: Element, query: string) {
     }
     textNode.parentNode?.replaceChild(fragment, textNode);
   }
+}
+
+/** Coleta text nodes elegíveis de um elemento (pula footnotes e verse numbers) */
+function collectTextNodes(element: Element): Text[] {
+  const nodes: Text[] = [];
+  const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+  while (walker.nextNode()) {
+    const node = walker.currentNode as Text;
+    if (node.parentElement?.closest(".bible-footnote")) continue;
+    if (node.parentElement?.closest("sup.v")) continue;
+    if (node.parentElement?.tagName === "MARK") continue;
+    nodes.push(node);
+  }
+  return nodes;
 }
 
 export function BibleContent({
@@ -291,21 +289,23 @@ export function BibleContent({
       if (normalizedText.includes(normalizedQuery)) {
         span.style.display = "";
         hasVisible = true;
-        highlightTextInElement(span, searchQuery);
-        // Highlight também nos siblings órfãos (texto fora do span por causa de footnotes)
-        const nextVerse = index < verseSpans.length - 1 ? verseSpans[index + 1] : null;
+        // Coletar TODOS os text nodes do verso + siblings órfãos em uma passada única
+        // (permite highlight cross-node quando match cruza fronteira de footnote órfão)
+        const allTextNodes: Text[] = [...collectTextNodes(span)];
+        const nextV = index < verseSpans.length - 1 ? verseSpans[index + 1] : null;
         let sib: Node | null = span.nextSibling;
         while (sib) {
-          if (sib === nextVerse) break;
-          if (sib.nodeType === Node.ELEMENT_NODE) {
+          if (sib === nextV) break;
+          if (sib.nodeType === Node.TEXT_NODE) {
+            allTextNodes.push(sib as Text);
+          } else if (sib.nodeType === Node.ELEMENT_NODE) {
             const el = sib as Element;
             if (el.classList?.contains("bible-verse")) break;
-            if (!el.classList?.contains("bible-footnote-content")) {
-              highlightTextInElement(el, searchQuery);
-            }
+            allTextNodes.push(...collectTextNodes(el));
           }
           sib = sib.nextSibling;
         }
+        highlightNodes(allTextNodes, searchQuery);
       } else {
         span.style.display = "none";
       }

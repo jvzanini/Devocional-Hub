@@ -120,6 +120,7 @@ export function BibleModal({
   const progressRingRef = useRef<SVGCircleElement>(null);
   const wasPlayingBeforeSearchRef = useRef(false);
   const savedSearchQueryRef = useRef("");
+  const scrollToVerseAfterSearchRef = useRef(false);
 
   // Restaurar tamanho da fonte salvo
   useEffect(() => {
@@ -502,6 +503,21 @@ export function BibleModal({
     }
   }, [isOpen]);
 
+  // Scroll para versículo atual ao sair da busca via play
+  useEffect(() => {
+    if (isSearchOpen || !scrollToVerseAfterSearchRef.current) return;
+    scrollToVerseAfterSearchRef.current = false;
+    // Duplo rAF: esperar processSearch limpar o filtro, então scrollar
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (currentVerse && contentRef.current) {
+          const verseEl = contentRef.current.querySelector(`[data-verse="${currentVerse}"]`);
+          if (verseEl) verseEl.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      });
+    });
+  }, [isSearchOpen, currentVerse]);
+
   // Prevenir pinch-to-zoom no modal (mobile)
   useEffect(() => {
     if (!isOpen) return;
@@ -777,12 +793,7 @@ export function BibleModal({
                   setIsSearchOpen(false);
                   setSearchQuery("");
                   wasPlayingBeforeSearchRef.current = false;
-                  setTimeout(() => {
-                    if (currentVerse && contentRef.current) {
-                      const verseEl = contentRef.current.querySelector(`[data-verse="${currentVerse}"]`);
-                      if (verseEl) verseEl.scrollIntoView({ behavior: "smooth", block: "center" });
-                    }
-                  }, 200);
+                  scrollToVerseAfterSearchRef.current = true;
                 } : undefined}
               />
             </div>
@@ -822,13 +833,8 @@ export function BibleModal({
                     setIsSearchOpen(false);
                     setSearchQuery("");
                     wasPlayingBeforeSearchRef.current = false;
+                    scrollToVerseAfterSearchRef.current = true;
                     handleAudioToggle();
-                    setTimeout(() => {
-                      if (currentVerse && contentRef.current) {
-                        const verseEl = contentRef.current.querySelector(`[data-verse="${currentVerse}"]`);
-                        if (verseEl) verseEl.scrollIntoView({ behavior: "smooth", block: "center" });
-                      }
-                    }, 200);
                     return;
                   }
                   handleAudioToggle();
