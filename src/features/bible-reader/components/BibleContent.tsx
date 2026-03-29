@@ -139,8 +139,6 @@ export function BibleContent({
       return;
     }
 
-    // Usar getClientRects para inline elements que quebram linha
-    // getBoundingClientRect pode dar altura errada em elementos inline multi-linha
     const wrapper = indicator.parentElement;
     if (!wrapper) return;
     const wrapperRect = wrapper.getBoundingClientRect();
@@ -152,9 +150,38 @@ export function BibleContent({
     }
 
     const firstRect = rects[0];
-    const lastRect = rects[rects.length - 1];
     const top = firstRect.top - wrapperRect.top;
-    const height = (lastRect.top + lastRect.height) - firstRect.top;
+
+    // Medir altura até o próximo versículo para cobrir blocos intermediários
+    // (poesia, quebras de linha, etc. que são irmãos do span do versículo)
+    const allVerses = container.querySelectorAll("[data-verse]");
+    let nextVerseEl: Element | null = null;
+    let foundCurrent = false;
+    for (const v of allVerses) {
+      if (v.getAttribute("data-verse") === String(currentVerse)) {
+        foundCurrent = true;
+        continue;
+      }
+      if (foundCurrent) {
+        nextVerseEl = v;
+        break;
+      }
+    }
+
+    let height: number;
+    if (nextVerseEl) {
+      const nextRects = nextVerseEl.getClientRects();
+      if (nextRects.length > 0) {
+        height = nextRects[0].top - firstRect.top;
+      } else {
+        const lastRect = rects[rects.length - 1];
+        height = (lastRect.top + lastRect.height) - firstRect.top;
+      }
+    } else {
+      // Último versículo: medir até o fim do conteúdo
+      const containerRect = container.getBoundingClientRect();
+      height = (containerRect.top + containerRect.height) - firstRect.top;
+    }
 
     indicator.style.top = `${top}px`;
     indicator.style.height = `${Math.max(height, 8)}px`;
@@ -167,6 +194,8 @@ export function BibleContent({
 
     clearHighlights(container);
 
+    // Resetar visibilidade de TODOS os elementos + container
+    container.style.display = "";
     container.querySelectorAll<HTMLElement>(
       ".bible-verse, .bible-section-title, .bible-description, .bible-reference, .bible-break, .bible-paragraph, .bible-poetry-1, .bible-poetry-2, .bible-footnote"
     ).forEach((el) => {
@@ -179,28 +208,42 @@ export function BibleContent({
     const normalizedQuery = normalizeForSearch(searchQuery);
     if (!normalizedQuery) return;
 
-    const verseSpans = container.querySelectorAll<HTMLElement>(".bible-verse");
+    const verseSpans = Array.from(container.querySelectorAll<HTMLElement>(".bible-verse"));
     if (verseSpans.length === 0) return;
 
     let hasVisible = false;
 
-    verseSpans.forEach((span) => {
-      const footnotes = span.querySelectorAll(".bible-footnote-content");
+    verseSpans.forEach((span, index) => {
       const textsWithoutFootnotes: string[] = [];
 
+      // 1. Texto dentro do span do versículo (excluindo footnote-content)
       const walker = document.createTreeWalker(span, NodeFilter.SHOW_TEXT);
       while (walker.nextNode()) {
         const node = walker.currentNode as Text;
-        let isInsideFootnoteContent = false;
-        for (let i = 0; i < footnotes.length; i++) {
-          if (footnotes[i].contains(node)) {
-            isInsideFootnoteContent = true;
-            break;
+        if (node.parentElement?.closest(".bible-footnote-content")) continue;
+        textsWithoutFootnotes.push(node.textContent || "");
+      }
+
+      // 2. Texto órfão: siblings entre este verso e o próximo
+      //    (YouVersion coloca texto após footnotes fora do span do versículo)
+      const nextVerse = index < verseSpans.length - 1 ? verseSpans[index + 1] : null;
+      let sibling: Node | null = span.nextSibling;
+      while (sibling) {
+        if (sibling === nextVerse) break;
+        if (sibling.nodeType === Node.ELEMENT_NODE) {
+          const el = sibling as Element;
+          if (el.classList?.contains("bible-verse")) break;
+          const subWalker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+          while (subWalker.nextNode()) {
+            const t = subWalker.currentNode as Text;
+            if (!t.parentElement?.closest(".bible-footnote-content")) {
+              textsWithoutFootnotes.push(t.textContent || "");
+            }
           }
+        } else if (sibling.nodeType === Node.TEXT_NODE) {
+          textsWithoutFootnotes.push(sibling.textContent || "");
         }
-        if (!isInsideFootnoteContent) {
-          textsWithoutFootnotes.push(node.textContent || "");
-        }
+        sibling = sibling.nextSibling;
       }
 
       const fullText = textsWithoutFootnotes.join(" ");
@@ -230,13 +273,28 @@ export function BibleContent({
       if (!hasVisibleVerse) el.style.display = "none";
     });
 
-    // Esconder footnotes órfãos (fora de versículos visíveis)
+    // Footnotes: associar ao versículo anterior (podem ser siblings, não filhos)
     container.querySelectorAll<HTMLElement>(".bible-footnote").forEach((el) => {
       const parentVerse = el.closest(".bible-verse") as HTMLElement | null;
-      if (!parentVerse || parentVerse.style.display === "none") {
+      if (parentVerse) {
+        // Dentro de um versículo — seguir visibilidade do versículo
+        if (parentVerse.style.display === "none") el.style.display = "none";
+        return;
+      }
+      // Fora de versículo (órfão) — associar ao versículo irmão anterior
+      let prev = el.previousElementSibling;
+      while (prev && !prev.classList.contains("bible-verse")) {
+        prev = prev.previousElementSibling;
+      }
+      if (!prev || (prev as HTMLElement).style.display === "none") {
         el.style.display = "none";
       }
     });
+
+    // Se não encontrou nada, esconder o container inteiro (fix texto órfão visível)
+    if (!hasVisible) {
+      container.style.display = "none";
+    }
 
     setNoResults(!hasVisible);
   }, [searchQuery]);
@@ -247,14 +305,58 @@ export function BibleContent({
     return () => cancelAnimationFrame(timer);
   }, [searchQuery, htmlContent, processSearch]);
 
+  // ─── Posicionar tooltip dentro dos limites do modal (fixed) ─────────────────
+  const positionTooltip = useCallback((footnoteEl: HTMLElement) => {
+    const icon = footnoteEl.querySelector(".bible-footnote-icon") as HTMLElement;
+    const content = footnoteEl.querySelector(".bible-footnote-content") as HTMLElement;
+    if (!icon || !content) return;
+
+    const modal = footnoteEl.closest(".bible-modal") || document.body;
+    const modalRect = modal.getBoundingClientRect();
+    const iconRect = icon.getBoundingClientRect();
+
+    // Setup: fixed + maxWidth restrito ao modal
+    content.style.position = "fixed";
+    content.style.display = "block";
+    content.style.pointerEvents = "auto";
+    content.style.right = "auto";
+    content.style.bottom = "auto";
+    content.style.transform = "none";
+    content.style.zIndex = "200";
+    content.style.maxWidth = `${modalRect.width - 24}px`;
+
+    // Medir após reflow com maxWidth aplicado
+    const tooltipW = content.offsetWidth;
+    const tooltipH = content.offsetHeight;
+
+    // Vertical: acima do ícone, fallback abaixo
+    let top = iconRect.top - tooltipH - 8;
+    if (top < modalRect.top + 8) top = iconRect.bottom + 8;
+    if (top + tooltipH > modalRect.bottom - 8) top = modalRect.bottom - tooltipH - 8;
+
+    // Horizontal: centralizado no ícone, clampado ao modal
+    let left = iconRect.left + iconRect.width / 2 - tooltipW / 2;
+    if (left < modalRect.left + 12) left = modalRect.left + 12;
+    if (left + tooltipW > modalRect.right - 12) left = modalRect.right - tooltipW - 12;
+
+    content.style.top = `${Math.round(top)}px`;
+    content.style.left = `${Math.round(left)}px`;
+  }, []);
+
+  const hideTooltip = useCallback((footnoteEl: HTMLElement) => {
+    const content = footnoteEl.querySelector(".bible-footnote-content") as HTMLElement;
+    if (content) content.style.display = "none";
+    footnoteEl.classList.remove("bible-footnote--active");
+  }, []);
+
   const handleFootnoteClick = useCallback((e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
     const footnoteIcon = target.closest(".bible-footnote-icon");
-    const footnoteEl = target.closest(".bible-footnote");
+    const footnoteEl = target.closest(".bible-footnote") as HTMLElement;
 
     if (!footnoteIcon || !footnoteEl) {
       if (activeFootnote) {
-        activeFootnote.classList.remove("bible-footnote--active");
+        hideTooltip(activeFootnote);
         setActiveFootnote(null);
       }
       return;
@@ -264,62 +366,57 @@ export function BibleContent({
     e.stopPropagation();
 
     if (activeFootnote && activeFootnote !== footnoteEl) {
-      activeFootnote.classList.remove("bible-footnote--active");
+      hideTooltip(activeFootnote);
     }
-
-    const content = footnoteEl.querySelector(".bible-footnote-content") as HTMLElement;
-    if (!content) return;
 
     const isActive = footnoteEl.classList.contains("bible-footnote--active");
     if (isActive) {
-      footnoteEl.classList.remove("bible-footnote--active");
+      hideTooltip(footnoteEl);
       setActiveFootnote(null);
       return;
     }
 
     footnoteEl.classList.add("bible-footnote--active");
-    setActiveFootnote(footnoteEl as HTMLElement);
+    setActiveFootnote(footnoteEl);
+    positionTooltip(footnoteEl);
+  }, [activeFootnote, positionTooltip, hideTooltip]);
 
-    const modal = footnoteEl.closest(".bible-modal") || document.body;
-    const modalRect = modal.getBoundingClientRect();
-    const iconRect = footnoteIcon.getBoundingClientRect();
+  // ─── Hover handling (desktop) — posiciona via JS em vez de CSS ────────────
+  useEffect(() => {
+    const container = contentRef.current;
+    if (!container) return;
 
-    content.style.position = "fixed";
-    content.style.display = "block";
-
-    const contentRect = content.getBoundingClientRect();
-    const tooltipW = contentRect.width;
-    const tooltipH = contentRect.height;
-
-    let top = iconRect.top - tooltipH - 8;
-    if (top < modalRect.top + 8) {
-      top = iconRect.bottom + 8;
-    }
-    if (top + tooltipH > modalRect.bottom - 8) {
-      top = modalRect.bottom - tooltipH - 8;
+    function handleMouseOver(e: MouseEvent) {
+      const icon = (e.target as HTMLElement).closest(".bible-footnote-icon");
+      if (!icon) return;
+      const footnoteEl = icon.closest(".bible-footnote") as HTMLElement;
+      if (!footnoteEl || footnoteEl.classList.contains("bible-footnote--active")) return;
+      positionTooltip(footnoteEl);
     }
 
-    let left = iconRect.left + iconRect.width / 2 - tooltipW / 2;
-    if (left < modalRect.left + 8) {
-      left = modalRect.left + 8;
-    }
-    if (left + tooltipW > modalRect.right - 8) {
-      left = modalRect.right - tooltipW - 8;
+    function handleMouseOut(e: MouseEvent) {
+      const footnoteEl = (e.target as HTMLElement).closest(".bible-footnote") as HTMLElement;
+      if (!footnoteEl || footnoteEl.classList.contains("bible-footnote--active")) return;
+      const related = e.relatedTarget as HTMLElement;
+      if (related && footnoteEl.contains(related)) return;
+      const content = footnoteEl.querySelector(".bible-footnote-content") as HTMLElement;
+      if (content) content.style.display = "none";
     }
 
-    content.style.top = `${Math.round(top)}px`;
-    content.style.left = `${Math.round(left)}px`;
-    content.style.right = "auto";
-    content.style.bottom = "auto";
-    content.style.transform = "none";
-    content.style.zIndex = "200";
-  }, [activeFootnote]);
+    container.addEventListener("mouseover", handleMouseOver);
+    container.addEventListener("mouseout", handleMouseOut);
+    return () => {
+      container.removeEventListener("mouseover", handleMouseOver);
+      container.removeEventListener("mouseout", handleMouseOut);
+    };
+  }, [htmlContent, positionTooltip]);
 
+  // ─── Fechar tooltip ao clicar fora ────────────────────────────────────────
   useEffect(() => {
     if (!activeFootnote) return;
     function handleOutsideClick(e: MouseEvent) {
       if (activeFootnote && !activeFootnote.contains(e.target as Node)) {
-        activeFootnote.classList.remove("bible-footnote--active");
+        hideTooltip(activeFootnote);
         setActiveFootnote(null);
       }
     }
@@ -329,7 +426,7 @@ export function BibleContent({
       document.removeEventListener("mousedown", handleOutsideClick);
       document.removeEventListener("touchstart", handleOutsideClick as EventListener);
     };
-  }, [activeFootnote]);
+  }, [activeFootnote, hideTooltip]);
 
   if (isLoading) {
     return (

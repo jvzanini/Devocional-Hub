@@ -1840,12 +1840,7 @@ select.input-field {
   word-break: break-word;
   pointer-events: none;
 }
-.bible-footnote:hover > .bible-footnote-content,
-.bible-footnote:focus > .bible-footnote-content,
-.bible-footnote:focus-within > .bible-footnote-content {
-  display: block;
-  pointer-events: auto;
-}
+/* Tooltip display controlado inteiramente via JS (positionamento fixed + bounds do modal) */
 .bible-footnote--active > .bible-footnote-content {
   display: block;
   pointer-events: auto;

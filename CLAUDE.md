@@ -1,13 +1,29 @@
 # Devocional Hub — Diretrizes do Projeto
 
-## Fix Audio v5.9 — Correcoes de reproducao de audio (CONCLUIDO — 2026-03-29)
+## Bible Bubble v5.10 — Fix audio, guia, tooltips e busca (CONCLUIDO — 2026-03-29)
 
-### Correcoes
-- **Subscribe sincronizado:** `AudioManager.subscribe()` agora emite estado atual imediatamente ao se inscrever. Antes o componente montava com estado falso ate o proximo evento do audio.
-- **Pausa ao navegar capitulos:** `AudioPlayer` agora pausa o audio antigo quando `audioUrl` fica null (troca de capitulo). Antes o audio do capitulo anterior continuava tocando sobre o texto do novo capitulo.
-- **isLoading preciso:** Flag `hasSrc` adicionada para que `isLoading` so seja true quando ha fonte carregando (`hasSrc && readyState < 3`). Antes retornava true com audio vazio apos `stop()`.
-- **Speed sem stutter (mobile):** `setSpeed()` agora faz pause → alterar playbackRate → seek posicao exata → requestAnimationFrame → resume. Antes mudava playbackRate direto causando stutter no mobile.
-- **Player colapsado com loading correto:** Botao play colapsado mostra spinner quando `audioUrl` e null (audio sendo buscado) e clique desabilitado. Antes mostrava icone de play que nao fazia nada.
+### Audio (v5.9)
+- **Subscribe sincronizado:** `AudioManager.subscribe()` emite estado atual imediatamente ao se inscrever
+- **Pausa ao navegar capitulos:** `AudioPlayer` pausa audio antigo quando `audioUrl` fica null (troca de capitulo)
+- **isLoading preciso:** Flag `hasSrc` para que `isLoading` so seja true quando ha fonte carregando
+- **Speed fluido:** `setSpeed()` seta `playbackRate` direto (sem pause/resume que causava engasgada)
+- **Player colapsado com loading correto:** Spinner quando `audioUrl` e null, clique desabilitado
+
+### Guia de leitura (v5.10)
+- **Altura correta em versiculos com poesia:** Calculo mede do versiculo atual ate o PROXIMO versiculo, cobrindo blocos intermediarios (poesia q1/q2, quebras de linha). Antes `getClientRects()` so media o span do versiculo, ignorando divs irmas de poesia.
+- **Ultimo versiculo:** Mede ate o fim do container de conteudo
+
+### Tooltips/Insights (v5.10)
+- **Posicionamento 100% via JS:** Removido CSS `:hover` display. Hover e click usam mesma logica JS com `position: fixed`
+- **maxWidth restrito ao modal:** `modalRect.width - 24px` garante que tooltip nunca ultrapassa bordas
+- **Medicao apos reflow:** `offsetWidth`/`offsetHeight` medidos depois de aplicar maxWidth
+- **Clamp horizontal e vertical:** Tooltip sempre dentro dos limites do modal (12px margem)
+
+### Busca (v5.10)
+- **Texto orfao do YouVersion:** YouVersion coloca texto apos footnotes FORA do span do versiculo (`</span>NOTE<span class="content">text</span>`). Busca agora percorre siblings ate o proximo versiculo para coletar texto completo
+- **Footnotes visiveis nos resultados:** Footnotes que sao siblings (nao filhos) do versiculo sao associados ao versiculo anterior na hora de mostrar/esconder
+- **Tela limpa sem resultados:** Quando nenhum versiculo encontra, `container.style.display = "none"` esconde tudo (fix texto orfao visivel)
+- **Highlight nos resultados:** `highlightTextInElement` aplicado nos versiculos que correspondem a busca
 
 ## Bible Bubble v5.7 — Leitura Acompanhada + Player Melhorado (CONCLUIDO — 2026-03-23)
 
@@ -57,9 +73,9 @@ ARC (637), Almeida (636), ARA (635), NBV (642), OL (646), TB (647), CAP (640), B
 - **Speed button:** min-width 46px para nao empurrar outros botoes ao alternar velocidade (1x→2x). Posicao fixa no layout.
 - **Bubble:** 15% maior que padrao, label "Abrir Biblia", esconde quando modal aberto, z-index 9999, subido 20px, anti-zoom iOS
 - **Player:** inicia colapsado/pausado, sem autoplay, drag-to-seek (mouse+touch), cache de posicao (localStorage 24h)
-- **Audio speed:** pause → alterar playbackRate → seek posicao exata → requestAnimationFrame → resume (fix stutter mobile)
-- **Busca:** lupa no header, client-side no capitulo com highlight, filtra versiculos, ignora acentos/pontuacao, remove footnotes antes do matching. Esconde titulos/breaks/containers sem versiculos visiveis.
-- **Footnotes:** icone 18x18 com margin-left 4px, tooltip abre abaixo, max-width responsivo
+- **Audio speed:** `setSpeed()` seta playbackRate direto no HTMLAudioElement (fluido, sem pause/resume)
+- **Busca:** lupa no header, client-side no capitulo com highlight, filtra versiculos, ignora acentos/pontuacao, remove footnotes antes do matching. Esconde titulos/breaks/containers sem versiculos visiveis. Coleta texto orfao de siblings (fix YouVersion footnotes). Container inteiro escondido quando sem resultados.
+- **Footnotes:** icone 18x18 com margin-left 4px, tooltip posicionado via JS (position: fixed), maxWidth restrito ao modal, hover+click usam mesma logica de posicionamento
 - **Botao AA:** ciclo normal (17px) → medio (20px) → grande (24px), persistencia via localStorage. Guia de leitura recalcula ao mudar.
 - **Navegacao lateral:** botoes flutuantes prev/next capitulo nos lados do modal (escondidos em mobile < 768px)
 - **Seletores:** centralizados em mobile, bordas, transicoes suaves, separacao AT/NT

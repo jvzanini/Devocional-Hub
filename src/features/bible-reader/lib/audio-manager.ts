@@ -151,16 +151,7 @@ export class AudioManager {
   setSpeed(speed: PlaybackSpeed): void {
     this.currentSpeed = speed;
     if (this.audio) {
-      const wasPlaying = !this.audio.paused;
-      const pos = this.audio.currentTime;
-      if (wasPlaying) this.audio.pause();
       this.audio.playbackRate = speed;
-      if (wasPlaying) {
-        this.audio.currentTime = pos;
-        requestAnimationFrame(() => {
-          this.audio?.play().catch(console.warn);
-        });
-      }
     }
     try { localStorage.setItem("devhub-bible-speed", String(speed)); } catch {}
     this.notifyListeners();
