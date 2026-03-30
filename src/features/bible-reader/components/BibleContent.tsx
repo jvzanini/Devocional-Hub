@@ -170,59 +170,73 @@ export function BibleContent({
       return;
     }
 
-    const verseEl = container.querySelector(`[data-verse="${currentVerse}"]`);
-    if (!verseEl) {
-      indicator.style.opacity = "0";
-      return;
-    }
+    // Duplo rAF: esperar processSearch limpar filtro do DOM antes de posicionar
+    // (processSearch roda em rAF; o segundo frame garante que o DOM já foi restaurado)
+    let frame2: number;
+    const frame1 = requestAnimationFrame(() => {
+      frame2 = requestAnimationFrame(() => {
+        if (!container.isConnected || !indicator.isConnected) return;
 
-    const wrapper = indicator.parentElement;
-    if (!wrapper) return;
-    const wrapperRect = wrapper.getBoundingClientRect();
-    const rects = verseEl.getClientRects();
+        const verseEl = container.querySelector(`[data-verse="${currentVerse}"]`);
+        if (!verseEl) {
+          indicator.style.opacity = "0";
+          return;
+        }
 
-    if (rects.length === 0) {
-      indicator.style.opacity = "0";
-      return;
-    }
+        const wrapper = indicator.parentElement;
+        if (!wrapper) return;
+        const wrapperRect = wrapper.getBoundingClientRect();
+        const rects = verseEl.getClientRects();
 
-    const firstRect = rects[0];
-    const top = firstRect.top - wrapperRect.top;
+        if (rects.length === 0) {
+          indicator.style.opacity = "0";
+          return;
+        }
 
-    // Medir altura até o próximo versículo para cobrir blocos intermediários
-    // (poesia, quebras de linha, etc. que são irmãos do span do versículo)
-    const allVerses = container.querySelectorAll("[data-verse]");
-    let nextVerseEl: Element | null = null;
-    let foundCurrent = false;
-    for (const v of allVerses) {
-      if (v.getAttribute("data-verse") === String(currentVerse)) {
-        foundCurrent = true;
-        continue;
-      }
-      if (foundCurrent) {
-        nextVerseEl = v;
-        break;
-      }
-    }
+        const firstRect = rects[0];
+        const top = firstRect.top - wrapperRect.top;
 
-    let height: number;
-    if (nextVerseEl) {
-      const nextRects = nextVerseEl.getClientRects();
-      if (nextRects.length > 0) {
-        height = nextRects[0].top - firstRect.top;
-      } else {
-        const lastRect = rects[rects.length - 1];
-        height = (lastRect.top + lastRect.height) - firstRect.top;
-      }
-    } else {
-      // Último versículo: medir até o fim do conteúdo
-      const containerRect = container.getBoundingClientRect();
-      height = (containerRect.top + containerRect.height) - firstRect.top;
-    }
+        // Medir altura até o próximo versículo para cobrir blocos intermediários
+        // (poesia, quebras de linha, etc. que são irmãos do span do versículo)
+        const allVerses = container.querySelectorAll("[data-verse]");
+        let nextVerseEl: Element | null = null;
+        let foundCurrent = false;
+        for (const v of allVerses) {
+          if (v.getAttribute("data-verse") === String(currentVerse)) {
+            foundCurrent = true;
+            continue;
+          }
+          if (foundCurrent) {
+            nextVerseEl = v;
+            break;
+          }
+        }
 
-    indicator.style.top = `${top}px`;
-    indicator.style.height = `${Math.max(height, 8)}px`;
-    indicator.style.opacity = "1";
+        let height: number;
+        if (nextVerseEl) {
+          const nextRects = nextVerseEl.getClientRects();
+          if (nextRects.length > 0) {
+            height = nextRects[0].top - firstRect.top;
+          } else {
+            const lastRect = rects[rects.length - 1];
+            height = (lastRect.top + lastRect.height) - firstRect.top;
+          }
+        } else {
+          // Último versículo: medir até o fim do conteúdo
+          const containerRect = container.getBoundingClientRect();
+          height = (containerRect.top + containerRect.height) - firstRect.top;
+        }
+
+        indicator.style.top = `${top}px`;
+        indicator.style.height = `${Math.max(height, 8)}px`;
+        indicator.style.opacity = "1";
+      });
+    });
+
+    return () => {
+      cancelAnimationFrame(frame1);
+      if (frame2) cancelAnimationFrame(frame2);
+    };
   }, [currentVerse, htmlContent, fontSize, isSearchActive]);
 
   const processSearch = useCallback(() => {
@@ -518,10 +532,14 @@ export function BibleContent({
     function handleTouchEnd(e: TouchEvent) {
       const touch = e.changedTouches[0];
       if (!touch) return;
-      const target = document.elementFromPoint(touch.clientX, touch.clientY) as HTMLElement;
+      // Tentar via elementFromPoint E via e.target (fallback para SVG que pode não retornar via point)
+      const pointTarget = document.elementFromPoint(touch.clientX, touch.clientY) as HTMLElement | null;
+      const eventTarget = e.target as HTMLElement | null;
+      const target = pointTarget || eventTarget;
       if (!target) return;
       if (target.closest(".bible-footnote-content")) return;
-      const footnoteEl = target.closest(".bible-footnote") as HTMLElement;
+      const footnoteEl = (target.closest(".bible-footnote")
+        || eventTarget?.closest(".bible-footnote")) as HTMLElement;
       if (!footnoteEl) return;
 
       e.preventDefault(); // Previne click sintético (evita double-fire com React onClick)

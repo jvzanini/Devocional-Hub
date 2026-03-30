@@ -1,8 +1,8 @@
 # Devocional Hub — Diretrizes do Projeto
 
-## Bible Bubble v5.15 — Estado atual (CONCLUIDO — 2026-03-30)
+## Bible Bubble v5.16 — Estado atual (CONCLUIDO — 2026-03-30)
 
-O Bible Bubble e o modulo de leitura biblica interativa do DevocionalHub. Versao atual: v5.15.
+O Bible Bubble e o modulo de leitura biblica interativa do DevocionalHub. Versao atual: v5.16.
 
 ### Fontes de dados
 - **Texto:** Holy Bible API (holy-bible-api.com) — 12 versoes PT, gratuita, sem API key
@@ -23,12 +23,12 @@ Texto apenas (sem YouVersion mapping): Almeida (636), NBV (642), OL (646), TB (6
 
 ### Player de audio
 - Inicia colapsado/pausado, sem autoplay. Cache de posicao em localStorage (24h).
-- **Colapsado:** botao play 48x48 com progress ring circular (SVG), nav prev/next, speed. **Expandido:** mesmos botoes + barra de progresso + timestamps.
+- **Colapsado:** botao play 48x48 com progress ring circular (SVG stroke-width 4, cobre borda do botao), nav prev/next, speed. **Expandido:** mesmos botoes + barra de progresso + timestamps.
 - **Speed:** `playbackRate` direto no HTMLAudioElement (1x→1.25x→1.5x→1.75x→2x). min-width 46px no botao.
 - **Drag-to-seek:** pausa durante drag, retoma ao soltar. `isDraggingRef` suprime `onChapterEnd` durante drag + seek clampado a `duration-0.5s` (previne troca cascata de capitulos). Ao soltar no final com audio tocando: avanca 1 capitulo.
 - **Barra de progresso:** visual 4px, hit area 32px via `::before`. Thumb 14px/16px hover/18px drag.
 - **Timestamps Bible.is:** API `live.bible.is/api/timestamps/{fileset}/{book}/{ch}?v=4` (NVI/NTLH/NVT NT). Fallback proporcional (8% intro offset).
-- **Guia de leitura:** barra lateral 4px acompanha versiculo atual. Altura via `getClientRects()`. Escondida durante busca.
+- **Guia de leitura:** barra lateral 4px acompanha versiculo atual. Altura via `getClientRects()`. Escondida durante busca. Posicionamento usa duplo rAF para garantir DOM pronto apos limpar filtro de busca.
 - **Auto-scroll:** puxa versiculo para topo quando sai da area visivel. Pausa 4s se usuario rolar manualmente.
 
 ### Busca no capitulo
@@ -41,7 +41,7 @@ Texto apenas (sem YouVersion mapping): Almeida (636), NBV (642), OL (646), TB (6
 ### Footnotes (insights)
 - Icone 18x18 inline, tooltip posicionado via JS (`position: fixed`), maxWidth restrito ao modal.
 - **Desktop:** hover mostra tooltip, click fixa/desfixa. mouseout sintetico ignorado 500ms apos touch.
-- **Mobile:** handler nativo `touchend` no container (React `onClick` nao e confiavel em `dangerouslySetInnerHTML` no mobile). `e.preventDefault()` no touchend evita double-fire com desktop. Click area aceita `.bible-footnote` inteiro.
+- **Mobile:** handler nativo `touchend` no container com fallback `e.target.closest()` (alem de `elementFromPoint`). `e.preventDefault()` no touchend evita double-fire. Hit area do icone expandida para ~44px via padding negativo no mobile (min tap target). `-webkit-tap-highlight-color: transparent`.
 
 ### Navegacao
 - **Capitulo:** `scrollTo({ top: 0, behavior: "instant" })` ao mudar — overrida CSS `scroll-behavior:smooth`.

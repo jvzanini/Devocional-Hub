@@ -1811,6 +1811,7 @@ select.input-field {
   margin-left: 4px;
   margin-right: 2px;
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
 .bible-footnote-icon svg {
   width: 18px;
@@ -2127,12 +2128,12 @@ select.input-field {
 .bible-player-progress-ring-track {
   fill: none;
   stroke: rgba(255,255,255,0.15);
-  stroke-width: 2;
+  stroke-width: 4;
 }
 .bible-player-progress-ring-fill {
   fill: none;
   stroke: #fff;
-  stroke-width: 2;
+  stroke-width: 4;
   stroke-linecap: round;
   transition: stroke-dashoffset 0.3s ease;
 }
@@ -2635,6 +2636,14 @@ select.input-field {
   .bible-content-text {
     font-size: 16px;
     line-height: 1.75;
+  }
+  /* Área de toque maior para footnotes no mobile (mín 44x44px) */
+  .bible-footnote-icon {
+    position: relative;
+    padding: 13px;
+    margin: -13px;
+    margin-left: -9px;
+    margin-right: -11px;
   }
   .bible-header {
     padding: 10px 12px;
