@@ -456,6 +456,7 @@ export function BibleModal({
           savedSearchQueryRef.current = searchQuery;
           setIsSearchOpen(false);
           setSearchQuery("");
+          scrollToVerseAfterSearchRef.current = true;
           if (wasPlayingBeforeSearchRef.current) {
             getAudioManager().play();
             wasPlayingBeforeSearchRef.current = false;
@@ -664,10 +665,11 @@ export function BibleModal({
               }
               setIsSearchOpen(true);
             } else {
-              // Fechando busca (via toggle lupa): salvar query para restaurar depois
+              // Fechando busca (via toggle lupa): salvar query, scroll para versículo
               savedSearchQueryRef.current = searchQuery;
               setIsSearchOpen(false);
               setSearchQuery("");
+              scrollToVerseAfterSearchRef.current = true;
               if (wasPlayingBeforeSearchRef.current) {
                 getAudioManager().play();
                 wasPlayingBeforeSearchRef.current = false;

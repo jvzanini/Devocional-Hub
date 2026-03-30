@@ -514,11 +514,47 @@ export function BibleContent({
       if (content) content.style.display = "none";
     }
 
+    // Footnote tap no mobile (touchend nativo — mais confiável que React onClick em dangerouslySetInnerHTML)
+    function handleTouchEnd(e: TouchEvent) {
+      const touch = e.changedTouches[0];
+      if (!touch) return;
+      const target = document.elementFromPoint(touch.clientX, touch.clientY) as HTMLElement;
+      if (!target) return;
+      if (target.closest(".bible-footnote-content")) return;
+      const footnoteEl = target.closest(".bible-footnote") as HTMLElement;
+      if (!footnoteEl) return;
+
+      e.preventDefault(); // Previne click sintético (evita double-fire com React onClick)
+      lastTouchTime = Date.now();
+
+      // Fechar outro footnote ativo
+      const currentActive = contentRef.current?.querySelector(".bible-footnote--active") as HTMLElement;
+      if (currentActive && currentActive !== footnoteEl) {
+        const c = currentActive.querySelector(".bible-footnote-content") as HTMLElement;
+        if (c) c.style.display = "none";
+        currentActive.classList.remove("bible-footnote--active");
+      }
+
+      const isActive = footnoteEl.classList.contains("bible-footnote--active");
+      if (isActive) {
+        const c = footnoteEl.querySelector(".bible-footnote-content") as HTMLElement;
+        if (c) c.style.display = "none";
+        footnoteEl.classList.remove("bible-footnote--active");
+        setActiveFootnote(null);
+      } else {
+        footnoteEl.classList.add("bible-footnote--active");
+        setActiveFootnote(footnoteEl);
+        positionTooltip(footnoteEl);
+      }
+    }
+
     container.addEventListener("touchstart", handleTouchStart, { passive: true });
+    container.addEventListener("touchend", handleTouchEnd);
     container.addEventListener("mouseover", handleMouseOver);
     container.addEventListener("mouseout", handleMouseOut);
     return () => {
       container.removeEventListener("touchstart", handleTouchStart);
+      container.removeEventListener("touchend", handleTouchEnd);
       container.removeEventListener("mouseover", handleMouseOver);
       container.removeEventListener("mouseout", handleMouseOut);
     };
