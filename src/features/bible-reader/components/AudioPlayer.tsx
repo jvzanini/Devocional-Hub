@@ -7,7 +7,6 @@ import { getAudioManager } from "../lib/audio-manager";
 interface AudioPlayerProps {
   audioUrl: string | null;
   audioAvailable: boolean;
-  copyright?: string;
   onPrevious: () => void;
   onNext: () => void;
   onCollapse?: () => void;

@@ -32,7 +32,6 @@ function saveFontSize(size: FontSizeLevel) {
 }
 
 const CACHE_KEY = "devhub-bible-position";
-const SPEED_KEY = "devhub-bible-speed";
 const CACHE_TTL = 24 * 60 * 60 * 1000; // 24h
 
 interface CachedPosition {
@@ -65,17 +64,6 @@ function loadPosition(): CachedPosition | null {
   }
 }
 
-function saveSpeed(speed: number) {
-  try { localStorage.setItem(SPEED_KEY, String(speed)); } catch {}
-}
-
-function loadSpeed(): number {
-  try {
-    const val = localStorage.getItem(SPEED_KEY);
-    return val ? parseFloat(val) : 1;
-  } catch { return 1; }
-}
-
 interface BibleModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -96,7 +84,6 @@ export function BibleModal({
   const [bookCode, setBookCode] = useState(initialBookCode);
   const [chapter, setChapter] = useState(initialChapter);
   const [htmlContent, setHtmlContent] = useState<string | null>(null);
-  const [copyright, setCopyright] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
@@ -202,7 +189,6 @@ export function BibleModal({
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || `Erro ${res.status}`);
         setHtmlContent(data.content?.content || "");
-        setCopyright(data.content?.copyright || "");
       } catch (err) {
         setError(err instanceof Error ? err.message : "Erro desconhecido");
       } finally {
@@ -211,7 +197,7 @@ export function BibleModal({
     }
 
     loadContent();
-    contentRef.current?.scrollTo({ top: 0 });
+    contentRef.current?.scrollTo({ top: 0, behavior: "instant" });
 
     if (selectedVersion) {
       savePosition({ bookCode, chapter, versionId: selectedVersion.id, audioTime: 0 });
@@ -780,7 +766,6 @@ export function BibleModal({
               <AudioPlayer
                 audioUrl={audioUrl}
                 audioAvailable={audioAvailable}
-                copyright={copyright}
                 onPrevious={handlePreviousChapter}
                 onNext={handleChapterEndAutoPlay}
                 onCollapse={() => setIsPlayerCollapsed(true)}

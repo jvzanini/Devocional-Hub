@@ -453,10 +453,13 @@ export function BibleContent({
 
   const handleFootnoteClick = useCallback((e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
-    const footnoteIcon = target.closest(".bible-footnote-icon");
+
+    // Ignorar cliques no conteúdo do tooltip
+    if (target.closest(".bible-footnote-content")) return;
+
     const footnoteEl = target.closest(".bible-footnote") as HTMLElement;
 
-    if (!footnoteIcon || !footnoteEl) {
+    if (!footnoteEl) {
       if (activeFootnote) {
         hideTooltip(activeFootnote);
         setActiveFootnote(null);
