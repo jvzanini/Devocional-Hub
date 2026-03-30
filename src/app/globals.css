@@ -2637,12 +2637,6 @@ select.input-field {
     font-size: 16px;
     line-height: 1.75;
   }
-  /* Área de toque maior para footnotes no mobile (mín 44x44px) */
-  .bible-footnote::after {
-    content: "";
-    position: absolute;
-    inset: -12px;
-  }
   .bible-header {
     padding: 10px 12px;
     gap: 4px;
