@@ -1,65 +1,59 @@
 # Devocional Hub — Diretrizes do Projeto
 
-## Bible Bubble v5.15 — Estado atual (CONCLUIDO — 2026-03-29)
+## Bible Bubble v5.15 — Estado atual (CONCLUIDO — 2026-03-30)
 
-O Bible Bubble e o modulo de leitura biblica interativa do DevocionalHub. Versao atual: v5.15 (consolidado v5.7-v5.15).
+O Bible Bubble e o modulo de leitura biblica interativa do DevocionalHub. Versao atual: v5.15.
 
 ### Fontes de dados
 - **Texto:** Holy Bible API (holy-bible-api.com) — 12 versoes PT, gratuita, sem API key
 - **Formatacao:** YouVersion (bible.com) — titulos de secao, paragrafos, poesia via scraping de `__NEXT_DATA__`
-- **Audio:** Bible.is (live.bible.is) — 4 versoes com audio versao-especifico (NVI, NAA, NTLH, NVT)
+- **Audio:** Bible.is (live.bible.is) — 4 versoes com audio (NVI, NAA, NTLH, NVT)
 
-### Formatacao YouVersion (sem IA)
-- Titulos de secao, paragrafos e poesia vem **direto do YouVersion (bible.com)**
-- Eliminada dependencia de IA (GPT) para formatacao de texto biblico
-- Modulo: `youversion-client.ts` — fetch + parse + transform + cache 24h em memoria
-- Modulo: `bible-formatter.ts` — orquestra YouVersion com fallback para texto puro
-- Classes CSS: `.bible-section-title`, `.bible-paragraph`, `.bible-poetry-1`, `.bible-poetry-2`
-- Fallback: se YouVersion falhar, usa Holy Bible API (texto sem titulos de secao)
+### Versoes
+| Holy Bible ID | YouVersion ID | Abrev | Audio NT | Audio AT |
+|:---:|:---:|:---:|:---:|:---:|
+| 644 | 129 | NVI | PORNVIN1DA | PORNVIO1DA |
+| 641 | 1840 | NAA | PORBBSN1DA | PORBBSO1DA |
+| 643 | 211 | NTLH | PO1NLHN1DA | PO1NLHO1DA |
+| 645 | 1930 | NVT | PORTHFN1DA | PORTHFO1DA |
+| 635 | 1608 | ARA | — | — |
+| 637 | 212 | ARC | — | — |
 
-### Mapeamento de versoes (Holy Bible API → YouVersion)
-| Holy Bible ID | YouVersion ID | Abreviacao |
-|---------------|---------------|------------|
-| 644 | 129 | NVI |
-| 635 | 1608 | ARA |
-| 637 | 212 | ARC |
-| 641 | 1840 | NAA |
-| 645 | 1930 | NVT |
-| 643 | 211 | NTLH |
+Texto apenas (sem YouVersion mapping): Almeida (636), NBV (642), OL (646), TB (647), CAP (640), BPT (639)
 
-### Versoes PT com audio versao-especifico (Bible.is)
-| Versao | ID | NT Fileset | OT Fileset |
-|--------|----|-----------|-----------|
-| NVI | 644 | PORNVIN1DA | PORNVIO1DA |
-| NAA | 641 | PORBBSN1DA | PORBBSO1DA |
-| NTLH | 643 | PO1NLHN1DA | PO1NLHO1DA |
-| NVT | 645 | PORTHFN1DA | PORTHFO1DA |
+### Player de audio
+- Inicia colapsado/pausado, sem autoplay. Cache de posicao em localStorage (24h).
+- **Colapsado:** botao play 48x48 com progress ring circular (SVG), nav prev/next, speed. **Expandido:** mesmos botoes + barra de progresso + timestamps.
+- **Speed:** `playbackRate` direto no HTMLAudioElement (1x→1.25x→1.5x→1.75x→2x). min-width 46px no botao.
+- **Drag-to-seek:** pausa durante drag, retoma ao soltar. `isDraggingRef` suprime `onChapterEnd` durante drag + seek clampado a `duration-0.5s` (previne troca cascata de capitulos). Ao soltar no final com audio tocando: avanca 1 capitulo.
+- **Barra de progresso:** visual 4px, hit area 32px via `::before`. Thumb 14px/16px hover/18px drag.
+- **Timestamps Bible.is:** API `live.bible.is/api/timestamps/{fileset}/{book}/{ch}?v=4` (NVI/NTLH/NVT NT). Fallback proporcional (8% intro offset).
+- **Guia de leitura:** barra lateral 4px acompanha versiculo atual. Altura via `getClientRects()`. Escondida durante busca.
+- **Auto-scroll:** puxa versiculo para topo quando sai da area visivel. Pausa 4s se usuario rolar manualmente.
 
-### Versoes PT (texto apenas)
-ARC (637), Almeida (636), ARA (635), NBV (642), OL (646), TB (647), CAP (640), BPT (639)
+### Busca no capitulo
+- Lupa no header, filtragem client-side. Ignora acentos/pontuacao via `normalizeForSearch()`.
+- **Highlight cross-node:** `highlightNodes()` + `collectTextNodes()` coletam text nodes do verso span + siblings orfaos em passada unica. Regex com `\s+` para matches que cruzam fronteira de footnotes.
+- **Orphan text:** text nodes orfaos de versos ocultos envolvidos em `<span class="bible-orphan-text" style="display:none">`. Cleanup restaura ao limpar busca.
+- **Safeguard:** `useLayoutEffect` sem deps re-aplica filtro se DOM resetado pelo React (ex: collapse/expand player).
+- **Botoes:** Play salva query + fecha + scroll para versiculo via `scrollToVerseAfterSearchRef` + duplo rAF. Lupa/ESC: mesmo scroll, salva query em `savedSearchQueryRef` (restaura ao reabrir), retoma audio se estava tocando. X: limpa tudo. Collapse/expand/velocidade: NAO afetam busca.
 
-### Features UX
-- **Guia de leitura (v5.7):** barra lateral esquerda (4px, border-radius 3px) acompanha o versiculo sendo lido no audio. Posicao: left 6px (desktop) / 8px (mobile). Calculo de altura via `getClientRects()` (fix versiculos inline multi-linha). Reagrupavel: recalcula ao mudar fontSize. Branco em dark mode, preto em light mode. Transicoes cubic-bezier.
-- **Auto-scroll inteligente (v5.7):** puxa versiculo para o topo quando sai da tela visivel. Considera altura do footer/player expandido para nao esconder texto. Pausa 4s se usuario rolar manualmente (detecta wheel/touchmove). Usa getClientRects para precisao.
-- **Timestamps Bible.is:** API `live.bible.is/api/timestamps/{fileset}/{book}/{ch}?v=4` — disponivel para NVI, NTLH, NVT (NT apenas). Fallback proporcional para NAA e AT (8% offset intro + divisao igual). Timestamps sao tempo-arquivo (independe de playbackRate).
-- **Progress ring (v5.7):** barra circular no botao play colapsado, estilo relogio (topo→sentido horario), branca, stroke-width 2px, track opacity 0.15. SVG viewBox 48x48, radius 22. Atualiza via DOM direto (sem re-render).
-- **Player colapsado (v5.7):** botao play 48x48 (igual ao expandido), botoes nav maiores (font 13px, padding 6px 10px), icones 24px/16px, gap 14px
-- **Player expandido (v5.7):** botao play 48x48 (igual ao colapsado), icones 24px
-- **Speed button:** min-width 46px para nao empurrar outros botoes ao alternar velocidade (1x→2x). Posicao fixa no layout.
-- **Bubble:** 15% maior que padrao, label "Abrir Biblia", esconde quando modal aberto, z-index 9999, subido 20px, anti-zoom iOS
-- **Player:** inicia colapsado/pausado, sem autoplay, drag-to-seek (mouse+touch), cache de posicao (localStorage 24h). Area de interacao expandida via `::before` (32px hit area, visual 4px).
-- **Drag-to-seek (v5.15):** dupla protecao contra troca cascata de capitulos — `isDraggingRef` suprime callback `onChapterEnd` durante drag + seek clampado a `duration - 0.5s`. Ao soltar no final, avanca capitulo se estava tocando. Clique direto (sem drag) nao e afetado.
-- **Audio speed:** `setSpeed()` seta playbackRate direto no HTMLAudioElement (fluido, sem pause/resume)
-- **Busca (v5.15):** lupa no header, client-side no capitulo. Highlight cross-node via `highlightNodes()` + `collectTextNodes()` — coleta text nodes do verso span E siblings orfaos em passada unica, matches cruzam fronteira de footnotes orfaos. Filtra versiculos, ignora acentos/pontuacao, remove footnotes antes do matching. Esconde titulos/breaks/containers sem versiculos visiveis. Text nodes orfaos de versos ocultos envolvidos em `<span class="bible-orphan-text" style="display:none">` (fix: texto vazando para versos adjacentes). Container inteiro escondido quando sem resultados. `useLayoutEffect` safeguard re-aplica filtro se DOM resetado pelo React. Espacos flexiveis na regex (`\s+`).
-- **Busca — comportamento dos botoes (v5.15):** Lupa: toggle busca, salva query em `savedSearchQueryRef` ao fechar (restaura ao reabrir). X: limpa query + `savedSearchQueryRef` e fecha. Play: salva query, fecha, scroll para versiculo atual via useEffect + ref flag + duplo rAF. ESC: mesmo da lupa. Collapse/expand/velocidade: NAO afetam busca.
-- **Navegacao de capitulo (v5.15):** scroll instantaneo (`scrollTo({ top: 0, behavior: "instant" })`) ao mudar capitulo — overrida CSS `scroll-behavior:smooth` que causava animacao competindo com auto-scroll.
-- **Footnotes (v5.15):** icone 18x18 com margin-left 4px, tooltip posicionado via JS (position: fixed), maxWidth restrito ao modal, hover+click usam mesma logica. Click handler aceita `.bible-footnote` inteiro (nao so `.bible-footnote-icon`) — fix mobile touch target.
-- **Botao AA:** ciclo normal (17px) → medio (20px) → grande (24px), persistencia via localStorage. Guia de leitura recalcula ao mudar.
-- **Navegacao lateral:** botoes flutuantes prev/next capitulo nos lados do modal (escondidos em mobile < 768px)
-- **Seletores:** centralizados em mobile, bordas, transicoes suaves, separacao AT/NT
-- **NVT fix:** class="s" (sem numero) tratado como section title alem de class="s1"
-- **Modal:** scroll lock total no mobile, pinch-to-zoom desabilitado (touch-action: pan-y), body padding removido em mobile
-- **Padding texto:** desktop 20px, mobile 24px (libera espaco para guia de leitura)
+### Footnotes (insights)
+- Icone 18x18 inline, tooltip posicionado via JS (`position: fixed`), maxWidth restrito ao modal.
+- **Desktop:** hover mostra tooltip, click fixa/desfixa. mouseout sintetico ignorado 500ms apos touch.
+- **Mobile:** handler nativo `touchend` no container (React `onClick` nao e confiavel em `dangerouslySetInnerHTML` no mobile). `e.preventDefault()` no touchend evita double-fire com desktop. Click area aceita `.bible-footnote` inteiro.
+
+### Navegacao
+- **Capitulo:** `scrollTo({ top: 0, behavior: "instant" })` ao mudar — overrida CSS `scroll-behavior:smooth`.
+- **Lateral:** botoes flutuantes prev/next (escondidos em mobile < 768px).
+- **Seletores:** book/version centralizados em mobile, separacao AT/NT.
+- **Bubble:** 15% maior, label "Abrir Biblia", z-index 9999, anti-zoom iOS.
+
+### Outros
+- **Botao AA:** ciclo normal (17px) → medio (20px) → grande (24px), persistencia localStorage.
+- **Modal:** scroll lock total no mobile, pinch-to-zoom desabilitado (`touch-action: pan-y`).
+- **NVT fix:** class="s" (sem numero) tratado como section title alem de class="s1".
+- **YouVersion:** `youversion-client.ts` fetch + parse + cache 24h. Fallback: Holy Bible API (texto puro).
 
 ### Componentes
 `BibleBubble`, `BibleBubbleWrapper`, `BibleModal`, `BibleContent`, `BibleHeader`, `BibleNavigation`, `AudioPlayer`, `BookSelector`, `ChapterSelector`, `VersionSelector`
