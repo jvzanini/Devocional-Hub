@@ -7,6 +7,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGri
 import { ALL_ROLES, isAdmin as checkIsAdmin, type UserRoleType } from "@/features/permissions/lib/role-hierarchy";
 import { timeAgoPtBR } from "@/features/engagement/lib/time-utils";
 import type { AdminInsights, RiskLevel } from "@/features/engagement/lib/admin-insights";
+import { UserJourneyModal } from "@/features/engagement/components/UserJourneyModal";
 
 type Tab = "zoom" | "schedule" | "webhooks" | "users" | "reading" | "attendance" | "ia" | "permissions" | "subscriptions" | "engagement";
 
@@ -125,7 +126,7 @@ interface ParsedInsights extends Omit<AdminInsights, "topStreaks" | "atRisk"> {
   atRisk: (Omit<AdminInsights["atRisk"][number], "lastAttendedAt"> & { lastAttendedAt: Date })[];
 }
 
-function EngagementTab() {
+function EngagementTab({ onSelectUser }: { onSelectUser: (id: string) => void }) {
   const [data, setData] = useState<ParsedInsights | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -194,7 +195,14 @@ function EngagementTab() {
             <tbody>
               {data.topStreaks.map((t) => (
                 <tr key={t.userId}>
-                  <td>{t.name}</td>
+                  <td>
+                    <button
+                      onClick={() => onSelectUser(t.userId)}
+                      style={{ background: "none", border: "none", color: "var(--accent)", cursor: "pointer", padding: 0, font: "inherit", textAlign: "left" }}
+                    >
+                      {t.name}
+                    </button>
+                  </td>
                   <td>{[t.church, t.team].filter(Boolean).join(" · ")}</td>
                   <td>{t.currentStreak}</td>
                   <td>{t.bestStreak}</td>
@@ -254,7 +262,14 @@ function EngagementTab() {
               {data.atRisk.map((a) => (
                 <tr key={a.userId}>
                   <td>{LEVEL_LABEL[a.level]}</td>
-                  <td>{a.name}</td>
+                  <td>
+                    <button
+                      onClick={() => onSelectUser(a.userId)}
+                      style={{ background: "none", border: "none", color: "var(--accent)", cursor: "pointer", padding: 0, font: "inherit", textAlign: "left" }}
+                    >
+                      {a.name}
+                    </button>
+                  </td>
                   <td>{[a.church, a.team].filter(Boolean).join(" · ")}</td>
                   <td>{a.bestStreak}</td>
                   <td>{timeAgoPtBR(a.lastAttendedAt)}</td>
@@ -344,6 +359,9 @@ export default function AdminPage() {
   // Permissions state
   const [permissions, setPermissions] = useState<Record<string, string>>({});
   const [permissionsLoading, setPermissionsLoading] = useState(false);
+
+  // Journey modal state
+  const [journeyUserId, setJourneyUserId] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -733,6 +751,7 @@ export default function AdminPage() {
   if (loading) return <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 300 }}><p style={{ color: "var(--text-muted)" }}>Carregando...</p></div>;
 
   return (
+    <>
     <div>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
         <h1 style={{ fontWeight: 700, fontSize: 22, color: "var(--text)" }}>Administração</h1>
@@ -1112,6 +1131,14 @@ export default function AdminPage() {
                         )}
                       </div>
                       <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                        <button
+                          onClick={() => setJourneyUserId(u.id)}
+                          className="btn-outline"
+                          title="Ver jornada"
+                          style={{ padding: "4px 10px", fontSize: 13 }}
+                        >
+                          Ver Jornada
+                        </button>
                         <div className="tooltip-wrapper">
                           <button className="btn-icon" onClick={() => { setEditingUser(u.id); setEditUserData({}); setNewZoomId(""); }}>
                             <IconPencil size={14} />
@@ -1798,9 +1825,14 @@ export default function AdminPage() {
         )}
 
         {/* ─── TAB: Engajamento ─── */}
-        {tab === "engagement" && <EngagementTab />}
+        {tab === "engagement" && <EngagementTab onSelectUser={setJourneyUserId} />}
 
       </div>
     </div>
+
+    {journeyUserId && (
+      <UserJourneyModal userId={journeyUserId} onClose={() => setJourneyUserId(null)} />
+    )}
+    </>
   );
 }
