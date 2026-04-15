@@ -46,25 +46,26 @@ export default async function DashboardPage() {
 
   const userId = (session.user as { id?: string })?.id;
 
-  type EngagementTuple = [boolean, Awaited<ReturnType<typeof getUserEngagementStats>> | null];
-  let engagementTuple: EngagementTuple = [false, null];
+  type EngagementData = Awaited<ReturnType<typeof getUserEngagementStats>>;
+  let engagementEnabled = false;
+  let engagement: EngagementData | null = null;
   if (userId && userId.length > 0) {
     try {
-      engagementTuple = await Promise.all([
-        getEngagementEnabled(),
-        getUserEngagementStats(userId, sessions.map((s) => ({
+      engagementEnabled = await getEngagementEnabled();
+      if (engagementEnabled) {
+        engagement = await getUserEngagementStats(userId, sessions.map((s) => ({
           id: s.id,
           status: s.status,
           chapterRef: s.chapterRef,
           date: s.date,
-        }))),
-      ]);
+        })));
+      }
     } catch (err) {
       console.error("[engagement] erro ao carregar Sua Jornada — feature degradada:", err);
-      engagementTuple = [false, null];
+      engagementEnabled = false;
+      engagement = null;
     }
   }
-  const [engagementEnabled, engagement] = engagementTuple;
 
   const dbUser = userId ? await prisma.user.findUnique({ where: { id: userId }, select: { name: true } }) : null;
   const userName = dbUser?.name || session.user?.name || "usuário";
@@ -289,7 +290,11 @@ export default async function DashboardPage() {
 
       {engagementEnabled && engagement && (
         <>
-          <JourneyCard stats={engagement.stats} unlocked={engagement.allUnlocked} />
+          <JourneyCard
+            stats={engagement.stats}
+            unlocked={engagement.allUnlocked}
+            recentlyUnlockedKeys={engagement.newlyUnlockedKeys}
+          />
           <AchievementToast
             newlyUnlockedKeys={engagement.newlyUnlockedKeys}
             silent={engagement.silent}

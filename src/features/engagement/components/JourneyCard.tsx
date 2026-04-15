@@ -6,9 +6,10 @@ import { timeAgoPtBR } from "../lib/time-utils";
 interface Props {
   stats: UserEngagementStats;
   unlocked: { key: string; unlockedAt: Date }[];
+  recentlyUnlockedKeys?: string[];
 }
 
-export function JourneyCard({ stats, unlocked }: Props) {
+export function JourneyCard({ stats, unlocked, recentlyUnlockedKeys }: Props) {
   const unlockedKeys = new Set(unlocked.map((u) => u.key));
   const lastUnlock = unlocked.length > 0
     ? [...unlocked].sort((a, b) => b.unlockedAt.getTime() - a.unlockedAt.getTime())[0]
@@ -46,6 +47,7 @@ export function JourneyCard({ stats, unlocked }: Props) {
       <BadgeGrid
         catalog={ACHIEVEMENTS_VIEW}
         unlockedKeys={Array.from(unlockedKeys)}
+        recentlyUnlockedKeys={recentlyUnlockedKeys}
       />
 
       {lastAchievement && lastUnlock && (
