@@ -1,5 +1,93 @@
 # Devocional Hub — Diretrizes do Projeto
 
+## Leis Absolutas do Projeto
+
+1. **Implementacao SEMPRE via `superpowers:subagent-driven-development`** — qualquer fase de implementacao (apos spec e plan aprovados) deve ser executada obrigatoriamente com essa skill. Nao implementar direto no agente principal.
+2. **Spec sempre com 2 reviews profundos** antes de avancar para o plan.
+3. **Plan sempre com 2 reviews profundos** antes de avancar para a implementacao.
+4. **Frontend/layout SEMPRE com identidade visual atual** — reutilizar classes existentes em `globals.css` (`.card`, `.stat-card`, `.stats-row`, `.section-title`, `.reports-table`, `.btn-outline`, etc.). **Proibido criar classes CSS novas**. Quando precisar de variacao, usar inline style apenas com tokens `var(--*)`.
+5. **Comunicacao em pt-BR, minima** — conforme CLAUDE.md global do usuario.
+
+## Sistema de Engajamento — 6 features v1 (CONCLUIDO — 2026-04-15)
+
+Conjunto coeso de 6 features pastorais construidas no mesmo dia via spec+plan+reviews+subagent-driven-development. 64 testes unit passando (Vitest), zero CSS novo, todas deployadas.
+
+### Feature 1: "Sua Jornada" no dashboard (widget do proprio usuario)
+- Tabela nova `UserAchievement` (`userId + key + unlockedAt`, unique composto)
+- Util puro `computeUserEngagementStats(sessions, attendances)` em `src/features/engagement/lib/user-stats.ts` — `currentStreak` com tolerancia de 36h para mitigar atraso de pipeline Zoom
+- 7 conquistas: `first_step`, `streak_3`, `streak_7`, `streak_15`, `faithful_10`, `faithful_30`, `book_explorer`
+- Persistencia idempotente via `createMany({ skipDuplicates: true })` em `achievement-sync.ts`
+- Orquestrador `getUserEngagementStats(userId, sessions)` em `orchestrator.ts` com backfill silencioso (usuario antigo com >=2 presencas e sem conquistas previas recebe todas como "ja conquistadas", suprimindo toast)
+- Feature flag `engagementEnabled` em `AppSetting` (linha ausente = habilitado)
+- Dashboard: `JourneyCard` (Server), `BadgeGrid` (Client), `AchievementToast` (Client) — posicionado apos Reading Banner, antes da Distribuicao por Livro
+- Server->Client boundary: `ACHIEVEMENTS_VIEW` (sem funcao `criterion`) e tipo `AchievementView`
+- Toggle no painel admin (aba Config. Zoom)
+- Resiliencia: `try/catch` no dashboard impede que bug em engagement derrube a pagina
+
+### Feature 2: Aba "Engajamento" no painel admin
+- Util puro `computeAdminInsights(users, sessions, attendances, unlocks)` em `admin-insights.ts`
+- Endpoint `GET /api/admin/engagement/insights` com `requireRole("ADMIN")` + `Cache-Control: private, max-age=30`
+- 4 stat-cards: Comunidade Ativa (30d), Streaks Ativos (currentStreak>=3), Em Risco, Conquistas Totais
+- Tabela Top Streaks (top 10 com desempate estavel)
+- Lista de distribuicao de conquistas (ordenada por count desc, inclui zeradas)
+- Tabela Usuarios em Risco (ate 20) com classificacao em 3 niveis:
+  - `attention` (7-30d sem presenca, bestStreak>=2)
+  - `dormant` (30-90d)
+  - `lost` (90+d)
+- LGPD: filtro `deletedAt: null, active: true` em `prisma.user.findMany`
+
+### Feature 3: Jornada Individual (admin)
+- Util puro `computeUserJourney(user, sessions, attendances, unlocks)` em `user-journey.ts`
+- Helper compartilhado `fetchUserJourney(userId)` usado tanto por `/api/admin/users/:id/journey` quanto `/api/me/journey`
+- Endpoint admin: guard `requireRole("ADMIN")` (hierarquico via `hasAccess >=`), filtro `sessions.date >= user.createdAt`, 404 se soft-deleted
+- Modal `UserJourneyModal` (Client) com overlay fixed seguindo padrao existente em `admin/page.tsx:1425`
+- Admin abre modal via botao "Ver Jornada" na aba Usuarios OU clicando em nomes nas tabelas da aba Engajamento
+- State unico no `AdminPage` + prop `onSelectUser` no `EngagementTab` (nao duplicar modal)
+
+### Feature 4: Export CSV do Engajamento Admin
+- Util puro `csv-export.ts` com `escapeCsvField` RFC 4180 + **protecao CSV injection obrigatoria** (chars `= + - @ \t \r` prefixados com apostrofe antes do escape — mitigacao de Formula Injection em Excel/Sheets)
+- `downloadCsv(content, filename)` aplica BOM UTF-8 `\uFEFF` internamente
+- Builders: `buildTopStreaksCsv`, `buildAtRiskCsv`, `buildDistributionCsv`
+- `dateOrEmpty` aceita `Date | string | null` para tolerar serializacao JSON
+- 3 botoes "Baixar CSV" no header das secoes (disabled quando vazio)
+- `LEVEL_LABEL` refatorado para `src/features/engagement/lib/risk-labels.ts` (compartilhado entre admin/page.tsx e csv-export.ts)
+- Filenames: `devocional-top-streaks-YYYY-MM-DD.csv`, `devocional-em-risco-*.csv`, `devocional-conquistas-*.csv` (data via `toBrazilDate`)
+
+### Feature 5: "Minha Jornada" no perfil (auto-servico)
+- Endpoint `GET /api/me/journey` com guard `auth()` apenas (nao admin) — `userId` sempre vem de `session.user.id`, nunca aceita via URL/body
+- Retorna 401 sem sessao, 404 se user nao encontrado
+- Componente `MyJourneySection` (Client) em `/profile` — espelho privado da jornada que admin ve
+- Reusa `fetchUserJourney` compartilhado
+
+### Feature 6: WhatsApp Action pastoral
+- Util puro `whatsapp.ts` com:
+  - `normalizeWhatsApp(raw)`: 10/11 digitos prefixa 55, 12/13 com 55 mantem, resto null
+  - `buildWhatsAppMessage({name, level})`: templates pastorais por nivel de risco com primeiro nome extraido (fallback "amigo(a)")
+  - `buildWhatsAppUrl(phone, msg)`: monta `https://wa.me/5511...?text=...` com encodeURIComponent
+- Tabela Em Risco: coluna WhatsApp vira `<a target=_blank rel="noopener noreferrer">` quando numero valido — admin clica, WhatsApp Web abre com mensagem ja pronta para revisao e envio manual
+- Zero backend novo; zero CSS novo
+
+### Arquivos de referencia do sistema
+```
+src/features/engagement/
+  lib/
+    types.ts, achievements.ts, user-stats.ts
+    admin-insights.ts, user-journey.ts
+    feature-flag.ts, time-utils.ts
+    achievement-sync.ts, orchestrator.ts
+    csv-export.ts, whatsapp.ts, risk-labels.ts
+    __tests__/ (6 suites, 64 testes)
+  components/
+    JourneyCard.tsx (Server), BadgeIcon.tsx (Server)
+    BadgeGrid.tsx (Client), AchievementToast.tsx (Client)
+    UserJourneyModal.tsx (Client), MyJourneySection.tsx (Client)
+
+src/app/api/
+  admin/engagement/insights/route.ts
+  admin/users/[id]/journey/route.ts
+  me/journey/route.ts
+```
+
 ## Bible Bubble v5.16 — Estado atual (CONCLUIDO — 2026-03-30)
 
 O Bible Bubble e o modulo de leitura biblica interativa do DevocionalHub. Versao atual: v5.16.
