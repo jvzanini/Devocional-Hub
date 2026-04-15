@@ -65,7 +65,7 @@ Percentual formatado como `75%` (inteiro): `Math.round(Math.min(pct, 1) * 100) +
 
 Campos de texto vindos do banco (`name`, `church`, `team`, `whatsapp`) podem começar com caracteres que Excel/Google Sheets interpretam como fórmula executável (`=1+1`, `+CMD()`, `-2+3`, `@SUM(...)`). Isso é vetor de ataque clássico (Formula Injection / CSV injection).
 
-**Mitigação em `escapeCsvField`:** se o primeiro char do valor for um de `=`, `+`, `-`, `@`, `\t`, `\r`, prefixar o campo com aspa simples (`'`) antes do escape RFC 4180. Ex: `=SUM(A:A)` → `'=SUM(A:A)` → `"'=SUM(A:A)"`. Planilhas exibem o apóstrofo como literal ou omitem silenciosamente, mas jamais executam.
+**Mitigação em `escapeCsvField`:** se o primeiro char do valor for um de `=`, `+`, `-`, `@`, `\t`, `\r`, prefixar o campo com aspa simples (`'`) antes da avaliação RFC 4180. Ex: `=SUM(A:A)` vira `'=SUM(A:A)`. Como `'` isolado não aciona envolver em aspas (RFC 4180 só exige aspas para `,`, `"`, `\r`, `\n`), o resultado final é `'=SUM(A:A)` sem aspas. Se houver vírgula no campo (`=A,B` → `'=A,B` → envolve: `"'=A,B"`), aspas são aplicadas normalmente. Planilhas exibem o apóstrofo como literal ou omitem silenciosamente, mas jamais executam.
 
 ### 4.3.2 WhatsApp/números
 
@@ -132,9 +132,10 @@ Zero classe nova. Reusa `.btn-outline` (já presente em `globals.css`).
 - `escapeCsvField` com aspas → envolve em aspas e duplica aspas internas.
 - `escapeCsvField` com quebra de linha (`\n`) → envolve em aspas.
 - `escapeCsvField` com null/undefined → string vazia.
-- **CSV injection**: `escapeCsvField("=SUM(A:A)")` → `"'=SUM(A:A)"` (aspa prefixada + envolvido em aspas por causa do `=`).
+- **CSV injection**: `escapeCsvField("=SUM(A:A)")` → `"'=SUM(A:A)"` (apóstrofo prefixado; sem aspas pois não tem `,"\r\n`).
 - **CSV injection**: `escapeCsvField("+5511999998888")` → `"'+5511999998888"`.
 - **CSV injection**: `escapeCsvField("@hack()")` e `escapeCsvField("-2+3")` idem.
+- **CSV injection + vírgula** (combina prefix + aspas): `escapeCsvField("=A,B")` → `'"\'=A,B"'`.
 - `toCsv` produz cabeçalho + linhas separadas por `\r\n`.
 - `buildTopStreaksCsv` produz header correto + 1 linha por streak.
 - `buildTopStreaksCsv` formata `lastAttendedAt` como `YYYY-MM-DD` em TZ Brasil via `toBrazilDate` — ou string vazia se null.
