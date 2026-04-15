@@ -5,8 +5,10 @@ import { useRouter } from "next/navigation";
 import { BIBLE_BOOKS } from "@/features/bible/lib/bible-books";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { ALL_ROLES, isAdmin as checkIsAdmin, type UserRoleType } from "@/features/permissions/lib/role-hierarchy";
+import { timeAgoPtBR } from "@/features/engagement/lib/time-utils";
+import type { AdminInsights, RiskLevel } from "@/features/engagement/lib/admin-insights";
 
-type Tab = "zoom" | "schedule" | "webhooks" | "users" | "reading" | "attendance" | "ia" | "permissions" | "subscriptions";
+type Tab = "zoom" | "schedule" | "webhooks" | "users" | "reading" | "attendance" | "ia" | "permissions" | "subscriptions" | "engagement";
 
 interface ZoomIdentifier { id: string; value: string; type: string; locked: boolean; }
 interface Webhook { id: string; name: string; slug: string; active: boolean; createdAt: string; }
@@ -105,6 +107,167 @@ function EditableField({ label, value, description, onSave }: {
             <IconPencil size={16} />
           </button>
         )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Engagement Tab ────────────────────────────────────
+
+const LEVEL_LABEL: Record<RiskLevel, string> = {
+  attention: "Atenção",
+  dormant: "Adormecido",
+  lost: "Perdido",
+};
+
+interface ParsedInsights extends Omit<AdminInsights, "topStreaks" | "atRisk"> {
+  topStreaks: (Omit<AdminInsights["topStreaks"][number], "lastAttendedAt"> & { lastAttendedAt: Date | null })[];
+  atRisk: (Omit<AdminInsights["atRisk"][number], "lastAttendedAt"> & { lastAttendedAt: Date })[];
+}
+
+function EngagementTab() {
+  const [data, setData] = useState<ParsedInsights | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/admin/engagement/insights")
+      .then((r) => r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`)))
+      .then((json: AdminInsights) => {
+        const parsed: ParsedInsights = {
+          ...json,
+          topStreaks: json.topStreaks.map((t) => ({ ...t, lastAttendedAt: t.lastAttendedAt ? new Date(t.lastAttendedAt) : null })),
+          atRisk: json.atRisk.map((a) => ({ ...a, lastAttendedAt: new Date(a.lastAttendedAt) })),
+        };
+        setData(parsed);
+      })
+      .catch((e) => setError(String(e?.message ?? e)))
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) return <div style={{ padding: 24, color: "var(--text-muted)" }}>Carregando insights…</div>;
+  if (error) return <div style={{ padding: 24, color: "var(--accent)" }}>Erro: {error}</div>;
+  if (!data) return null;
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+      <div className="stats-row" style={{ gridTemplateColumns: "repeat(4, minmax(0, 1fr))" }}>
+        <div className="stat-card">
+          <div className="section-title">Comunidade Ativa</div>
+          <div style={{ fontSize: 28, fontWeight: 700, color: "var(--accent)", fontVariantNumeric: "tabular-nums" }}>{data.summary.activeCommunity}</div>
+          <div style={{ fontSize: 13, color: "var(--text-muted)" }}>últimos 30 dias</div>
+        </div>
+        <div className="stat-card">
+          <div className="section-title">Streaks Ativos</div>
+          <div style={{ fontSize: 28, fontWeight: 700, color: "var(--accent)", fontVariantNumeric: "tabular-nums" }}>{data.summary.activeStreaks}</div>
+          <div style={{ fontSize: 13, color: "var(--text-muted)" }}>com 3+ seguidos</div>
+        </div>
+        <div className="stat-card">
+          <div className="section-title">Em Risco</div>
+          <div style={{ fontSize: 28, fontWeight: 700, color: "var(--accent)", fontVariantNumeric: "tabular-nums" }}>{data.summary.atRisk}</div>
+          <div style={{ fontSize: 13, color: "var(--text-muted)" }}>precisam de atenção</div>
+        </div>
+        <div className="stat-card">
+          <div className="section-title">Conquistas</div>
+          <div style={{ fontSize: 28, fontWeight: 700, color: "var(--accent)", fontVariantNumeric: "tabular-nums" }}>{data.summary.totalAchievements}</div>
+          <div style={{ fontSize: 13, color: "var(--text-muted)" }}>total desbloqueado</div>
+        </div>
+      </div>
+
+      {/* Top Streaks */}
+      <div className="card" style={{ padding: 20 }}>
+        <div className="section-title">Top Streaks</div>
+        {data.topStreaks.length === 0 ? (
+          <p style={{ color: "var(--text-muted)" }}>Sem streaks ainda.</p>
+        ) : (
+          <table className="reports-table">
+            <thead>
+              <tr>
+                <th scope="col">Nome</th>
+                <th scope="col">Igreja/Equipe</th>
+                <th scope="col">Atual</th>
+                <th scope="col">Melhor</th>
+                <th scope="col">Total</th>
+                <th scope="col">Última</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.topStreaks.map((t) => (
+                <tr key={t.userId}>
+                  <td>{t.name}</td>
+                  <td>{[t.church, t.team].filter(Boolean).join(" · ")}</td>
+                  <td>{t.currentStreak}</td>
+                  <td>{t.bestStreak}</td>
+                  <td>{t.totalAttended}</td>
+                  <td>{t.lastAttendedAt ? timeAgoPtBR(t.lastAttendedAt) : "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      {/* Distribuição */}
+      <div className="card" style={{ padding: 20 }}>
+        <div className="section-title">Distribuição de Conquistas</div>
+        <ul style={{ margin: 0, padding: 0, listStyle: "none" }}>
+          {data.distribution.map((d) => (
+            <li key={d.key} style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid var(--border)" }}>
+              <div>
+                <strong>{d.title}</strong>
+                <div style={{ fontSize: 12, color: "var(--text-muted)" }}>{d.description}</div>
+              </div>
+              <div style={{ textAlign: "right", minWidth: 120 }}>
+                <div style={{ fontWeight: 700, color: "var(--accent)" }}>{d.count}</div>
+                <div style={{ fontSize: 12, color: "var(--text-muted)" }}>{Math.round(Math.min(d.pct, 1) * 100)}%</div>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {/* Em Risco */}
+      <div className="card" style={{ padding: 20 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 }}>
+          <div className="section-title" style={{ margin: 0 }}>Usuários em Risco</div>
+          {data.summary.atRisk > data.atRisk.length && (
+            <span style={{ fontSize: 12, color: "var(--text-muted)" }}>
+              mostrando {data.atRisk.length} de {data.summary.atRisk} (mais prioritários)
+            </span>
+          )}
+        </div>
+        {data.atRisk.length === 0 ? (
+          <p style={{ color: "var(--text-muted)" }}>Ninguém em risco agora 🙌</p>
+        ) : (
+          <table className="reports-table">
+            <thead>
+              <tr>
+                <th scope="col">Nível</th>
+                <th scope="col">Nome</th>
+                <th scope="col">Igreja/Equipe</th>
+                <th scope="col">Melhor</th>
+                <th scope="col">Última</th>
+                <th scope="col">WhatsApp</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.atRisk.map((a) => (
+                <tr key={a.userId}>
+                  <td>{LEVEL_LABEL[a.level]}</td>
+                  <td>{a.name}</td>
+                  <td>{[a.church, a.team].filter(Boolean).join(" · ")}</td>
+                  <td>{a.bestStreak}</td>
+                  <td>{timeAgoPtBR(a.lastAttendedAt)}</td>
+                  <td>{a.whatsapp ?? "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      <div style={{ fontSize: 12, color: "var(--text-muted)", textAlign: "right" }}>
+        Atualizado {timeAgoPtBR(new Date(data.computedAt))}
       </div>
     </div>
   );
@@ -589,6 +752,7 @@ export default function AdminPage() {
             { key: "ia", label: "IA", icon: "M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z" },
             { key: "permissions", label: "Permissões", icon: "M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" },
             { key: "subscriptions", label: "Assinaturas", icon: "M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z" },
+            { key: "engagement", label: "Engajamento", icon: "M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" },
           ] as { key: Tab; label: string; icon: string }[]).map(t => (
             <button key={t.key} onClick={() => setTab(t.key)} className={`tab-trigger ${tab === t.key ? "active" : ""}`}>
               <svg width={16} height={16} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -1632,6 +1796,9 @@ export default function AdminPage() {
             </div>
           </div>
         )}
+
+        {/* ─── TAB: Engajamento ─── */}
+        {tab === "engagement" && <EngagementTab />}
 
       </div>
     </div>
