@@ -5,6 +5,10 @@ import { DashboardCalendar } from "@/features/dashboard/components/DashboardCale
 import { BooksDistributionChart } from "@/features/dashboard/components/BooksDistributionChart";
 import Link from "next/link";
 import { extractBookName } from "@/shared/lib/bible-utils";
+import { getUserEngagementStats } from "@/features/engagement/lib/orchestrator";
+import { getEngagementEnabled } from "@/features/engagement/lib/feature-flag";
+import { JourneyCard } from "@/features/engagement/components/JourneyCard";
+import { AchievementToast } from "@/features/engagement/components/AchievementToast";
 
 function getGreetingName(fullName: string): string {
   const parts = fullName.trim().split(/\s+/);
@@ -84,6 +88,31 @@ export default async function DashboardPage() {
   if (userId) {
     attendedCount = await prisma.attendance.count({ where: { userId } });
     attendancePercentage = totalCompleted > 0 ? Math.round((attendedCount / totalCompleted) * 100) : 0;
+  }
+
+  // Engagement
+  type EngagementData = Awaited<ReturnType<typeof getUserEngagementStats>>;
+  let engagementEnabled = false;
+  let engagement: EngagementData | null = null;
+  if (userId && userId.length > 0) {
+    try {
+      engagementEnabled = await getEngagementEnabled();
+      if (engagementEnabled) {
+        engagement = await getUserEngagementStats(
+          userId,
+          sessions.map((s) => ({
+            id: s.id,
+            status: s.status,
+            chapterRef: s.chapterRef,
+            date: s.date,
+          }))
+        );
+      }
+    } catch (err) {
+      console.error("[engagement] erro — feature degradada:", err);
+      engagementEnabled = false;
+      engagement = null;
+    }
   }
 
   // Reading plan progress
@@ -260,6 +289,22 @@ export default async function DashboardPage() {
             Entrar no Zoom
           </a>
         </div>
+      )}
+
+      {/* ─── Sua Jornada ─── */}
+      {engagementEnabled && engagement && (
+        <>
+          <JourneyCard
+            stats={engagement.stats}
+            unlocked={engagement.allUnlocked}
+            recentlyUnlockedKeys={engagement.newlyUnlockedKeys}
+          />
+          <AchievementToast
+            newlyUnlockedKeys={engagement.newlyUnlockedKeys}
+            silent={engagement.silent}
+            allUnlockedKeys={engagement.allUnlocked.map((u) => u.key)}
+          />
+        </>
       )}
 
       {/* ─── Distribuição por Livro ─── */}
