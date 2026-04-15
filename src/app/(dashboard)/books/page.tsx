@@ -3,7 +3,13 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/shared/lib/db";
 import { BIBLE_BOOKS } from "@/features/bible/lib/bible-books";
 import { BooksPageClient } from "@/features/bible/components/BooksPageClient";
-import { extractBookName } from "@/shared/lib/bible-utils";
+
+function extractBookName(chapterRef: string): string {
+  if (!chapterRef) return "Outros";
+  const match = chapterRef.match(/^(\d?\s?[A-Za-zÀ-ú]+)/);
+  if (match) return match[1].trim();
+  return chapterRef.split(" ")[0] || "Outros";
+}
 
 export default async function BooksPage() {
   const session = await auth();

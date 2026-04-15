@@ -623,23 +623,6 @@ export default function AdminPage() {
               value={settings.zoomLink || ""}
               onSave={val => saveSetting("zoomLink", val)}
             />
-            <div className="section-card" style={{ padding: 18 }}>
-              <div className="section-title">Funcionalidades</div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 8 }}>
-                <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}>
-                  <input
-                    type="checkbox"
-                    checked={(settings.engagementEnabled ?? "true") !== "false"}
-                    onChange={(e) => saveSetting("engagementEnabled", e.target.checked ? "true" : "false")}
-                    style={{ width: 16, height: 16, accentColor: "var(--accent)", cursor: "pointer" }}
-                  />
-                  <span style={{ fontSize: 14, fontWeight: 600, color: "var(--text)" }}>Ativar "Sua Jornada" (streaks + conquistas)</span>
-                </label>
-                <p style={{ fontSize: 12, color: "var(--text-muted)", marginLeft: 26 }}>
-                  Exibe o módulo de engajamento com streaks de leitura e conquistas no dashboard. Linha ausente = habilitado por padrão.
-                </p>
-              </div>
-            </div>
           </div>
         )}
 

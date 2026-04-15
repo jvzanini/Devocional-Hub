@@ -4,11 +4,13 @@ import { prisma } from "@/shared/lib/db";
 import { DashboardCalendar } from "@/features/dashboard/components/DashboardCalendar";
 import { BooksDistributionChart } from "@/features/dashboard/components/BooksDistributionChart";
 import Link from "next/link";
-import { extractBookName } from "@/shared/lib/bible-utils";
-import { getUserEngagementStats } from "@/features/engagement/lib/orchestrator";
-import { getEngagementEnabled } from "@/features/engagement/lib/feature-flag";
-import { JourneyCard } from "@/features/engagement/components/JourneyCard";
-import { AchievementToast } from "@/features/engagement/components/AchievementToast";
+
+function extractBookName(chapterRef: string): string {
+  if (!chapterRef) return "Outros";
+  const match = chapterRef.match(/^(\d?\s?[A-Za-zÀ-ú]+)/);
+  if (match) return match[1].trim();
+  return chapterRef.split(" ")[0] || "Outros";
+}
 
 function getGreetingName(fullName: string): string {
   const parts = fullName.trim().split(/\s+/);
@@ -45,28 +47,6 @@ export default async function DashboardPage() {
   const zoomLink = settingsMap.zoomLink || (zoomMeetingId ? `https://zoom.us/j/${zoomMeetingId}` : "");
 
   const userId = (session.user as { id?: string })?.id;
-
-  type EngagementData = Awaited<ReturnType<typeof getUserEngagementStats>>;
-  let engagementEnabled = false;
-  let engagement: EngagementData | null = null;
-  if (userId && userId.length > 0) {
-    try {
-      engagementEnabled = await getEngagementEnabled();
-      if (engagementEnabled) {
-        engagement = await getUserEngagementStats(userId, sessions.map((s) => ({
-          id: s.id,
-          status: s.status,
-          chapterRef: s.chapterRef,
-          date: s.date,
-        })));
-      }
-    } catch (err) {
-      console.error("[engagement] erro ao carregar Sua Jornada — feature degradada:", err);
-      engagementEnabled = false;
-      engagement = null;
-    }
-  }
-
   const dbUser = userId ? await prisma.user.findUnique({ where: { id: userId }, select: { name: true } }) : null;
   const userName = dbUser?.name || session.user?.name || "usuário";
   const greetingName = getGreetingName(userName);
@@ -286,21 +266,6 @@ export default async function DashboardPage() {
             Entrar no Zoom
           </a>
         </div>
-      )}
-
-      {engagementEnabled && engagement && (
-        <>
-          <JourneyCard
-            stats={engagement.stats}
-            unlocked={engagement.allUnlocked}
-            recentlyUnlockedKeys={engagement.newlyUnlockedKeys}
-          />
-          <AchievementToast
-            newlyUnlockedKeys={engagement.newlyUnlockedKeys}
-            silent={engagement.silent}
-            allUnlockedKeys={engagement.allUnlocked.map((u) => u.key)}
-          />
-        </>
       )}
 
       {/* ─── Distribuição por Livro ─── */}

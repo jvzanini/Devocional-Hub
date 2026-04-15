@@ -29,7 +29,6 @@ model User {
   zoomIdentifiers ZoomIdentifier[]
   attendances     Attendance[]
   passwordResets  PasswordResetToken[]
-  achievements    UserAchievement[]
 }
 
 enum UserRole {
@@ -38,18 +37,6 @@ enum UserRole {
   SUBSCRIBER_VIP
   SUBSCRIBER
   MEMBER
-}
-
-model UserAchievement {
-  id         String   @id @default(cuid())
-  userId     String
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  key        String
-  unlockedAt DateTime @default(now())
-
-  @@unique([userId, key])
-  @@index([userId])
-  @@index([userId, unlockedAt])
 }
 
 model ZoomIdentifier {
