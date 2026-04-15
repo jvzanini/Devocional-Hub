@@ -5,8 +5,9 @@ import { useRouter } from "next/navigation";
 import { BIBLE_BOOKS } from "@/features/bible/lib/bible-books";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { ALL_ROLES, isAdmin as checkIsAdmin, type UserRoleType } from "@/features/permissions/lib/role-hierarchy";
-import { timeAgoPtBR } from "@/features/engagement/lib/time-utils";
+import { timeAgoPtBR, toBrazilDate } from "@/features/engagement/lib/time-utils";
 import type { AdminInsights } from "@/features/engagement/lib/admin-insights";
+import { buildTopStreaksCsv, buildAtRiskCsv, buildDistributionCsv, downloadCsv } from "@/features/engagement/lib/csv-export";
 import { LEVEL_LABEL } from "@/features/engagement/lib/risk-labels";
 import { UserJourneyModal } from "@/features/engagement/components/UserJourneyModal";
 
@@ -172,7 +173,20 @@ function EngagementTab({ onSelectUser }: { onSelectUser: (id: string) => void })
 
       {/* Top Streaks */}
       <div className="card" style={{ padding: 20 }}>
-        <div className="section-title">Top Streaks</div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 }}>
+          <div className="section-title" style={{ margin: 0 }}>Top Streaks</div>
+          <button
+            className="btn-outline"
+            onClick={() => downloadCsv(
+              buildTopStreaksCsv(data.topStreaks),
+              `devocional-top-streaks-${toBrazilDate(new Date())}.csv`,
+            )}
+            style={{ padding: "4px 12px", fontSize: 13 }}
+            disabled={data.topStreaks.length === 0}
+          >
+            Baixar CSV
+          </button>
+        </div>
         {data.topStreaks.length === 0 ? (
           <p style={{ color: "var(--text-muted)" }}>Sem streaks ainda.</p>
         ) : (
@@ -212,7 +226,20 @@ function EngagementTab({ onSelectUser }: { onSelectUser: (id: string) => void })
 
       {/* Distribuição */}
       <div className="card" style={{ padding: 20 }}>
-        <div className="section-title">Distribuição de Conquistas</div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 }}>
+          <div className="section-title" style={{ margin: 0 }}>Distribuição de Conquistas</div>
+          <button
+            className="btn-outline"
+            onClick={() => downloadCsv(
+              buildDistributionCsv(data.distribution),
+              `devocional-conquistas-${toBrazilDate(new Date())}.csv`,
+            )}
+            style={{ padding: "4px 12px", fontSize: 13 }}
+            disabled={data.distribution.every((d) => d.count === 0)}
+          >
+            Baixar CSV
+          </button>
+        </div>
         <ul style={{ margin: 0, padding: 0, listStyle: "none" }}>
           {data.distribution.map((d) => (
             <li key={d.key} style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid var(--border)" }}>
@@ -231,13 +258,26 @@ function EngagementTab({ onSelectUser }: { onSelectUser: (id: string) => void })
 
       {/* Em Risco */}
       <div className="card" style={{ padding: 20 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8, gap: 12, flexWrap: "wrap" }}>
           <div className="section-title" style={{ margin: 0 }}>Usuários em Risco</div>
-          {data.summary.atRisk > data.atRisk.length && (
-            <span style={{ fontSize: 12, color: "var(--text-muted)" }}>
-              mostrando {data.atRisk.length} de {data.summary.atRisk} (mais prioritários)
-            </span>
-          )}
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            {data.summary.atRisk > data.atRisk.length && (
+              <span style={{ fontSize: 12, color: "var(--text-muted)" }}>
+                mostrando {data.atRisk.length} de {data.summary.atRisk} (mais prioritários)
+              </span>
+            )}
+            <button
+              className="btn-outline"
+              onClick={() => downloadCsv(
+                buildAtRiskCsv(data.atRisk),
+                `devocional-em-risco-${toBrazilDate(new Date())}.csv`,
+              )}
+              style={{ padding: "4px 12px", fontSize: 13 }}
+              disabled={data.atRisk.length === 0}
+            >
+              Baixar CSV
+            </button>
+          </div>
         </div>
         {data.atRisk.length === 0 ? (
           <p style={{ color: "var(--text-muted)" }}>Ninguém em risco agora 🙌</p>
