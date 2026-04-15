@@ -1,9 +1,9 @@
 # PRD — DevocionalHub
 
-> **Versao:** 2.0
-> **Data:** 2026-03-22
+> **Versao:** 2.2
+> **Data:** 2026-04-15
 > **Autor:** Joao Vitor Zanini
-> **Status:** Em Producao (v2 + Hotfix v2.1 + Bible Bubble v5)
+> **Status:** Em Producao (v2 + Hotfix v2.1 + Bible Bubble v5.16 + Sistema de Engajamento v1)
 
 ---
 
@@ -758,6 +758,7 @@ AppSetting (standalone, key-value)
 | **PlanningCard** | planId, bookName, bookCode, chapter, analysis, references, studyLinks[], imageUrls[], themeGroup? | Cards de planejamento |
 | **Webhook** | name, slug, secret?, active | Webhooks configurados |
 | **AppSetting** | key, value | Configuracoes chave-valor |
+| **UserAchievement** | userId, key, unlockedAt (unique composite userId+key) | Conquistas desbloqueadas por usuario (Sistema de Engajamento) |
 
 ### 11.3 Enums
 
@@ -782,13 +783,14 @@ AppSetting (standalone, key-value)
 | POST | `/api/auth/reset-password` | Redefinir senha com token |
 | GET | `/api/auth/validate-reset-token` | Validar token de redefinicao |
 
-### 12.2 Perfil
+### 12.2 Perfil / Conta
 
 | Metodo | Endpoint | Descricao |
 |--------|----------|-----------|
 | PATCH | `/api/profile/password` | Alterar senha (logado) |
 | DELETE | `/api/profile/account` | Soft delete (LGPD) |
 | GET/POST | `/api/profile/photo/[userId]` | Foto de perfil |
+| GET | `/api/me/journey` | Jornada de engajamento do usuario logado |
 
 ### 12.3 Admin
 
@@ -804,6 +806,8 @@ AppSetting (standalone, key-value)
 | GET/POST | `/api/admin/notebooklm-session` | Sessao NotebookLM |
 | POST | `/api/admin/notebooklm-setup` | Setup NotebookLM |
 | POST | `/api/admin/cleanup` | Limpar banco (SUPER_ADMIN) |
+| GET | `/api/admin/engagement/insights` | Insights de engajamento (top streaks, em risco, distribuicao) |
+| GET | `/api/admin/users/[id]/journey` | Jornada individual de um usuario |
 
 ### 12.4 Biblia
 
@@ -960,6 +964,25 @@ Formatacao de texto direto do YouVersion, controle de tamanho de fonte e fix de 
 - Botao "Aa" para controle de tamanho da fonte (3 niveis)
 - Fix de audio speed no mobile (pause -> rate -> seek -> resume)
 - Testes Playwright (Desktop Chrome + Mobile Chrome Pixel 7)
+
+### Bible Bubble v5.16 — Correcoes finais (2026-03-30)
+
+Consolidacao do Bubble com 16 iteracoes: busca cross-node, drag-to-seek protegido, tooltips mobile 44px, guia leitura com duplo rAF, footnote mobile com touchend nativo, scroll instant ao mudar capitulo, auto-scroll pausado por 4s apos scroll manual, timestamps Bible.is para NVI/NTLH/NVT NT.
+
+### Sistema de Engajamento v1 (2026-04-15)
+
+Seis features pastorais coesas construidas no mesmo dia (64 testes Vitest, zero CSS novo, todas deployadas):
+
+1. **"Sua Jornada" no dashboard** — widget do proprio usuario com streak atual/melhor, conquistas (7 achievements persistidos em `UserAchievement`) e toast celebratorio com dedupe via localStorage. Backfill silencioso para usuarios antigos (>=2 presencas, sem conquistas previas).
+2. **Aba "Engajamento" no painel admin** — 4 stat-cards (Comunidade Ativa, Streaks Ativos, Em Risco, Conquistas Totais), tabela Top 10 Streaks, distribuicao de conquistas, lista de Usuarios em Risco classificados em 3 niveis (`attention` 7-30d, `dormant` 30-90d, `lost` 90+d).
+3. **Jornada Individual** — admin abre modal ao clicar em usuario (aba Usuarios ou tabelas de Engajamento) com timeline completa: stats, conquistas com datas, 20 presencas recentes, livros participados.
+4. **Export CSV** — 3 botoes "Baixar CSV" nas secoes da aba Engajamento. UTF-8 com BOM, escape RFC 4180 + **protecao CSV injection** (prefixo apostrofe em `= + - @ \t \r`).
+5. **"Minha Jornada" no perfil** — espelho privado da jornada individual em `/profile`. Novo endpoint `/api/me/journey` com guard apenas de autenticacao (`session.user.id`).
+6. **WhatsApp Action pastoral** — coluna WhatsApp da tabela Em Risco vira link `wa.me` com mensagem contextual por nivel (Atencao/Adormecido/Perdido) ja preenchida para revisao e envio manual.
+
+**Arquitetura:** `src/features/engagement/` (lib + components). Funcoes puras testaveis (`computeUserEngagementStats`, `computeAdminInsights`, `computeUserJourney`, `csv-export`, `whatsapp`). Helpers compartilhados: `fetchUserJourney` entre rotas admin e `/me`, `LEVEL_LABEL` entre UI e CSV, `extractBookName` entre dashboards e engajamento.
+
+**Fluxo de desenvolvimento:** Todas as 6 features seguiram o mesmo ciclo disciplinado — spec com 2 reviews profundos -> plan com 2 reviews -> implementacao via subagent-driven-development (fresh subagent por task). Lei absoluta: zero classe CSS nova; reuso total do design system atual (`.card`, `.stat-card`, `.reports-table`, etc.).
 
 ---
 
