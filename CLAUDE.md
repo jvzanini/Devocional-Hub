@@ -374,6 +374,36 @@ Modelos disponiveis: gpt-4.1-mini, gpt-4.1, gpt-4.1-nano, gpt-4o, gpt-4o-mini, o
 - PostgreSQL roda APENAS na VPS (Docker Swarm), NUNCA localmente — `npm run build` trava local
 - NVT usa class="s" (sem numero) alem de class="s1" para headings — regex precisa aceitar ambos
 
+## Engajamento & Streaks v1 (CONCLUIDO — 2026-04-15)
+
+Widget "Sua Jornada" no dashboard com streak atual, melhor streak e 7 conquistas persistentes baseadas em `Attendance`.
+
+### Arquitetura
+- Feature: `src/features/engagement/`
+- Util puro: `computeUserEngagementStats(sessions, attendances)` — currentStreak com tolerância de 36h
+- Persistência: tabela `UserAchievement` (unique `userId + key`)
+- Orquestrador: `getUserEngagementStats(userId, sessionsAlreadyLoaded)` — single-fetch; `Promise.all` paraleliza attendance + snapshot de conquistas
+- Flag: `AppSetting.engagementEnabled` — linha ausente = habilitado
+- Fronteira Server→Client: `ACHIEVEMENTS_VIEW` (sem `criterion`) e `AchievementView`
+
+### Convenção da flag
+- Lida via `getEngagementEnabled()` em `feature-flag.ts`
+- `value="false"` desabilita; qualquer outro valor ou linha ausente = habilitado
+- Toggle exposto no painel admin (aba Config. Zoom → card Funcionalidades)
+
+### Backfill silencioso
+- Usuário com `totalAttended >= 2` e sem `UserAchievement` pré-existente é tratado como "histórico"
+- Conquistas são persistidas mas `newlyUnlockedKeys` vem vazio — toast suprimido
+- `devhub-achievement-seen` em localStorage faz dedupe entre renders
+
+### Resiliência operacional
+- Dashboard envolve `getUserEngagementStats` em `try/catch` — se DB falhar, feature degrada silenciosamente (card some, dashboard continua)
+- Rollback DB: `DROP TABLE "UserAchievement";`
+
+### Testes
+- Unit: Vitest (`npm run test:unit`) — 16 casos em user-stats + achievements
+- E2E: Playwright (`tests/e2e/engagement.spec.ts`) — rodar APÓS deploy
+
 ## Git
 
 - Branch: main
