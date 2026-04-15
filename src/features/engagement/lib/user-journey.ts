@@ -3,6 +3,8 @@ import { ACHIEVEMENTS_VIEW } from "./achievements";
 import type { UserLike, UnlockLike } from "./admin-insights";
 import { extractBookName } from "@/shared/lib/bible-utils";
 import type { IconId, UserEngagementStats } from "./types";
+import { prisma } from "@/shared/lib/db";
+import { PipelineStatus } from "@prisma/client";
 
 export interface JourneyAttendance {
   sessionId: string;
@@ -112,4 +114,37 @@ export function computeUserJourney(
     booksParticipated,
     computedAt: new Date(now).toISOString(),
   };
+}
+
+export async function fetchUserJourney(userId: string): Promise<UserJourney | null> {
+  const user = await prisma.user.findFirst({
+    where: { id: userId, deletedAt: null },
+    select: {
+      id: true, name: true, email: true,
+      church: true, team: true, subTeam: true, createdAt: true,
+    },
+  });
+  if (!user) return null;
+
+  const [attendances, sessions, unlocks] = await Promise.all([
+    prisma.attendance.findMany({
+      where: { userId },
+      select: { sessionId: true, joinTime: true, duration: true },
+    }),
+    prisma.session.findMany({
+      where: { status: PipelineStatus.COMPLETED, date: { gte: user.createdAt } },
+      select: { id: true, status: true, chapterRef: true, date: true },
+    }),
+    prisma.userAchievement.findMany({
+      where: { userId },
+      select: { userId: true, key: true, unlockedAt: true },
+    }),
+  ]);
+
+  return computeUserJourney(
+    { ...user, whatsapp: null },
+    sessions.map((s) => ({ ...s, status: s.status as string })),
+    attendances,
+    unlocks,
+  );
 }
