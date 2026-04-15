@@ -10,6 +10,7 @@ import type { AdminInsights } from "@/features/engagement/lib/admin-insights";
 import { buildTopStreaksCsv, buildAtRiskCsv, buildDistributionCsv, downloadCsv } from "@/features/engagement/lib/csv-export";
 import { LEVEL_LABEL } from "@/features/engagement/lib/risk-labels";
 import { UserJourneyModal } from "@/features/engagement/components/UserJourneyModal";
+import { buildWhatsAppUrl, buildWhatsAppMessage } from "@/features/engagement/lib/whatsapp";
 
 type Tab = "zoom" | "schedule" | "webhooks" | "users" | "reading" | "attendance" | "ia" | "permissions" | "subscriptions" | "engagement";
 
@@ -308,7 +309,24 @@ function EngagementTab({ onSelectUser }: { onSelectUser: (id: string) => void })
                   <td>{[a.church, a.team].filter(Boolean).join(" · ")}</td>
                   <td>{a.bestStreak}</td>
                   <td>{timeAgoPtBR(a.lastAttendedAt)}</td>
-                  <td>{a.whatsapp ?? "—"}</td>
+                  <td>
+                    {(() => {
+                      if (!a.whatsapp) return "—";
+                      const url = buildWhatsAppUrl(a.whatsapp, buildWhatsAppMessage({ name: a.name, level: a.level }));
+                      if (!url) return a.whatsapp;
+                      return (
+                        <a
+                          href={url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ color: "var(--accent)", textDecoration: "none", fontWeight: 500 }}
+                          title="Abrir WhatsApp com mensagem pastoral"
+                        >
+                          {a.whatsapp} ↗
+                        </a>
+                      );
+                    })()}
+                  </td>
                 </tr>
               ))}
             </tbody>
