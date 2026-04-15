@@ -1,5 +1,13 @@
 # Devocional Hub — Diretrizes do Projeto
 
+## Leis Absolutas do Projeto
+
+1. **Implementacao SEMPRE via `superpowers:subagent-driven-development`** — qualquer fase de implementacao (apos spec aprovada e plan aprovado) deve ser executada obrigatoriamente com a skill `superpowers:subagent-driven-development`. Nao implementar direto no agente principal.
+2. **Spec sempre com 2 reviews profundos** antes de avancar para o plan.
+3. **Plan sempre com 2 reviews profundos** antes de avancar para a implementacao.
+4. **Frontend/layout SEMPRE via skill `ui-ux-pro-max`** durante a construcao de componentes visuais.
+5. **Comunicacao em pt-BR, minima** — conforme CLAUDE.md global do usuario.
+
 ## Bible Bubble v5.16 — Estado atual (CONCLUIDO — 2026-03-30)
 
 O Bible Bubble e o modulo de leitura biblica interativa do DevocionalHub. Versao atual: v5.16.
