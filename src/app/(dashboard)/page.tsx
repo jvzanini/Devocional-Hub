@@ -4,13 +4,7 @@ import { prisma } from "@/shared/lib/db";
 import { DashboardCalendar } from "@/features/dashboard/components/DashboardCalendar";
 import { BooksDistributionChart } from "@/features/dashboard/components/BooksDistributionChart";
 import Link from "next/link";
-
-function extractBookName(chapterRef: string): string {
-  if (!chapterRef) return "Outros";
-  const match = chapterRef.match(/^(\d?\s?[A-Za-zÀ-ú]+)/);
-  if (match) return match[1].trim();
-  return chapterRef.split(" ")[0] || "Outros";
-}
+import { extractBookName } from "@/shared/lib/bible-utils";
 
 function getGreetingName(fullName: string): string {
   const parts = fullName.trim().split(/\s+/);
