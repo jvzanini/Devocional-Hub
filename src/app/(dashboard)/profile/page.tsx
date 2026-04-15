@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { ALL_ROLES, type UserRoleType } from "@/features/permissions/lib/role-hierarchy";
+import { ALL_ROLES } from "@/features/permissions/lib/role-hierarchy";
 import { MyJourneySection } from "@/features/engagement/components/MyJourneySection";
 
 interface ZoomIdentifier { id: string; value: string; type: string; locked: boolean; }

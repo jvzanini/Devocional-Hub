@@ -72,7 +72,6 @@ export async function GET(request: Request) {
     }
 
     // Verificar se esta transcrição já foi processada
-    const transcriptDate = new Date(transcript.startTime);
     const alreadyProcessed = await prisma.session.findFirst({
       where: {
         zoomRecordingId: transcript.meetingUuid,

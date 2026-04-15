@@ -19,9 +19,6 @@ export async function GET(request: Request) {
     return NextResponse.json({ sessions: [] });
   }
 
-  // Buscar sessões por chapterRef ou summary usando ILIKE (case-insensitive)
-  const pattern = `%${query}%`;
-
   const sessions = await prisma.session.findMany({
     where: {
       status: "COMPLETED",
