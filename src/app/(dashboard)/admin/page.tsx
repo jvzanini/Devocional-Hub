@@ -6,7 +6,8 @@ import { BIBLE_BOOKS } from "@/features/bible/lib/bible-books";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { ALL_ROLES, isAdmin as checkIsAdmin, type UserRoleType } from "@/features/permissions/lib/role-hierarchy";
 import { timeAgoPtBR } from "@/features/engagement/lib/time-utils";
-import type { AdminInsights, RiskLevel } from "@/features/engagement/lib/admin-insights";
+import type { AdminInsights } from "@/features/engagement/lib/admin-insights";
+import { LEVEL_LABEL } from "@/features/engagement/lib/risk-labels";
 import { UserJourneyModal } from "@/features/engagement/components/UserJourneyModal";
 
 type Tab = "zoom" | "schedule" | "webhooks" | "users" | "reading" | "attendance" | "ia" | "permissions" | "subscriptions" | "engagement";
@@ -114,12 +115,6 @@ function EditableField({ label, value, description, onSave }: {
 }
 
 // ─── Engagement Tab ────────────────────────────────────
-
-const LEVEL_LABEL: Record<RiskLevel, string> = {
-  attention: "Atenção",
-  dormant: "Adormecido",
-  lost: "Perdido",
-};
 
 interface ParsedInsights extends Omit<AdminInsights, "topStreaks" | "atRisk"> {
   topStreaks: (Omit<AdminInsights["topStreaks"][number], "lastAttendedAt"> & { lastAttendedAt: Date | null })[];
