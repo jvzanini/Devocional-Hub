@@ -5,6 +5,10 @@ import { DashboardCalendar } from "@/features/dashboard/components/DashboardCale
 import { BooksDistributionChart } from "@/features/dashboard/components/BooksDistributionChart";
 import Link from "next/link";
 import { extractBookName } from "@/shared/lib/bible-utils";
+import { getUserEngagementStats } from "@/features/engagement/lib/orchestrator";
+import { getEngagementEnabled } from "@/features/engagement/lib/feature-flag";
+import { JourneyCard } from "@/features/engagement/components/JourneyCard";
+import { AchievementToast } from "@/features/engagement/components/AchievementToast";
 
 function getGreetingName(fullName: string): string {
   const parts = fullName.trim().split(/\s+/);
@@ -41,6 +45,27 @@ export default async function DashboardPage() {
   const zoomLink = settingsMap.zoomLink || (zoomMeetingId ? `https://zoom.us/j/${zoomMeetingId}` : "");
 
   const userId = (session.user as { id?: string })?.id;
+
+  type EngagementTuple = [boolean, Awaited<ReturnType<typeof getUserEngagementStats>> | null];
+  let engagementTuple: EngagementTuple = [false, null];
+  if (userId && userId.length > 0) {
+    try {
+      engagementTuple = await Promise.all([
+        getEngagementEnabled(),
+        getUserEngagementStats(userId, sessions.map((s) => ({
+          id: s.id,
+          status: s.status,
+          chapterRef: s.chapterRef,
+          date: s.date,
+        }))),
+      ]);
+    } catch (err) {
+      console.error("[engagement] erro ao carregar Sua Jornada — feature degradada:", err);
+      engagementTuple = [false, null];
+    }
+  }
+  const [engagementEnabled, engagement] = engagementTuple;
+
   const dbUser = userId ? await prisma.user.findUnique({ where: { id: userId }, select: { name: true } }) : null;
   const userName = dbUser?.name || session.user?.name || "usuário";
   const greetingName = getGreetingName(userName);
@@ -260,6 +285,17 @@ export default async function DashboardPage() {
             Entrar no Zoom
           </a>
         </div>
+      )}
+
+      {engagementEnabled && engagement && (
+        <>
+          <JourneyCard stats={engagement.stats} unlocked={engagement.allUnlocked} />
+          <AchievementToast
+            newlyUnlockedKeys={engagement.newlyUnlockedKeys}
+            silent={engagement.silent}
+            allUnlockedKeys={engagement.allUnlocked.map((u) => u.key)}
+          />
+        </>
       )}
 
       {/* ─── Distribuição por Livro ─── */}
