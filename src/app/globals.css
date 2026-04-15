@@ -3036,3 +3036,133 @@ select.input-field {
   color: #fff;
   border-color: var(--accent);
 }
+
+/* ─── Engagement (Sua Jornada) ─── */
+.journey-card {
+  background-color: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-xl);
+  padding: 24px;
+  margin-bottom: 24px;
+}
+
+.journey-card__title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 16px;
+  letter-spacing: -0.01em;
+}
+
+.journey-card__stats {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.journey-card__stat {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  color: var(--text);
+}
+
+.journey-card__stat strong {
+  font-size: 24px;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.journey-card__progress {
+  margin-bottom: 18px;
+}
+
+.journey-card__progress-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.badge-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.badge-circle {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 2px solid var(--accent);
+  background: linear-gradient(135deg, var(--surface), color-mix(in srgb, var(--accent) 14%, var(--surface)));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
+  position: relative;
+  transition: transform 0.2s;
+}
+
+.badge-circle:hover {
+  transform: scale(1.08);
+}
+
+.badge-locked {
+  opacity: 0.4;
+  border-color: var(--border);
+  background: var(--surface);
+  color: var(--text-muted);
+}
+
+.badge-locked::after {
+  content: "🔒";
+  position: absolute;
+  bottom: -4px;
+  right: -4px;
+  font-size: 12px;
+  background: var(--surface);
+  border-radius: 50%;
+  padding: 2px;
+  line-height: 1;
+}
+
+.badge-recent {
+  animation: badgeGlow 2s ease-out 1;
+}
+
+@keyframes badgeGlow {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 70%, transparent); }
+  70% { box-shadow: 0 0 0 14px color-mix(in srgb, var(--accent) 0%, transparent); }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+
+.achievement-toast {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  max-width: 320px;
+  background: var(--surface);
+  border: 1.5px solid var(--accent);
+  border-radius: var(--radius-lg);
+  padding: 16px 20px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+  color: var(--text);
+  font-size: 14px;
+  z-index: 9998;
+  animation: toastSlideUp 0.35s ease-out;
+}
+
+@keyframes toastSlideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@media (max-width: 480px) {
+  .badge-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .journey-card__stat strong { font-size: 20px; }
+  .achievement-toast { left: 12px; right: 12px; max-width: unset; }
+}
